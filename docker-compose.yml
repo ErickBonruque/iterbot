@@ -1,17 +1,57 @@
+version: '3.8'
+
 services:
   traefik:
     image: traefik:v2.10
+    restart: unless-stopped
     command:
       - "--configFile=/etc/traefik/traefik.yml"
     ports:
       - "80:80"
+      - "443:443"
       - "8080:8080"
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./infra/traefik/traefik.yml:/etc/traefik/traefik.yml:ro
+      - ./infra/traefik/dynamic:/etc/traefik/dynamic:ro
+      - traefik_certs:/letsencrypt
     depends_on:
-      - backend
-      - waha
+      backend:
+        condition: service_healthy
+      waha:
+        condition: service_started
+    networks:
+      - web
+
+  db:
+    image: postgres:13-alpine
+    restart: unless-stopped
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB:-capyvagas}
+      - POSTGRES_USER=${POSTGRES_USER:-capyvagas_user}
+      - POSTGRES_PASSWORD_FILE=/run/secrets/postgres_password
+    secrets:
+      - postgres_password
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-capyvagas_user} -d ${POSTGRES_DB:-capyvagas}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - web
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     networks:
       - web
 
@@ -19,55 +59,89 @@ services:
     build:
       context: .
       dockerfile: docker/django/Dockerfile
+    restart: unless-stopped
     command: /start.sh
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.backend.rule=Host(`localhost`) || Host(`backend.localhost`)"
-      - "traefik.http.routers.backend.entrypoints=web"
+      - "traefik.http.routers.backend.rule=Host(`${DOMAIN:-localhost}`) || Host(`backend.${DOMAIN:-localhost}`)"
+      - "traefik.http.routers.backend.entrypoints=websecure"
+      - "traefik.http.routers.backend.tls=true"
+      - "traefik.http.routers.backend.tls.certresolver=letsencrypt"
       - "traefik.http.services.backend.loadbalancer.server.port=8000"
+      # HTTP to HTTPS redirect
+      - "traefik.http.routers.backend-http.rule=Host(`${DOMAIN:-localhost}`) || Host(`backend.${DOMAIN:-localhost}`)"
+      - "traefik.http.routers.backend-http.entrypoints=web"
+      - "traefik.http.routers.backend-http.middlewares=redirect-to-https"
+      - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
     env_file:
       - .env
+    secrets:
+      - django_secret_key
+      - postgres_password
+      - waha_api_key
     depends_on:
-      - waha
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
     networks:
       - web
 
   waha:
     image: devlikeapro/waha
+    restart: unless-stopped
     environment:
       - WHATSAPP_DEFAULT_ENGINE=WEBJS
       - WHATSAPP_HOOK_URL=http://backend:8000/webhook/
       - WHATSAPP_HOOK_EVENTS=message.any
-      - WAHA_API_KEY=${WAHA_API_KEY}
-      # Credenciais do Dashboard WAHA fixadas
-      - WAHA_DASHBOARD_USERNAME=${WAHA_DASHBOARD_USERNAME}
-      - WAHA_DASHBOARD_PASSWORD=${WAHA_DASHBOARD_PASSWORD}
-      - WHATSAPP_SWAGGER_USERNAME=${WHATSAPP_SWAGGER_USERNAME}
-      - WHATSAPP_SWAGGER_PASSWORD=${WHATSAPP_SWAGGER_PASSWORD}
+      - WAHA_API_KEY_FILE=/run/secrets/waha_api_key
+      - WAHA_DASHBOARD_USERNAME=${WAHA_DASHBOARD_USERNAME:-admin}
+      - WAHA_DASHBOARD_PASSWORD_FILE=/run/secrets/waha_dashboard_password
+      - WHATSAPP_SWAGGER_USERNAME=${WHATSAPP_SWAGGER_USERNAME:-swagger}
+      - WHATSAPP_SWAGGER_PASSWORD_FILE=/run/secrets/waha_swagger_password
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.waha.rule=Host(`waha.localhost`)"
-      - "traefik.http.routers.waha.entrypoints=web"
+      - "traefik.http.routers.waha.rule=Host(`waha.${DOMAIN:-localhost}`)"
+      - "traefik.http.routers.waha.entrypoints=websecure"
+      - "traefik.http.routers.waha.tls=true"
+      - "traefik.http.routers.waha.tls.certresolver=letsencrypt"
       - "traefik.http.services.waha.loadbalancer.server.port=3000"
-    env_file:
-      - .env
+      # HTTP to HTTPS redirect
+      - "traefik.http.routers.waha-http.rule=Host(`waha.${DOMAIN:-localhost}`)"
+      - "traefik.http.routers.waha-http.entrypoints=web"
+      - "traefik.http.routers.waha-http.middlewares=redirect-to-https"
+    secrets:
+      - waha_api_key
+      - waha_dashboard_password
+      - waha_swagger_password
     volumes:
-      - ./waha-sessions:/app/.sessions
+      - waha_sessions:/app/.sessions
     networks:
       - web
 
+secrets:
+  django_secret_key:
+    file: ./secrets/django_secret_key.txt
+  postgres_password:
+    file: ./secrets/postgres_password.txt
+  waha_api_key:
+    file: ./secrets/waha_api_key.txt
+  waha_dashboard_password:
+    file: ./secrets/waha_dashboard_password.txt
+  waha_swagger_password:
+    file: ./secrets/waha_swagger_password.txt
 
-  # db:
-  #   image: postgres:13-alpine
-  #   volumes:
-  #     - postgres_data:/var/lib/postgresql/data/
-  #   environment:
-  #     - POSTGRES_USER=hello_django
-  #     - POSTGRES_PASSWORD=hello_django
-  #     - POSTGRES_DB=hello_django_dev
-
-# volumes:
-#   postgres_data:
+volumes:
+  postgres_data:
+  redis_data:
+  waha_sessions:
+  traefik_certs:
 
 networks:
   web:

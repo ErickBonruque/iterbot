@@ -1,6 +1,7 @@
 from django.db import models
 from apps.core.models import TimeStampedModel
 from apps.courses.models import Course, SearchTerm
+from infra.security.fields import EncryptedCharField
 
 class UserProfile(TimeStampedModel):
     """
@@ -9,7 +10,7 @@ class UserProfile(TimeStampedModel):
     """
     phone_number = models.CharField(max_length=50, unique=True, help_text="ID do usuário no WhatsApp (ex: 554199999999@c.us)")
     ra = models.CharField(max_length=20, blank=True, null=True, help_text="Registro Acadêmico")
-    utfpr_password = models.CharField(max_length=255, blank=True, null=True, help_text="Senha do Portal (Cuidado: Armazenamento sensível)")
+    utfpr_password = EncryptedCharField(max_length=512, blank=True, null=True, help_text="Senha do Portal (criptografada)")
     is_authenticated_utfpr = models.BooleanField(default=False)
     last_activity = models.DateTimeField(auto_now=True)
     current_action = models.CharField(
