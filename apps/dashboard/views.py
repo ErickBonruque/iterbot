@@ -1,11 +1,12 @@
-from django.shortcuts import render, redirect, get_object_or_404
-from django.http import JsonResponse
-from django.utils import timezone
-from django.db.models import Q
 from datetime import timedelta
-from apps.courses.models import Course, SearchTerm
-from apps.bot.models import InteractionLog, BotHealthCheck, BotConfiguration
+
+from django.db.models import Q
+from django.shortcuts import get_object_or_404, render
+from django.utils import timezone
+
 from apps.bot.health import BotHealthMonitor
+from apps.bot.models import BotConfiguration, BotHealthCheck, InteractionLog
+from apps.courses.models import Course
 
 
 def dashboard_home(request):
@@ -15,24 +16,28 @@ def dashboard_home(request):
     # Estatísticas gerais
     total_courses = Course.objects.filter(is_active=True).count()
     total_interactions = InteractionLog.objects.count()
-    total_users = InteractionLog.objects.values('user').distinct().count()
-    
+    total_users = InteractionLog.objects.values("user_id").distinct().count()
+
     # Últimas interações
-    recent_logs = InteractionLog.objects.select_related('user').order_by('-created_at')[:10]
-    
+    recent_logs = (
+        InteractionLog.objects.select_related("user")
+        .only("user__phone_number", "message_content", "message_type", "created_at")
+        .order_by("-created_at")[:10]
+    )
+
     # Status do bot
     monitor = BotHealthMonitor()
     bot_metrics = monitor.get_metrics_summary(hours=24)
-    
+
     context = {
-        'total_courses': total_courses,
-        'total_interactions': total_interactions,
-        'total_users': total_users,
-        'recent_logs': recent_logs,
-        'bot_metrics': bot_metrics,
+        "total_courses": total_courses,
+        "total_interactions": total_interactions,
+        "total_users": total_users,
+        "recent_logs": recent_logs,
+        "bot_metrics": bot_metrics,
     }
-    
-    return render(request, 'dashboard/home_modern.html', context)
+
+    return render(request, "dashboard/home_modern.html", context)
 
 
 def bot_status(request):
@@ -40,35 +45,36 @@ def bot_status(request):
     Página de monitoramento detalhado do bot.
     """
     monitor = BotHealthMonitor()
-    
+
     # Status atual
     current_status = monitor.check_bot_status()
-    
+
     # Métricas de diferentes períodos
     metrics_1h = monitor.get_metrics_summary(hours=1)
     metrics_24h = monitor.get_metrics_summary(hours=24)
-    metrics_7d = monitor.get_metrics_summary(hours=24*7)
-    
+    metrics_7d = monitor.get_metrics_summary(hours=24 * 7)
+
     # Últimas verificações
-    recent_checks = BotHealthCheck.objects.order_by('-created_at')[:20]
-    
+    recent_checks = BotHealthCheck.objects.only(
+        "status", "response_time", "session_status", "error_message", "created_at"
+    ).order_by("-created_at")[:20]
+
     context = {
-        'current_status': current_status,
-        'metrics_1h': metrics_1h,
-        'metrics_24h': metrics_24h,
-        'metrics_7d': metrics_7d,
-        'recent_checks': recent_checks,
+        "current_status": current_status,
+        "metrics_1h": metrics_1h,
+        "metrics_24h": metrics_24h,
+        "metrics_7d": metrics_7d,
+        "recent_checks": recent_checks,
     }
-    
-    return render(request, 'dashboard/bot_status.html', context)
+
+    return render(request, "dashboard/bot_status.html", context)
 
 
 def bot_configuration(request):
     """Página para gerenciar credenciais WAHA e login do dashboard."""
 
     active_config = (
-        BotConfiguration.objects.order_by("-created_at").first()
-        or BotConfiguration.defaults()
+        BotConfiguration.objects.order_by("-created_at").first() or BotConfiguration.defaults()
     )
 
     context = {
@@ -82,28 +88,28 @@ def courses_list(request):
     """
     Lista e gerenciamento de cursos.
     """
-    courses = Course.objects.prefetch_related('search_terms').all()
-    
+    courses = Course.objects.prefetch_related("search_terms").all()
+
     context = {
-        'courses': courses,
+        "courses": courses,
     }
-    
-    return render(request, 'dashboard/courses_modern.html', context)
+
+    return render(request, "dashboard/courses_modern.html", context)
 
 
 def course_detail(request, course_id):
     """
     Detalhes e gerenciamento de um curso específico.
     """
-    course = get_object_or_404(Course, id=course_id)
+    course = get_object_or_404(Course.objects.prefetch_related("search_terms"), id=course_id)
     search_terms = course.search_terms.all()
-    
+
     context = {
-        'course': course,
-        'search_terms': search_terms,
+        "course": course,
+        "search_terms": search_terms,
     }
-    
-    return render(request, 'dashboard/course_detail.html', context)
+
+    return render(request, "dashboard/course_detail.html", context)
 
 
 def interactions_log(request):
@@ -111,44 +117,44 @@ def interactions_log(request):
     Histórico de interações com filtros.
     """
     # Filtros
-    days = int(request.GET.get('days', 7))
-    message_type = request.GET.get('type', '')
-    search = request.GET.get('search', '')
-    
+    days = int(request.GET.get("days", 7))
+    message_type = request.GET.get("type", "")
+    search = request.GET.get("search", "")
+
     # Query base
-    queryset = InteractionLog.objects.select_related('user').order_by('-created_at')
-    
+    queryset = InteractionLog.objects.select_related("user").order_by("-created_at")
+
     # Aplicar filtros
     if days:
         since = timezone.now() - timedelta(days=days)
         queryset = queryset.filter(created_at__gte=since)
-    
+
     if message_type:
         queryset = queryset.filter(message_type=message_type)
-    
+
     if search:
         queryset = queryset.filter(
-            Q(message_content__icontains=search) |
-            Q(user__phone_number__icontains=search) |
-            Q(user__ra__icontains=search)
+            Q(message_content__icontains=search)
+            | Q(user__phone_number__icontains=search)
+            | Q(user__ra__icontains=search)
         )
-    
+
     # Paginação manual (ou use Django Paginator)
     logs = queryset[:100]
-    
+
     # Estatísticas
     stats = {
-        'total': queryset.count(),
-        'received': queryset.filter(message_type='RECEIVED').count(),
-        'sent': queryset.filter(message_type='SENT').count(),
+        "total": queryset.count(),
+        "received": queryset.filter(message_type="RECEIVED").count(),
+        "sent": queryset.filter(message_type="SENT").count(),
     }
-    
+
     context = {
-        'logs': logs,
-        'stats': stats,
-        'days': days,
-        'message_type': message_type,
-        'search': search,
+        "logs": logs,
+        "stats": stats,
+        "days": days,
+        "message_type": message_type,
+        "search": search,
     }
-    
-    return render(request, 'dashboard/interactions_modern.html', context)
+
+    return render(request, "dashboard/interactions_modern.html", context)
