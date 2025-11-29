@@ -2,34 +2,35 @@ services:
   traefik:
     image: traefik:v2.10
     command:
-      - "--api.insecure=true"
-      - "--providers.docker=true"
-      - "--providers.docker.exposedbydefault=false"
-      - "--entrypoints.web.address=:80"
+      - "--configFile=/etc/traefik/traefik.yml"
     ports:
       - "80:80"
       - "8080:8080"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./infra/traefik/traefik.yml:/etc/traefik/traefik.yml:ro
     depends_on:
       - backend
       - waha
+    networks:
+      - web
 
   backend:
     build:
       context: .
       dockerfile: docker/django/Dockerfile
     command: /start.sh
-    volumes:
-      - .:/app
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.backend.rule=Host(`localhost`)"
+      - "traefik.http.routers.backend.rule=Host(`localhost`) || Host(`backend.localhost`)"
+      - "traefik.http.routers.backend.entrypoints=web"
       - "traefik.http.services.backend.loadbalancer.server.port=8000"
     env_file:
       - .env
     depends_on:
       - waha
+    networks:
+      - web
 
   waha:
     image: devlikeapro/waha
@@ -46,11 +47,14 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.waha.rule=Host(`waha.localhost`)"
+      - "traefik.http.routers.waha.entrypoints=web"
       - "traefik.http.services.waha.loadbalancer.server.port=3000"
     env_file:
       - .env
     volumes:
       - ./waha-sessions:/app/.sessions
+    networks:
+      - web
 
 
   # db:
@@ -64,3 +68,7 @@ services:
 
 # volumes:
 #   postgres_data:
+
+networks:
+  web:
+    driver: bridge
