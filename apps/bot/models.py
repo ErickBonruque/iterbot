@@ -3,6 +3,7 @@ from django.db.models import Avg
 from apps.core.models import TimeStampedModel
 from apps.users.models import UserProfile
 from config.env import WahaSettings, settings
+from infra.security.fields import EncryptedCharField
 
 
 class BotHealthCheck(TimeStampedModel):
@@ -86,12 +87,12 @@ class BotConfiguration(TimeStampedModel):
     """Configurações persistentes do bot controladas pelo dashboard."""
 
     waha_url = models.URLField(blank=True)
-    waha_api_key = models.CharField(max_length=255, blank=True)
+    waha_api_key = EncryptedCharField(max_length=512, blank=True)
     waha_session = models.CharField(max_length=100, blank=True)
     dashboard_username = models.CharField(max_length=150, blank=True)
-    dashboard_password = models.CharField(max_length=150, blank=True)
+    dashboard_password = EncryptedCharField(max_length=512, blank=True)
     admin_username = models.CharField(max_length=150, blank=True)
-    admin_password = models.CharField(max_length=150, blank=True)
+    admin_password = EncryptedCharField(max_length=512, blank=True)
 
     class Meta:
         verbose_name = "Configuração do Bot"

@@ -1,3 +1,47 @@
+[tool.poetry]
+name = "capyvagas-utfpr"
+version = "0.1.0"
+description = "Assistente de WhatsApp para estudantes da UTFPR"
+authors = ["CapyVagas Team"]
+readme = "README.md"
+packages = [{include = "apps"}, {include = "config"}, {include = "infra"}, {include = "waha_bot"}]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+django = "^5.0.0"
+djangorestframework = "^3.14.0"
+django-filter = "^23.0"
+requests = "^2.31.0"
+python-jobspy = "^1.1.0"
+pandas = "^2.1.0"
+gunicorn = "^21.2.0"
+whitenoise = "^6.7.0"
+psycopg2-binary = "^2.9.9"
+django-environ = "^0.11.2"
+celery = "^5.3.4"
+redis = "^5.0.1"
+structlog = "^24.1.0"
+pydantic = "^2.5.0"
+cryptography = "^41.0.7"
+python-statemachine = "^2.1.2"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^7.4.3"
+pytest-django = "^4.7.0"
+pytest-mock = "^3.12.0"
+black = "^23.12.0"
+ruff = "^0.1.8"
+mypy = "^1.7.1"
+factory-boy = "^3.3.0"
+faker = "^20.1.0"
+responses = "^0.24.1"
+django-stubs = "^4.2.7"
+types-requests = "^2.31.0"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
 [tool.black]
 line-length = 100
 target-version = ["py311"]
@@ -19,3 +63,19 @@ line-ending = "lf"
 [tool.ruff.lint.isort]
 combine-as-imports = true
 known-first-party = ["apps", "infra", "config"]
+
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+plugins = ["mypy_django_plugin.main"]
+
+[tool.django-stubs]
+django_settings_module = "waha_bot.settings"
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "waha_bot.settings"
+python_files = ["test_*.py", "*_test.py"]
+addopts = "-v --tb=short --strict-markers"
+testpaths = ["apps"]

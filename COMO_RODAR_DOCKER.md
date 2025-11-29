@@ -1,64 +1,120 @@
-# 🐳 Como Rodar o Projeto com Docker
+# 🐳 Como Rodar o CapyVagas com Docker
+
+Guia completo para executar o projeto CapyVagas-UTFPR usando Docker e Docker Compose.
 
 ## 📋 Pré-requisitos
 
-- Docker instalado e rodando
-- Docker Compose instalado
+- **Docker** instalado e rodando (versão 20.10+)
+- **Docker Compose** instalado (versão 2.0+)
 - Terminal aberto na pasta do projeto
+- **Git** para clonar o repositório
+
+### Verificar Instalação
+
+```bash
+docker --version
+docker-compose --version
+```
 
 ---
 
-## 🚀 Como Subir o Projeto pela Primeira Vez
+## 🚀 Primeira Execução (Setup Inicial)
 
-### 1. Parar todos os containers (se houver algo rodando)
+### 1. Clone o Repositório
 
 ```bash
-docker-compose down
+git clone https://github.com/ErickBonruque/CapyVagas-UTFPR.git
+cd CapyVagas-UTFPR
 ```
 
-### 2. Fazer o build das imagens
+### 2. Configure as Variáveis de Ambiente
+
+```bash
+# Copie o arquivo de exemplo
+cp .env.example .env
+
+# Edite o arquivo .env com suas configurações
+nano .env  # ou use seu editor preferido
+```
+
+**Principais variáveis a configurar:**
+
+```ini
+# Para produção, altere:
+DEBUG=False
+DOMAIN=seu-dominio.com.br
+ALLOWED_HOSTS=localhost,127.0.0.1,seu-dominio.com.br
+
+# Para desenvolvimento local, mantenha:
+DEBUG=True
+DOMAIN=localhost
+```
+
+### 3. Configure os Secrets
+
+Os secrets são credenciais sensíveis que não devem estar no código.
+
+```bash
+cd secrets
+
+# Copie os arquivos de exemplo
+cp django_secret_key.txt.example django_secret_key.txt
+cp postgres_password.txt.example postgres_password.txt
+cp waha_api_key.txt.example waha_api_key.txt
+cp waha_dashboard_password.txt.example waha_dashboard_password.txt
+cp waha_swagger_password.txt.example waha_swagger_password.txt
+```
+
+**Gere valores seguros automaticamente:**
+
+```bash
+# Django Secret Key
+python3 -c 'from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())' > django_secret_key.txt
+
+# Senhas aleatórias seguras
+openssl rand -base64 32 > postgres_password.txt
+openssl rand -base64 32 > waha_api_key.txt
+openssl rand -base64 32 > waha_dashboard_password.txt
+openssl rand -base64 32 > waha_swagger_password.txt
+
+cd ..
+```
+
+**⚠️ IMPORTANTE:** Nunca commite os arquivos `.txt` em `secrets/`!
+
+### 4. Build das Imagens
 
 ```bash
 docker-compose build
 ```
 
-**ou usar o Makefile:**
+**Ou usando o Makefile:**
 
 ```bash
 make build
 ```
 
-### 3. Subir os containers
+Este processo pode levar alguns minutos na primeira vez.
+
+### 5. Inicie os Serviços
 
 ```bash
+# Modo foreground (ver logs)
 docker-compose up
-```
 
-**Para rodar em background (modo daemon):**
-
-```bash
+# Modo background (daemon)
 docker-compose up -d
 ```
 
-**ou usar o Makefile:**
+**Ou usando o Makefile:**
 
 ```bash
 make up
 ```
 
-### 4. Aplicar migrações do banco de dados
+### 6. Aguarde os Health Checks
 
-```bash
-docker-compose exec backend python manage.py migrate
-```
-
-**ou usar o Makefile:**
-
-```bash
-make migrate
-```
-
-### 5. Verificar se está rodando
+Os serviços têm health checks configurados. Aguarde até que todos estejam saudáveis:
 
 ```bash
 docker-compose ps
@@ -67,323 +123,440 @@ docker-compose ps
 Você deve ver algo assim:
 
 ```
-NAME                      IMAGE                   STATUS
-waha_capyvaga-backend-1   waha_capyvaga-backend   Up
-waha_capyvaga-waha-1      devlikeapro/waha        Up
+NAME                          STATUS
+capyvagas-utfpr-backend-1     Up (healthy)
+capyvagas-utfpr-db-1          Up (healthy)
+capyvagas-utfpr-redis-1       Up (healthy)
+capyvagas-utfpr-waha-1        Up
+capyvagas-utfpr-traefik-1     Up
 ```
+
+### 7. Execute as Migrações do Banco de Dados
+
+```bash
+docker-compose exec backend python manage.py migrate
+```
+
+**Ou usando o Makefile:**
+
+```bash
+make migrate
+```
+
+### 8. Crie um Superusuário
+
+```bash
+docker-compose exec backend python manage.py createsuperuser
+```
+
+Siga as instruções para criar seu usuário administrador.
+
+### 9. Colete Arquivos Estáticos (Produção)
+
+```bash
+docker-compose exec backend python manage.py collectstatic --noinput
+```
+
+### 10. Verifique o Health Check
+
+```bash
+curl http://localhost/health/
+```
+
+Resposta esperada:
+
+```json
+{
+  "status": "healthy",
+  "components": {
+    "database": "healthy",
+    "cache": "healthy"
+  }
+}
+```
+
+### 11. Acesse a Aplicação
+
+- **Dashboard**: http://localhost/dashboard/
+- **Django Admin**: http://localhost/admin/
+- **WAHA Dashboard**: http://waha.localhost/
+- **Traefik Dashboard**: http://localhost:8080/
+- **Health Check**: http://localhost/health/
 
 ---
 
-## 🔄 Como Aplicar Alterações no Docker
+## 🔄 Atualizações e Alterações
 
-### Cenário 1: Alterou arquivos Python (.py)
+### Cenário 1: Alterou Código Python (.py)
 
 **Não precisa rebuildar!** O código é montado via volume.
 
-Basta reiniciar o serviço:
-
 ```bash
+# Reinicie apenas o backend
 docker-compose restart backend
+
+# Ou reinicie todos os serviços
+docker-compose restart
 ```
 
-**ou parar e subir novamente:**
-
-```bash
-docker-compose down
-docker-compose up -d
-```
-
----
-
-### Cenário 2: Alterou requirements.txt (novas dependências)
+### Cenário 2: Alterou pyproject.toml ou poetry.lock (Dependências)
 
 **Precisa rebuildar a imagem:**
 
 ```bash
-# 1. Parar os containers
+# Pare os serviços
 docker-compose down
 
-# 2. Rebuildar a imagem do backend
+# Rebuild apenas o backend
 docker-compose build backend
 
-# 3. Subir novamente
+# Ou rebuild tudo
+docker-compose build
+
+# Suba novamente
 docker-compose up -d
 ```
 
-**ou usar o Makefile:**
+### Cenário 3: Alterou docker-compose.yml ou Dockerfile
+
+**Precisa rebuildar:**
 
 ```bash
-make build
-make up
+docker-compose down
+docker-compose build
+docker-compose up -d
 ```
 
----
-
-### Cenário 3: Alterou models.py (banco de dados)
+### Cenário 4: Alterou Modelos Django (models.py)
 
 **Precisa criar e aplicar migrações:**
 
 ```bash
-# 1. Criar as migrações
+# Crie as migrações
 docker-compose exec backend python manage.py makemigrations
 
-# 2. Aplicar as migrações
+# Aplique as migrações
 docker-compose exec backend python manage.py migrate
 ```
 
-**ou usar o Makefile:**
+### Cenário 5: Alterou Configuração do Traefik
 
 ```bash
-make makemigrations
-make migrate
+# Reinicie apenas o Traefik
+docker-compose restart traefik
 ```
 
 ---
 
-### Cenário 4: Alterou docker-compose.yml ou Dockerfile
+## 🛠️ Comandos Úteis
 
-**Precisa rebuildar tudo:**
+### Ver Logs
 
 ```bash
-# 1. Parar e remover containers
-docker-compose down
+# Todos os serviços
+docker-compose logs -f
 
-# 2. Rebuildar tudo
-docker-compose build
+# Apenas backend
+docker-compose logs -f backend
 
-# 3. Subir novamente
-docker-compose up -d
+# Apenas últimas 100 linhas
+docker-compose logs --tail=100 backend
+
+# Apenas erros
+docker-compose logs backend | grep ERROR
 ```
 
----
-
-## 📦 Comandos Úteis do Makefile
-
-O projeto já tem um Makefile com atalhos:
+### Executar Comandos no Container
 
 ```bash
-make build          # Constrói as imagens Docker
-make up             # Sobe os containers (foreground)
-make down           # Para e remove os containers
-make migrate        # Aplica migrações do Django
-make makemigrations # Cria novas migrações
-make shell          # Abre shell do Django
+# Shell interativo
+docker-compose exec backend bash
+
+# Executar manage.py
+docker-compose exec backend python manage.py <comando>
+
+# Shell do Django
+docker-compose exec backend python manage.py shell
+
+# Executar testes
+docker-compose exec backend pytest
 ```
 
----
-
-## 🛠️ Workflow Completo (Start do Zero)
-
-Execute os comandos na ordem:
+### Verificar Status dos Serviços
 
 ```bash
-# 1. Parar tudo (se houver algo rodando)
-docker-compose down
-
-# 2. Construir as imagens
-make build
-
-# 3. Subir os containers em background
-docker-compose up -d
-
-# 4. Aplicar migrações do banco
-make migrate
-
-# 5. Verificar se está rodando
+# Status resumido
 docker-compose ps
 
-# 6. Ver logs (opcional)
-docker-compose logs -f backend
+# Status detalhado
+docker-compose ps -a
+
+# Ver uso de recursos
+docker stats
 ```
 
----
-
-## 📊 Verificar se Está Funcionando
-
-### 1. Verificar containers rodando
+### Limpar Volumes e Dados
 
 ```bash
-docker-compose ps
-```
-
-### 2. Ver logs do backend
-
-```bash
-docker-compose logs -f backend
-```
-
-### 3. Ver logs do WAHA
-
-```bash
-docker-compose logs -f waha
-```
-
-### 4. Acessar no navegador
-
-- **Dashboard:** http://localhost:8000/dashboard/
-- **API:** http://localhost:8000/api/
-- **Admin:** http://localhost:8000/admin/
-- **WAHA Swagger:** http://localhost:3000/
-
----
-
-## 🐛 Resolução de Problemas
-
-### Problema: "Port already in use" (porta já em uso)
-
-```bash
-# Parar tudo
-docker-compose down
-
-# Verificar o que está usando a porta
-sudo lsof -i :8000
-sudo lsof -i :3000
-
-# Matar o processo (se necessário)
-sudo kill -9 <PID>
-
-# Subir novamente
-docker-compose up -d
-```
-
----
-
-### Problema: "Permission denied" ao fazer build
-
-```bash
-# Limpar tudo e reconstruir
+# ⚠️ CUIDADO: Remove TODOS os dados!
 docker-compose down -v
-docker system prune -a
-make build
-docker-compose up -d
+
+# Remover apenas volumes órfãos
+docker volume prune
+
+# Remover imagens não usadas
+docker image prune -a
 ```
 
----
-
-### Problema: Backend não está respondendo
+### Backup do Banco de Dados
 
 ```bash
-# Ver logs
-docker-compose logs backend
+# Criar backup
+docker-compose exec db pg_dump -U capyvagas_user capyvagas > backup.sql
 
-# Reiniciar o serviço
-docker-compose restart backend
-
-# Se persistir, rebuildar
-make build
-docker-compose up -d
+# Restaurar backup
+docker-compose exec -T db psql -U capyvagas_user capyvagas < backup.sql
 ```
 
 ---
 
-### Problema: Sessão do WAHA foi perdida
+## 🐛 Troubleshooting
 
-**A sessão está persistida em `./waha-sessions/`**
-
-Se você deletou essa pasta por acidente:
-1. Será necessário escanear o QR Code novamente
-2. Acesse http://localhost:3000/ e siga as instruções
-
-**Para preservar a sessão:**
-- ✅ **Nunca delete** a pasta `waha-sessions/`
-- ✅ Ela está no `.dockerignore` para não ser copiada no build
-- ✅ Está mapeada como volume no `docker-compose.yml`
-
----
-
-## 🔄 Workflow de Desenvolvimento Diário
-
-### Ao começar a trabalhar:
+### Problema: "Port already in use"
 
 ```bash
-# Subir os containers
-docker-compose up -d
+# Descubra qual processo está usando a porta
+sudo lsof -i :80
+sudo lsof -i :443
 
-# Ver logs (opcional)
-docker-compose logs -f backend
+# Pare o processo ou mude a porta no docker-compose.yml
 ```
 
-### Durante o desenvolvimento:
-
-- **Alterou código Python?** → Arquivo é montado via volume, mudanças são automáticas
-- **Adicionou dependência?** → `make build` + `docker-compose up -d`
-- **Alterou model?** → `make makemigrations` + `make migrate`
-
-### Ao terminar:
+### Problema: "Cannot connect to database"
 
 ```bash
-# Parar os containers (mas manter volumes)
-docker-compose stop
+# Verifique se o PostgreSQL está healthy
+docker-compose ps db
 
-# OU parar e remover (mas preserva volumes)
-docker-compose down
+# Veja os logs do banco
+docker-compose logs db
+
+# Reinicie o banco
+docker-compose restart db
 ```
 
----
-
-## 📝 Resumo dos Comandos Principais
-
-| Ação | Comando |
-|------|---------|
-| **Subir pela primeira vez** | `make build && docker-compose up -d && make migrate` |
-| **Subir no dia a dia** | `docker-compose up -d` |
-| **Ver logs** | `docker-compose logs -f backend` |
-| **Parar tudo** | `docker-compose down` |
-| **Reiniciar** | `docker-compose restart backend` |
-| **Rebuildar** | `make build && docker-compose up -d` |
-| **Aplicar migrações** | `make migrate` |
-| **Criar migrações** | `make makemigrations` |
-| **Shell Django** | `make shell` |
-
----
-
-## 🎯 Comandos para Rodar Agora
-
-**Cole isso no terminal:**
+### Problema: "Permission denied" em secrets/
 
 ```bash
-# Parar tudo
-docker-compose down
-
-# Rebuildar (inclui as novas dependências: DRF, django-filter)
-docker-compose build
-
-# Subir em background
-docker-compose up -d
-
-# Aplicar migrações (se ainda não aplicou)
-docker-compose exec backend python manage.py migrate
-
-# Verificar status
-docker-compose ps
-
-# Ver logs
-docker-compose logs -f backend
+# Ajuste as permissões
+chmod 600 secrets/*.txt
 ```
 
-**Depois de rodar, acesse:**
-- http://localhost:8000/dashboard/
+### Problema: Migrations não aplicadas
+
+```bash
+# Force a criação de migrações
+docker-compose exec backend python manage.py makemigrations --empty <app_name>
+
+# Aplique novamente
+docker-compose exec backend python manage.py migrate --fake-initial
+```
+
+### Problema: Redis não conecta
+
+```bash
+# Verifique o status
+docker-compose ps redis
+
+# Teste a conexão
+docker-compose exec redis redis-cli ping
+# Deve retornar: PONG
+
+# Veja os logs
+docker-compose logs redis
+```
+
+### Problema: WAHA não responde
+
+```bash
+# Verifique os logs
+docker-compose logs waha
+
+# Reinicie o serviço
+docker-compose restart waha
+
+# Verifique se o volume de sessões está correto
+docker volume ls | grep waha
+```
 
 ---
 
-## ✅ Checklist de Funcionamento
+## 🔒 Produção
 
-Após rodar os comandos, verifique:
+### Checklist para Deploy em Produção
 
-- [ ] Containers estão rodando: `docker-compose ps`
-- [ ] Backend está acessível: http://localhost:8000/
-- [ ] Dashboard carrega: http://localhost:8000/dashboard/
-- [ ] API funciona: http://localhost:8000/api/
-- [ ] WAHA está online: http://localhost:3000/
+- [ ] Configurar `DEBUG=False` no `.env`
+- [ ] Configurar `DOMAIN` com seu domínio real
+- [ ] Gerar secrets seguros (não usar os de exemplo)
+- [ ] Configurar certificado SSL (Let's Encrypt via Traefik)
+- [ ] Configurar backup automático do banco de dados
+- [ ] Configurar monitoramento (logs, métricas)
+- [ ] Revisar `ALLOWED_HOSTS` no `.env`
+- [ ] Configurar firewall (portas 80, 443, 8080)
+- [ ] Testar health checks
+- [ ] Configurar restart policies (já configurado)
+
+### HTTPS com Let's Encrypt
+
+O Traefik está configurado para obter certificados automaticamente.
+
+**Edite `infra/traefik/traefik.yml`:**
+
+```yaml
+certificatesResolvers:
+  letsencrypt:
+    acme:
+      email: seu-email@exemplo.com  # ALTERE AQUI
+      storage: /letsencrypt/acme.json
+      httpChallenge:
+        entryPoint: web
+```
+
+**Certifique-se de que:**
+1. Seu domínio aponta para o servidor (DNS configurado)
+2. Portas 80 e 443 estão abertas
+3. `DOMAIN` no `.env` está correto
+
+### Backup Automático
+
+Crie um script de backup:
+
+```bash
+#!/bin/bash
+# backup.sh
+
+BACKUP_DIR="/backups"
+DATE=$(date +%Y%m%d_%H%M%S)
+
+# Backup do banco
+docker-compose exec -T db pg_dump -U capyvagas_user capyvagas > "$BACKUP_DIR/db_$DATE.sql"
+
+# Backup dos volumes
+docker run --rm -v capyvagas-utfpr_postgres_data:/data -v $BACKUP_DIR:/backup alpine tar czf /backup/postgres_data_$DATE.tar.gz /data
+
+# Manter apenas últimos 7 dias
+find $BACKUP_DIR -name "*.sql" -mtime +7 -delete
+find $BACKUP_DIR -name "*.tar.gz" -mtime +7 -delete
+```
+
+Configure no cron:
+
+```bash
+# Backup diário às 2h da manhã
+0 2 * * * /path/to/backup.sh
+```
 
 ---
 
-## 📚 Referências
+## 📊 Monitoramento
 
-- **Docker Compose:** https://docs.docker.com/compose/
-- **Django com Docker:** https://docs.djangoproject.com/en/5.2/howto/deployment/
-- **WAHA Docs:** https://waha.devlike.pro/
+### Ver Métricas de Recursos
+
+```bash
+# CPU, memória, rede
+docker stats
+
+# Apenas backend
+docker stats capyvagas-utfpr-backend-1
+```
+
+### Logs Estruturados
+
+Os logs são em formato JSON para fácil parsing:
+
+```bash
+# Ver logs estruturados
+docker-compose logs backend | jq .
+
+# Filtrar por nível
+docker-compose logs backend | jq 'select(.level=="error")'
+
+# Filtrar por correlation_id
+docker-compose logs backend | jq 'select(.correlation_id=="abc-123")'
+```
 
 ---
 
-🎉 **Pronto! Seu ambiente Docker está configurado e rodando!**
+## 🧪 Testes
+
+### Executar Testes
+
+```bash
+# Todos os testes
+docker-compose exec backend pytest
+
+# Com cobertura
+docker-compose exec backend pytest --cov
+
+# Apenas um app
+docker-compose exec backend pytest apps/bot/
+
+# Verbose
+docker-compose exec backend pytest -v
+```
+
+### Verificação de Código
+
+```bash
+# Formatação
+docker-compose exec backend black .
+
+# Linting
+docker-compose exec backend ruff check .
+
+# Type checking
+docker-compose exec backend mypy .
+```
+
+---
+
+## 🔧 Makefile (Opcional)
+
+Se você tem um `Makefile`, pode usar comandos simplificados:
+
+```bash
+make build      # Build das imagens
+make up         # Subir serviços
+make down       # Parar serviços
+make logs       # Ver logs
+make migrate    # Aplicar migrações
+make test       # Executar testes
+make shell      # Shell do Django
+make lint       # Verificar código
+```
+
+---
+
+## 📚 Recursos Adicionais
+
+- [Documentação Docker](https://docs.docker.com/)
+- [Documentação Docker Compose](https://docs.docker.com/compose/)
+- [Documentação Django](https://docs.djangoproject.com/)
+- [Documentação Traefik](https://doc.traefik.io/traefik/)
+- [REFACTORING.md](REFACTORING.md) - Detalhes da refatoração
+
+---
+
+## 🆘 Suporte
+
+Se encontrar problemas:
+
+1. Verifique os logs: `docker-compose logs`
+2. Verifique o health check: `curl http://localhost/health/`
+3. Consulte a seção de Troubleshooting acima
+4. Abra uma issue no GitHub
+
+---
+
+**Versão:** 2.0.0 (Refatorado para Produção)  
+**Data:** 2024-11-29
