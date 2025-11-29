@@ -85,13 +85,13 @@ class InteractionLog(TimeStampedModel):
 class BotConfiguration(TimeStampedModel):
     """Configurações persistentes do bot controladas pelo dashboard."""
 
-    waha_url = models.URLField(default="http://localhost:3000")
-    waha_api_key = models.CharField(max_length=255, default="dev-api-key")
-    waha_session = models.CharField(max_length=100, default="dev-session")
-    dashboard_username = models.CharField(max_length=150, default="admin")
-    dashboard_password = models.CharField(max_length=150, default="password")
-    admin_username = models.CharField(max_length=150, default="admin")
-    admin_password = models.CharField(max_length=150, default="admin")
+    waha_url = models.URLField(blank=True)
+    waha_api_key = models.CharField(max_length=255, blank=True)
+    waha_session = models.CharField(max_length=100, blank=True)
+    dashboard_username = models.CharField(max_length=150, blank=True)
+    dashboard_password = models.CharField(max_length=150, blank=True)
+    admin_username = models.CharField(max_length=150, blank=True)
+    admin_password = models.CharField(max_length=150, blank=True)
 
     class Meta:
         verbose_name = "Configuração do Bot"
@@ -126,3 +126,34 @@ class BotConfiguration(TimeStampedModel):
             admin_username=settings.admin_credentials.username,
             admin_password=settings.admin_credentials.password,
         )
+
+
+class BotMessage(TimeStampedModel):
+    """
+    Mensagens configuráveis do bot.
+    """
+    KEY_CHOICES = (
+        ('welcome', 'Boas-vindas / Menu'),
+        ('login_prompt', 'Solicitar Login'),
+        ('login_success', 'Login com Sucesso'),
+        ('login_error', 'Erro no Login'),
+        ('logout_success', 'Logout com Sucesso'),
+        ('course_selection', 'Seleção de Curso'),
+        ('term_selection', 'Seleção de Termo'),
+        ('no_results', 'Sem Resultados'),
+        ('unknown_command', 'Comando Desconhecido'),
+        ('error_generic', 'Erro Genérico'),
+    )
+
+    key = models.CharField(max_length=50, choices=KEY_CHOICES, unique=True, help_text="Chave identificadora da mensagem")
+    text = models.TextField(help_text="Conteúdo da mensagem. Use {variaveis} para interpolação se necessário.")
+    description = models.CharField(max_length=255, blank=True, help_text="Descrição do uso desta mensagem")
+
+    class Meta:
+        verbose_name = 'Mensagem do Bot'
+        verbose_name_plural = 'Mensagens do Bot'
+        ordering = ['key']
+
+    def __str__(self):
+        return f"{self.get_key_display()}"
+

@@ -12,7 +12,7 @@ class SearchTermSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = SearchTerm
-        fields = ['id', 'term', 'is_default', 'priority', 'created_at', 'updated_at']
+        fields = ['id', 'course', 'term', 'is_default', 'priority', 'created_at', 'updated_at']
         read_only_fields = ['created_at', 'updated_at']
 
 

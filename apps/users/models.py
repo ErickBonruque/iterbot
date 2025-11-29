@@ -32,6 +32,7 @@ class UserProfile(TimeStampedModel):
         blank=True,
         null=True,
     )
+    flow_data = models.JSONField(default=dict, blank=True, help_text="Dados temporários do fluxo conversacional")
 
     def __str__(self):
         return f"{self.phone_number} ({self.ra if self.ra else 'Sem RA'})"

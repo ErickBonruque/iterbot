@@ -96,11 +96,11 @@ def course_detail(request, course_id):
     Detalhes e gerenciamento de um curso específico.
     """
     course = get_object_or_404(Course, id=course_id)
-    terms = course.search_terms.all()
+    search_terms = course.search_terms.all()
     
     context = {
         'course': course,
-        'terms': terms,
+        'search_terms': search_terms,
     }
     
     return render(request, 'dashboard/course_detail.html', context)

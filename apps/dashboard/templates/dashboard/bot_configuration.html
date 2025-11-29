@@ -16,7 +16,7 @@
         <div class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
                 <label class="block text-sm font-medium text-gray-700">WAHA URL</label>
-                <input type="url" x-model="form.waha_url" class="mt-1 input-modern" placeholder="http://localhost:3000" />
+                <input type="url" x-model="form.waha_url" class="mt-1 input-modern" placeholder="http://localhost:3000" required />
             </div>
             <div>
                 <label class="block text-sm font-medium text-gray-700">WAHA API Key</label>
@@ -28,11 +28,11 @@
             </div>
             <div>
                 <label class="block text-sm font-medium text-gray-700">Usuário do Dashboard</label>
-                <input type="text" x-model="form.dashboard_username" class="mt-1 input-modern" placeholder="admin" />
+                <input type="text" x-model="form.dashboard_username" class="mt-1 input-modern" placeholder="admin" required />
             </div>
             <div>
                 <label class="block text-sm font-medium text-gray-700">Senha do Dashboard</label>
-                <input type="password" x-model="form.dashboard_password" class="mt-1 input-modern" placeholder="password" />
+                <input type="password" x-model="form.dashboard_password" class="mt-1 input-modern" placeholder="Digite a senha" required />
             </div>
             <div>
                 <label class="block text-sm font-medium text-gray-700">Usuário Django Admin</label>
@@ -57,7 +57,12 @@
         <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
             <div class="p-4 bg-gray-50 rounded-lg">
                 <p class="text-xs uppercase text-gray-500">WAHA URL</p>
-                <p class="font-semibold text-gray-900" x-text="active.waha_url"></p>
+                <a :href="active.waha_url + '/dashboard/'" target="_blank" class="font-semibold text-blue-600 hover:text-blue-700 underline flex items-center space-x-1">
+                    <span x-text="active.waha_url"></span>
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+                    </svg>
+                </a>
             </div>
             <div class="p-4 bg-gray-50 rounded-lg">
                 <p class="text-xs uppercase text-gray-500">API Key</p>
@@ -91,22 +96,22 @@
 function botConfigurationForm() {
     return {
         form: {
-            waha_url: '{{ active_config.waha_url|default:"http://localhost:3000" }}',
-            waha_api_key: '{{ active_config.waha_api_key|default:"dev-api-key" }}',
-            waha_session: '{{ active_config.waha_session|default:"dev-session" }}',
-            dashboard_username: '{{ active_config.dashboard_username|default:"admin" }}',
-            dashboard_password: '{{ active_config.dashboard_password|default:"password" }}',
-            admin_username: '{{ active_config.admin_username|default:"admin" }}',
-            admin_password: '{{ active_config.admin_password|default:"admin" }}',
+            waha_url: '{{ active_config.waha_url }}',
+            waha_api_key: '{{ active_config.waha_api_key }}',
+            waha_session: '{{ active_config.waha_session }}',
+            dashboard_username: '{{ active_config.dashboard_username }}',
+            dashboard_password: '{{ active_config.dashboard_password }}',
+            admin_username: '{{ active_config.admin_username }}',
+            admin_password: '{{ active_config.admin_password }}',
         },
         active: {
-            waha_url: '{{ active_config.waha_url|default:"http://localhost:3000" }}',
-            waha_api_key: '{{ active_config.waha_api_key|default:"dev-api-key" }}',
-            waha_session: '{{ active_config.waha_session|default:"dev-session" }}',
-            dashboard_username: '{{ active_config.dashboard_username|default:"admin" }}',
+            waha_url: '{{ active_config.waha_url }}',
+            waha_api_key: '{{ active_config.waha_api_key }}',
+            waha_session: '{{ active_config.waha_session }}',
+            dashboard_username: '{{ active_config.dashboard_username }}',
             updated_at: '{{ active_config.updated_at|default:"" }}',
-            admin_username: '{{ active_config.admin_username|default:"admin" }}',
-            admin_password: '{{ active_config.admin_password|default:"admin" }}',
+            admin_username: '{{ active_config.admin_username }}',
+            admin_password: '{{ active_config.admin_password }}',
         },
         async fetchActive() {
             try {

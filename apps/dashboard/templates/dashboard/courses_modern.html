@@ -153,6 +153,11 @@
 </div>
 
 <script>
+// Função auxiliar para obter CSRF token
+function getCsrfToken() {
+    return document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+}
+
 function coursesManager() {
     return {
         showCreateModal: false,
@@ -179,7 +184,10 @@ function coursesManager() {
             try {
                 const response = await fetch('/api/courses/', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken()
+                    },
                     body: JSON.stringify(this.newCourse),
                 });
                 if (!response.ok) {
@@ -203,6 +211,7 @@ function coursesManager() {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken()
                     }
                 });
                 const data = await response.json();
@@ -216,6 +225,9 @@ function coursesManager() {
             if (confirm(`Tem certeza que deseja deletar o curso "${name}"? Esta ação não pode ser desfeita.`)) {
                 fetch(`/api/courses/${id}/`, {
                     method: 'DELETE',
+                    headers: {
+                        'X-CSRFToken': getCsrfToken()
+                    }
                 })
                 .then(() => {
                     showToast('Curso deletado com sucesso', 'success');

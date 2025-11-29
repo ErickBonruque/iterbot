@@ -1,0 +1,292 @@
+{% extends 'dashboard/base_modern.html' %}
+
+{% block page_title %}{{ course.name }}{% endblock %}
+
+{% block content %}
+<div class="space-y-6" x-data="courseDetailManager()" x-cloak>
+    <!-- Breadcrumb e cabeçalho -->
+    <div class="flex items-center space-x-2 text-sm text-gray-600">
+        <a href="{% url 'courses_list' %}" class="hover:text-gray-900">Cursos</a>
+        <span>→</span>
+        <span class="text-gray-900 font-medium">{{ course.name }}</span>
+    </div>
+
+    <!-- Informações do curso -->
+    <div class="bg-white rounded-lg shadow p-6">
+        <div class="flex items-start justify-between">
+            <div class="flex-1">
+                <div class="flex items-center space-x-3">
+                    <h2 class="text-2xl font-bold text-gray-900">{{ course.name }}</h2>
+                    {% if course.is_active %}
+                    <span class="px-3 py-1 text-sm bg-green-100 text-green-700 rounded-full">Ativo</span>
+                    {% else %}
+                    <span class="px-3 py-1 text-sm bg-gray-100 text-gray-700 rounded-full">Inativo</span>
+                    {% endif %}
+                </div>
+                {% if course.code %}
+                <p class="text-gray-600 mt-2">Código: <span class="font-medium">{{ course.code }}</span></p>
+                {% endif %}
+                {% if course.description %}
+                <p class="text-gray-700 mt-3">{{ course.description }}</p>
+                {% endif %}
+                <p class="text-sm text-gray-500 mt-3">
+                    Criado em {{ course.created_at|date:"d/m/Y H:i" }} • 
+                    Atualizado em {{ course.updated_at|date:"d/m/Y H:i" }}
+                </p>
+            </div>
+            <div class="flex items-center space-x-2">
+                <button 
+                    @click="editCourse()"
+                    class="px-4 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors"
+                >
+                    Editar Curso
+                </button>
+                <button 
+                    @click="toggleActive()"
+                    class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                    {% if course.is_active %}Desativar{% else %}Ativar{% endif %}
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Termos de busca -->
+    <div class="bg-white rounded-lg shadow">
+        <div class="p-6 border-b border-gray-200">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h3 class="text-xl font-semibold text-gray-900">Termos de Busca</h3>
+                    <p class="text-sm text-gray-600 mt-1">Palavras-chave usadas para buscar vagas deste curso</p>
+                </div>
+                <button 
+                    @click="openAddTermModal()"
+                    class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center space-x-2"
+                >
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                    </svg>
+                    <span>Adicionar Termo</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="p-6">
+            {% if search_terms %}
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {% for term in search_terms %}
+                <div class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                    <div class="flex items-start justify-between">
+                        <div class="flex-1">
+                            <h4 class="font-semibold text-gray-900">{{ term.term }}</h4>
+                            {% if term.priority %}
+                            <span class="inline-block mt-2 px-2 py-1 text-xs bg-yellow-100 text-yellow-700 rounded-full">
+                                Prioridade: {{ term.priority }}
+                            </span>
+                            {% endif %}
+                            {% if term.is_active %}
+                            <span class="inline-block mt-2 ml-1 px-2 py-1 text-xs bg-green-100 text-green-700 rounded-full">
+                                Ativo
+                            </span>
+                            {% else %}
+                            <span class="inline-block mt-2 ml-1 px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded-full">
+                                Inativo
+                            </span>
+                            {% endif %}
+                        </div>
+                        <button 
+                            @click="deleteTerm({{ term.id }}, '{{ term.term }}')"
+                            class="text-red-600 hover:text-red-700"
+                        >
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="text-center py-12">
+                <svg class="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path>
+                </svg>
+                <h4 class="text-lg font-semibold text-gray-900 mb-2">Nenhum termo cadastrado</h4>
+                <p class="text-gray-600 mb-6">Adicione termos de busca para começar a encontrar vagas</p>
+                <button 
+                    @click="openAddTermModal()"
+                    class="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                >
+                    Adicionar Primeiro Termo
+                </button>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Modal de adicionar termo -->
+    <div
+        x-show="showAddTermModal"
+        class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+        x-transition
+    >
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg p-6" @click.away="closeAddTermModal()">
+            <div class="flex items-start justify-between mb-6">
+                <div>
+                    <h3 class="text-xl font-semibold text-gray-900">Adicionar Termo de Busca</h3>
+                    <p class="text-sm text-gray-600">Defina uma palavra-chave para buscar vagas</p>
+                </div>
+                <button class="text-gray-400 hover:text-gray-600" @click="closeAddTermModal()">✕</button>
+            </div>
+
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Termo</label>
+                    <input 
+                        type="text" 
+                        x-model="newTerm.term" 
+                        class="w-full mt-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-green-500" 
+                        placeholder="Ex: software, backend, frontend" 
+                    />
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Prioridade (opcional)</label>
+                    <input 
+                        type="number" 
+                        x-model="newTerm.priority" 
+                        class="w-full mt-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-green-500" 
+                        placeholder="1-10 (maior = mais importante)" 
+                        min="1"
+                        max="10"
+                    />
+                </div>
+                <div class="flex items-center space-x-2">
+                    <input 
+                        type="checkbox" 
+                        id="term_is_active" 
+                        x-model="newTerm.is_active" 
+                        class="h-4 w-4 text-green-600 border-gray-300 rounded" 
+                        checked 
+                    />
+                    <label for="term_is_active" class="text-sm text-gray-700">Ativo</label>
+                </div>
+            </div>
+
+            <div class="mt-6 flex justify-end space-x-3">
+                <button class="px-4 py-2 rounded-lg border" @click="closeAddTermModal()">Cancelar</button>
+                <button
+                    class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-60"
+                    :disabled="isSubmitting"
+                    @click="addTerm()"
+                >
+                    <span x-show="!isSubmitting">Adicionar</span>
+                    <span x-show="isSubmitting">Adicionando...</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Função auxiliar para obter CSRF token
+function getCsrfToken() {
+    return document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+}
+
+// Toast notification
+function showToast(message, type = 'info') {
+    const bgColor = type === 'success' ? 'bg-green-500' : type === 'error' ? 'bg-red-500' : 'bg-blue-500';
+    const toast = document.createElement('div');
+    toast.className = `fixed bottom-4 right-4 ${bgColor} text-white px-6 py-3 rounded-lg shadow-lg z-50 transition-opacity`;
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+}
+
+function courseDetailManager() {
+    return {
+        showAddTermModal: false,
+        isSubmitting: false,
+        newTerm: {
+            term: '',
+            priority: null,
+            is_active: true,
+            course: {{ course.id }}
+        },
+        openAddTermModal() {
+            this.showAddTermModal = true;
+        },
+        closeAddTermModal() {
+            this.showAddTermModal = false;
+            this.newTerm = { term: '', priority: null, is_active: true, course: {{ course.id }} };
+        },
+        async addTerm() {
+            if (!this.newTerm.term) {
+                showToast('Informe o termo de busca', 'error');
+                return;
+            }
+            this.isSubmitting = true;
+            try {
+                const response = await fetch('/api/terms/', {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken()
+                    },
+                    body: JSON.stringify(this.newTerm),
+                });
+                if (!response.ok) {
+                    showToast('Erro ao adicionar termo', 'error');
+                    return;
+                }
+                showToast('Termo adicionado com sucesso', 'success');
+                setTimeout(() => window.location.reload(), 800);
+            } catch (error) {
+                showToast('Erro ao adicionar termo', 'error');
+            } finally {
+                this.isSubmitting = false;
+            }
+        },
+        editCourse() {
+            window.location.href = `/admin/courses/course/{{ course.id }}/change/`;
+        },
+        async toggleActive() {
+            try {
+                const response = await fetch(`/api/courses/{{ course.id }}/toggle_active/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken()
+                    }
+                });
+                const data = await response.json();
+                showToast(data.message, 'success');
+                setTimeout(() => location.reload(), 1000);
+            } catch (error) {
+                showToast('Erro ao alterar status do curso', 'error');
+            }
+        },
+        deleteTerm(id, term) {
+            if (confirm(`Tem certeza que deseja deletar o termo "${term}"?`)) {
+                fetch(`/api/terms/${id}/`, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRFToken': getCsrfToken()
+                    }
+                })
+                .then(() => {
+                    showToast('Termo deletado com sucesso', 'success');
+                    setTimeout(() => location.reload(), 1000);
+                })
+                .catch(() => {
+                    showToast('Erro ao deletar termo', 'error');
+                });
+            }
+        }
+    }
+}
+</script>
+{% endblock %}

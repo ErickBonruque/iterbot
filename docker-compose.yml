@@ -1,4 +1,20 @@
 services:
+  traefik:
+    image: traefik:v2.10
+    command:
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+    ports:
+      - "80:80"
+      - "8080:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    depends_on:
+      - backend
+      - waha
+
   backend:
     build:
       context: .
@@ -6,31 +22,36 @@ services:
     command: /start.sh
     volumes:
       - .:/app
-    ports:
-      - "8000:8000"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.backend.rule=Host(`localhost`)"
+      - "traefik.http.services.backend.loadbalancer.server.port=8000"
     env_file:
       - .env
     depends_on:
       - waha
-      # - db  # Uncomment when using Postgres
 
   waha:
     image: devlikeapro/waha
-    # restart: always
     environment:
       - WHATSAPP_DEFAULT_ENGINE=WEBJS
-      - WHATSAPP_SWAGGER_USERNAME=admin
-      - WHATSAPP_SWAGGER_PASSWORD=admin
       - WHATSAPP_HOOK_URL=http://backend:8000/webhook/
       - WHATSAPP_HOOK_EVENTS=message.any
       - WAHA_API_KEY=${WAHA_API_KEY}
+      # Credenciais do Dashboard WAHA fixadas
+      - WAHA_DASHBOARD_USERNAME=${WAHA_DASHBOARD_USERNAME}
+      - WAHA_DASHBOARD_PASSWORD=${WAHA_DASHBOARD_PASSWORD}
+      - WHATSAPP_SWAGGER_USERNAME=${WHATSAPP_SWAGGER_USERNAME}
+      - WHATSAPP_SWAGGER_PASSWORD=${WHATSAPP_SWAGGER_PASSWORD}
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.waha.rule=Host(`waha.localhost`)"
+      - "traefik.http.services.waha.loadbalancer.server.port=3000"
     env_file:
       - .env
-    ports:
-      - "3000:3000"
     volumes:
-      # PERSISTENCIA DE SESSAO: Mapeia a pasta local waha-sessions para persistir a autenticação
       - ./waha-sessions:/app/.sessions
+
 
   # db:
   #   image: postgres:13-alpine

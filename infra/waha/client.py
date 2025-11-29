@@ -23,7 +23,7 @@ class WahaClient:
         return f"{chat_id}@c.us"
 
     def send_message(self, chat_id: str, text: str) -> bool:
-        url = f"{self.settings.base_url}/api/send/text"
+        url = f"{self.settings.base_url}/api/sendText"
         headers = {
             "X-Api-Key": self.settings.api_key,
             "Content-Type": "application/json",
