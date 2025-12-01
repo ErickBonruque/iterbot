@@ -95,9 +95,9 @@ services:
       - WHATSAPP_DEFAULT_ENGINE=WEBJS
       - WHATSAPP_HOOK_URL=http://backend:8000/webhook/
       - WHATSAPP_HOOK_EVENTS=message.any
-      - WAHA_API_KEY=***REMOVED***
+      - WAHA_API_KEY_FILE=/run/secrets/waha_api_key
       - WAHA_DASHBOARD_USERNAME=${WAHA_DASHBOARD_USERNAME:-admin}
-      - WAHA_DASHBOARD_PASSWORD=***REMOVED***
+      - WAHA_DASHBOARD_PASSWORD_FILE=/run/secrets/waha_dashboard_password
       - WHATSAPP_SWAGGER_USERNAME=${WHATSAPP_SWAGGER_USERNAME:-swagger}
       - WHATSAPP_SWAGGER_PASSWORD_FILE=/run/secrets/waha_swagger_password
     ports:
@@ -109,6 +109,7 @@ services:
       - "traefik.http.services.waha.loadbalancer.server.port=3000"
     secrets:
       - waha_api_key
+      - waha_dashboard_password
       - waha_swagger_password
     volumes:
       - waha_sessions:/app/.sessions
@@ -122,6 +123,8 @@ secrets:
     file: ./secrets/postgres_password.txt
   waha_api_key:
     file: ./secrets/waha_api_key.txt
+  waha_dashboard_password:
+    file: ./secrets/waha_dashboard_password.txt
   waha_swagger_password:
     file: ./secrets/waha_swagger_password.txt
 
