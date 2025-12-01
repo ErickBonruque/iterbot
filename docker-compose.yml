@@ -91,15 +91,14 @@ services:
   waha:
     image: devlikeapro/waha
     restart: unless-stopped
+    entrypoint: ["/entrypoint.sh"]
+    command: ["node", "dist/server.js"]
     environment:
       - WHATSAPP_DEFAULT_ENGINE=WEBJS
       - WHATSAPP_HOOK_URL=http://backend:8000/webhook/
       - WHATSAPP_HOOK_EVENTS=message.any
-      - WAHA_API_KEY_FILE=/run/secrets/waha_api_key
       - WAHA_DASHBOARD_USERNAME=${WAHA_DASHBOARD_USERNAME:-admin}
-      - WAHA_DASHBOARD_PASSWORD_FILE=/run/secrets/waha_dashboard_password
       - WHATSAPP_SWAGGER_USERNAME=${WHATSAPP_SWAGGER_USERNAME:-swagger}
-      - WHATSAPP_SWAGGER_PASSWORD_FILE=/run/secrets/waha_swagger_password
     ports:
       - "3000:3000"
     labels:
@@ -112,6 +111,7 @@ services:
       - waha_dashboard_password
       - waha_swagger_password
     volumes:
+      - ./docker/waha/entrypoint.sh:/entrypoint.sh:ro
       - waha_sessions:/app/.sessions
     networks:
       - web
