@@ -32,9 +32,5 @@ load_secret "/run/secrets/waha_swagger_password" "WHATSAPP_SWAGGER_PASSWORD"
 echo "🚀 Iniciando WAHA..."
 
 # Executar o comando padrão do WAHA
-# Se nenhum comando foi passado, usa o padrão do container
-if [ $# -eq 0 ]; then
-    exec /entrypoint
-else
-    exec "$@"
-fi
+# O WAHA usa xvfb-run para rodar o Node.js com display virtual
+exec xvfb-run -a node dist/server.js
