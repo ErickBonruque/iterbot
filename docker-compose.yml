@@ -92,7 +92,6 @@ services:
     image: devlikeapro/waha
     restart: unless-stopped
     entrypoint: ["/entrypoint.sh"]
-    command: ["node", "dist/server.js"]
     environment:
       - WHATSAPP_DEFAULT_ENGINE=WEBJS
       - WHATSAPP_HOOK_URL=http://backend:8000/webhook/

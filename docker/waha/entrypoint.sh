@@ -31,5 +31,10 @@ load_secret "/run/secrets/waha_swagger_password" "WHATSAPP_SWAGGER_PASSWORD"
 
 echo "🚀 Iniciando WAHA..."
 
-# Executar o comando original do container WAHA
-exec "$@"
+# Executar o comando padrão do WAHA
+# Se nenhum comando foi passado, usa o padrão do container
+if [ $# -eq 0 ]; then
+    exec /entrypoint
+else
+    exec "$@"
+fi
