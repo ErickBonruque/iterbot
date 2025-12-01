@@ -1,36 +1,79 @@
 #!/bin/bash
 set -e
 
-# Script de entrypoint para o WAHA
-# Este script lê os secrets do Docker e os exporta como variáveis de ambiente normais
-# porque o WAHA não suporta nativamente o sufixo _FILE
+# ============================================================================
+# WAHA Entrypoint - Robust Secret Loading
+# ============================================================================
+# This script loads Docker Secrets and exports them as environment variables
+# because WAHA doesn't natively support *_FILE suffix variables.
+#
+# Author: CapyVagas Team
+# Last Updated: 2025-12-01
+# ============================================================================
 
-echo "🔐 Carregando secrets do Docker..."
+echo "============================================"
+echo "🔐 WAHA Secret Loader"
+echo "============================================"
 
-# Função para ler secret e exportar como variável de ambiente
+# Function to load secret from file and export as environment variable
 load_secret() {
     local secret_file=$1
     local env_var=$2
+    local required=${3:-false}
     
     if [ -f "$secret_file" ]; then
-        export "$env_var"=$(cat "$secret_file")
-        echo "✅ $env_var carregado do secret"
+        local value=$(cat "$secret_file" | tr -d '\n\r' | tr -d ' ')
+        
+        if [ -z "$value" ]; then
+            echo "⚠️  WARNING: $secret_file exists but is empty!"
+            if [ "$required" = "true" ]; then
+                echo "❌ ERROR: $env_var is required but empty"
+                exit 1
+            fi
+        else
+            export "$env_var"="$value"
+            echo "✅ $env_var loaded (length: ${#value} chars)"
+        fi
     else
-        echo "⚠️  Secret $secret_file não encontrado"
+        echo "⚠️  WARNING: Secret file $secret_file not found"
+        if [ "$required" = "true" ]; then
+            echo "❌ ERROR: Required secret $env_var not found"
+            exit 1
+        fi
     fi
 }
 
-# Carregar WAHA_API_KEY do secret
-load_secret "/run/secrets/waha_api_key" "WAHA_API_KEY"
+# Load WAHA_API_KEY (required for backend communication)
+echo ""
+echo "📡 Loading API Key..."
+load_secret "/run/secrets/waha_api_key" "WAHA_API_KEY" true
 
-# Carregar WAHA_DASHBOARD_PASSWORD do secret
-load_secret "/run/secrets/waha_dashboard_password" "WAHA_DASHBOARD_PASSWORD"
+# Load WAHA_DASHBOARD_PASSWORD (required for dashboard login)
+echo ""
+echo "🔑 Loading Dashboard Password..."
+load_secret "/run/secrets/waha_dashboard_password" "WAHA_DASHBOARD_PASSWORD" true
 
-# Carregar WHATSAPP_SWAGGER_PASSWORD do secret
-load_secret "/run/secrets/waha_swagger_password" "WHATSAPP_SWAGGER_PASSWORD"
+# Load WHATSAPP_SWAGGER_PASSWORD (optional)
+echo ""
+echo "📚 Loading Swagger Password..."
+load_secret "/run/secrets/waha_swagger_password" "WHATSAPP_SWAGGER_PASSWORD" false
 
-echo "🚀 Iniciando WAHA..."
+echo ""
+echo "============================================"
+echo "✅ All secrets loaded successfully"
+echo "============================================"
+echo ""
+echo "🔍 Environment Variables Check:"
+echo "   WAHA_DASHBOARD_USERNAME: ${WAHA_DASHBOARD_USERNAME:-<not set>}"
+echo "   WAHA_DASHBOARD_PASSWORD: ${WAHA_DASHBOARD_PASSWORD:+<set>}"
+echo "   WAHA_API_KEY: ${WAHA_API_KEY:+<set>}"
+echo "   WHATSAPP_SWAGGER_USERNAME: ${WHATSAPP_SWAGGER_USERNAME:-<not set>}"
+echo "   WHATSAPP_SWAGGER_PASSWORD: ${WHATSAPP_SWAGGER_PASSWORD:+<set>}"
+echo ""
+echo "============================================"
+echo "🚀 Starting WAHA..."
+echo "============================================"
+echo ""
 
-# Executar o comando padrão do WAHA
-# O WAHA usa xvfb-run para rodar o Node.js com display virtual
+# Start WAHA with the standard command
 exec xvfb-run -a node dist/server.js

@@ -1,15 +1,30 @@
 version: '3.8'
 
+# ============================================================================
+# CapyVagas-UTFPR - Docker Compose Configuration
+# ============================================================================
+# Production-ready configuration with:
+# - PostgreSQL for data persistence
+# - Redis for caching and sessions
+# - Django backend with REST API
+# - WAHA for WhatsApp integration
+# - Traefik for reverse proxy and HTTPS
+# ============================================================================
+
 services:
+  # ==========================================================================
+  # Traefik - Reverse Proxy & Load Balancer
+  # ==========================================================================
   traefik:
     image: traefik:v2.10
+    container_name: capyvagas_traefik
     restart: unless-stopped
     command:
       - "--configFile=/etc/traefik/traefik.yml"
     ports:
       - "80:80"
       - "443:443"
-      - "8080:8080"
+      - "8080:8080"  # Traefik dashboard
     volumes:
       - ./infra/traefik/traefik.yml:/etc/traefik/traefik.yml:ro
       - ./infra/traefik/dynamic:/etc/traefik/dynamic:ro
@@ -18,13 +33,17 @@ services:
     depends_on:
       backend:
         condition: service_healthy
-      waha:
-        condition: service_started
     networks:
       - web
+    labels:
+      - "traefik.enable=false"  # Don't proxy Traefik itself
 
+  # ==========================================================================
+  # PostgreSQL - Database
+  # ==========================================================================
   db:
     image: postgres:15-alpine
+    container_name: capyvagas_db
     restart: unless-stopped
     volumes:
       - postgres_data:/var/lib/postgresql/data/
@@ -39,27 +58,41 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 10s
     networks:
       - web
+    labels:
+      - "traefik.enable=false"
 
+  # ==========================================================================
+  # Redis - Cache & Session Store
+  # ==========================================================================
   redis:
     image: redis:7-alpine
+    container_name: capyvagas_redis
     restart: unless-stopped
     volumes:
       - redis_data:/data
-    command: redis-server --appendonly yes
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 5s
     networks:
       - web
+    labels:
+      - "traefik.enable=false"
 
+  # ==========================================================================
+  # Django Backend - REST API & Business Logic
+  # ==========================================================================
   backend:
     build:
       context: .
       dockerfile: docker/django/Dockerfile
+    container_name: capyvagas_backend
     restart: unless-stopped
     command: /start.sh
     ports:
@@ -88,23 +121,40 @@ services:
     networks:
       - web
 
+  # ==========================================================================
+  # WAHA - WhatsApp HTTP API
+  # ==========================================================================
+  # IMPORTANT: WAHA is accessed directly without Traefik to avoid
+  # authentication issues. Access via http://localhost:3000/dashboard
+  # ==========================================================================
   waha:
     image: devlikeapro/waha
+    container_name: capyvagas_waha
     restart: unless-stopped
     entrypoint: ["/entrypoint.sh"]
     environment:
+      # WhatsApp Engine Configuration
       - WHATSAPP_DEFAULT_ENGINE=WEBJS
       - WHATSAPP_HOOK_URL=http://backend:8000/webhook/
       - WHATSAPP_HOOK_EVENTS=message.any
+      
+      # Dashboard Configuration
+      - WAHA_DASHBOARD_ENABLED=true
       - WAHA_DASHBOARD_USERNAME=${WAHA_DASHBOARD_USERNAME:-admin}
+      # WAHA_DASHBOARD_PASSWORD is loaded from secret via entrypoint.sh
+      
+      # Swagger Configuration
       - WHATSAPP_SWAGGER_USERNAME=${WHATSAPP_SWAGGER_USERNAME:-swagger}
+      # WHATSAPP_SWAGGER_PASSWORD is loaded from secret via entrypoint.sh
+      
+      # API Configuration
+      # WAHA_API_KEY is loaded from secret via entrypoint.sh
+      
+      # Logging
+      - WAHA_LOG_LEVEL=info
+      - WAHA_LOG_FORMAT=PRETTY
     ports:
-      - "3000:3000"
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.waha.rule=Host(`waha.${DOMAIN:-localhost}`)"
-      - "traefik.http.routers.waha.entrypoints=web"
-      - "traefik.http.services.waha.loadbalancer.server.port=3000"
+      - "3000:3000"  # Direct access - no Traefik proxy
     secrets:
       - waha_api_key
       - waha_dashboard_password
@@ -114,7 +164,18 @@ services:
       - waha_sessions:/app/.sessions
     networks:
       - web
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    labels:
+      - "traefik.enable=false"  # Direct access, no proxy
 
+# ============================================================================
+# Docker Secrets - Secure Credential Management
+# ============================================================================
 secrets:
   django_secret_key:
     file: ./secrets/django_secret_key.txt
@@ -127,12 +188,25 @@ secrets:
   waha_swagger_password:
     file: ./secrets/waha_swagger_password.txt
 
+# ============================================================================
+# Volumes - Data Persistence
+# ============================================================================
 volumes:
   postgres_data:
+    driver: local
   redis_data:
+    driver: local
   waha_sessions:
+    driver: local
   traefik_certs:
+    driver: local
 
+# ============================================================================
+# Networks - Service Communication
+# ============================================================================
 networks:
   web:
     driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
