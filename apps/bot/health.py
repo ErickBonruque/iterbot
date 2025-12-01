@@ -6,10 +6,13 @@ import time
 import requests
 import logging
 from datetime import datetime, timedelta
+
 from django.utils import timezone
 from django.core.cache import cache
 from django.db.models import Avg
+
 from apps.bot.models import BotHealthCheck, BotMetrics
+from config.env import settings
 
 logger = logging.getLogger(__name__)
 
@@ -19,10 +22,12 @@ class BotHealthMonitor:
     Monitora a saúde e performance do bot WAHA.
     """
     
-    def __init__(self, waha_url='http://waha:3000', session_name='default'):
-        self.waha_url = waha_url
-        self.session_name = session_name
-        self.api_key = os.environ.get('WAHA_API_KEY', '')
+    def __init__(self, waha_url=None, session_name=None):
+        """Inicializa o monitor usando as configurações centrais do WAHA."""
+
+        self.waha_url = waha_url or settings.waha.base_url
+        self.session_name = session_name or settings.waha.session_name
+        self.api_key = settings.waha.api_key
         
     def check_bot_status(self):
         """

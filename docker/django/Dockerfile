@@ -39,6 +39,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq-dev \
     netcat-openbsd \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy installed packages from builder

@@ -7,6 +7,7 @@ from django.utils import timezone
 from apps.bot.health import BotHealthMonitor
 from apps.bot.models import BotConfiguration, BotHealthCheck, InteractionLog
 from apps.courses.models import Course
+from apps.users.models import UserProfile
 
 
 def dashboard_home(request):
@@ -158,3 +159,19 @@ def interactions_log(request):
     }
 
     return render(request, "dashboard/interactions_modern.html", context)
+
+
+def users_list(request):
+    users_qs = UserProfile.objects.select_related("selected_course").order_by("-last_activity")
+    total_users = users_qs.count()
+    authenticated_users = users_qs.filter(is_authenticated_utfpr=True).count()
+    unauthenticated_users = total_users - authenticated_users
+
+    context = {
+        "users": users_qs,
+        "total_users": total_users,
+        "authenticated_users": authenticated_users,
+        "unauthenticated_users": unauthenticated_users,
+    }
+
+    return render(request, "dashboard/users_modern.html", context)

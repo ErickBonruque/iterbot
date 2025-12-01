@@ -13,6 +13,7 @@ services:
     volumes:
       - ./infra/traefik/traefik.yml:/etc/traefik/traefik.yml:ro
       - ./infra/traefik/dynamic:/etc/traefik/dynamic:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
       - traefik_certs:/letsencrypt
     depends_on:
       backend:
@@ -23,7 +24,7 @@ services:
       - web
 
   db:
-    image: postgres:13-alpine
+    image: postgres:15-alpine
     restart: unless-stopped
     volumes:
       - postgres_data:/var/lib/postgresql/data/
@@ -61,24 +62,18 @@ services:
       dockerfile: docker/django/Dockerfile
     restart: unless-stopped
     command: /start.sh
+    ports:
+      - "8000:8000"
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.backend.rule=Host(`${DOMAIN:-localhost}`) || Host(`backend.${DOMAIN:-localhost}`)"
-      - "traefik.http.routers.backend.entrypoints=websecure"
-      - "traefik.http.routers.backend.tls=true"
-      - "traefik.http.routers.backend.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.backend.entrypoints=web"
       - "traefik.http.services.backend.loadbalancer.server.port=8000"
-      # HTTP to HTTPS redirect
-      - "traefik.http.routers.backend-http.rule=Host(`${DOMAIN:-localhost}`) || Host(`backend.${DOMAIN:-localhost}`)"
-      - "traefik.http.routers.backend-http.entrypoints=web"
-      - "traefik.http.routers.backend-http.middlewares=redirect-to-https"
-      - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
     env_file:
       - .env
     secrets:
       - django_secret_key
       - postgres_password
-      - waha_api_key
     depends_on:
       db:
         condition: service_healthy
@@ -100,25 +95,20 @@ services:
       - WHATSAPP_DEFAULT_ENGINE=WEBJS
       - WHATSAPP_HOOK_URL=http://backend:8000/webhook/
       - WHATSAPP_HOOK_EVENTS=message.any
-      - WAHA_API_KEY_FILE=/run/secrets/waha_api_key
+      - WAHA_API_KEY=***REMOVED***
       - WAHA_DASHBOARD_USERNAME=${WAHA_DASHBOARD_USERNAME:-admin}
-      - WAHA_DASHBOARD_PASSWORD_FILE=/run/secrets/waha_dashboard_password
+      - WAHA_DASHBOARD_PASSWORD=***REMOVED***
       - WHATSAPP_SWAGGER_USERNAME=${WHATSAPP_SWAGGER_USERNAME:-swagger}
       - WHATSAPP_SWAGGER_PASSWORD_FILE=/run/secrets/waha_swagger_password
+    ports:
+      - "3000:3000"
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.waha.rule=Host(`waha.${DOMAIN:-localhost}`)"
-      - "traefik.http.routers.waha.entrypoints=websecure"
-      - "traefik.http.routers.waha.tls=true"
-      - "traefik.http.routers.waha.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.waha.entrypoints=web"
       - "traefik.http.services.waha.loadbalancer.server.port=3000"
-      # HTTP to HTTPS redirect
-      - "traefik.http.routers.waha-http.rule=Host(`waha.${DOMAIN:-localhost}`)"
-      - "traefik.http.routers.waha-http.entrypoints=web"
-      - "traefik.http.routers.waha-http.middlewares=redirect-to-https"
     secrets:
       - waha_api_key
-      - waha_dashboard_password
       - waha_swagger_password
     volumes:
       - waha_sessions:/app/.sessions
@@ -132,8 +122,6 @@ secrets:
     file: ./secrets/postgres_password.txt
   waha_api_key:
     file: ./secrets/waha_api_key.txt
-  waha_dashboard_password:
-    file: ./secrets/waha_dashboard_password.txt
   waha_swagger_password:
     file: ./secrets/waha_swagger_password.txt
 

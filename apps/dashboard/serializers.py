@@ -45,6 +45,56 @@ class CourseListSerializer(serializers.ModelSerializer):
         return obj.search_terms.count()
 
 
+class UserProfileListSerializer(serializers.ModelSerializer):
+    interactions_count = serializers.SerializerMethodField()
+    selected_course_name = serializers.CharField(source="selected_course.name", read_only=True)
+
+    class Meta:
+        model = UserProfile
+        fields = [
+            "id",
+            "phone_number",
+            "ra",
+            "is_authenticated_utfpr",
+            "selected_course_name",
+            "last_activity",
+            "interactions_count",
+        ]
+
+    def get_interactions_count(self, obj):
+        return obj.interactions.count()
+
+
+class UserProfileSerializer(serializers.ModelSerializer):
+    interactions_count = serializers.SerializerMethodField()
+    selected_course_name = serializers.CharField(source="selected_course.name", read_only=True)
+
+    class Meta:
+        model = UserProfile
+        fields = [
+            "id",
+            "phone_number",
+            "ra",
+            "is_authenticated_utfpr",
+            "selected_course",
+            "selected_course_name",
+            "last_activity",
+            "created_at",
+            "updated_at",
+            "interactions_count",
+        ]
+        read_only_fields = [
+            "last_activity",
+            "created_at",
+            "updated_at",
+            "interactions_count",
+            "selected_course_name",
+        ]
+
+    def get_interactions_count(self, obj):
+        return obj.interactions.count()
+
+
 class InteractionLogSerializer(serializers.ModelSerializer):
     """Serializer para logs de interação."""
     user_phone = serializers.CharField(source='user.phone_number', read_only=True)

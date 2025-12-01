@@ -1,0 +1,266 @@
+{% extends 'dashboard/base_modern.html' %}
+
+{% block page_title %}Gerenciar Alunos{% endblock %}
+
+{% block content %}
+<div class="space-y-6" x-data="usersManager()" x-cloak>
+    <!-- Header com estatísticas -->
+    <div class="flex items-center justify-between">
+        <div>
+            <h2 class="text-2xl font-bold text-gray-900">Alunos</h2>
+            <p class="text-sm text-gray-600 mt-1">
+                Gerencie os alunos que interagem com o bot: dados de RA, autenticação e curso vinculado.
+            </p>
+        </div>
+        <button
+            @click="openCreateModal()"
+            class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center space-x-2"
+        >
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+            </svg>
+            <span>Novo aluno manual</span>
+        </button>
+    </div>
+
+    <!-- Cards de estatísticas -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="bg-white rounded-lg shadow p-6">
+            <p class="text-sm text-gray-600 font-medium">Total de alunos</p>
+            <p class="text-3xl font-bold text-gray-900 mt-2">{{ total_users }}</p>
+        </div>
+        <div class="bg-white rounded-lg shadow p-6">
+            <p class="text-sm text-gray-600 font-medium">Alunos autenticados</p>
+            <p class="text-3xl font-bold text-green-700 mt-2">{{ authenticated_users }}</p>
+        </div>
+        <div class="bg-white rounded-lg shadow p-6">
+            <p class="text-sm text-gray-600 font-medium">Não autenticados</p>
+            <p class="text-3xl font-bold text-yellow-700 mt-2">{{ unauthenticated_users }}</p>
+        </div>
+    </div>
+
+    <!-- Tabela de alunos -->
+    <div class="bg-white rounded-lg shadow">
+        <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+            <h3 class="text-lg font-semibold text-gray-900">Lista de alunos ({{ users|length }})</h3>
+            <input
+                type="text"
+                placeholder="Filtrar por telefone ou RA..."
+                class="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                x-model="search"
+            >
+        </div>
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200 text-sm">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-4 py-3 text-left font-medium text-gray-500">Telefone</th>
+                        <th class="px-4 py-3 text-left font-medium text-gray-500">RA</th>
+                        <th class="px-4 py-3 text-left font-medium text-gray-500">Curso</th>
+                        <th class="px-4 py-3 text-left font-medium text-gray-500">Autenticado</th>
+                        <th class="px-4 py-3 text-left font-medium text-gray-500">Interações</th>
+                        <th class="px-4 py-3 text-left font-medium text-gray-500">Última atividade</th>
+                        <th class="px-4 py-3 text-right font-medium text-gray-500">Ações</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200">
+                    {% for user in users %}
+                    <tr x-show="matchesFilter('{{ user.phone_number }}', '{{ user.ra|default:'' }}')">
+                        <td class="px-4 py-3 font-mono text-xs text-gray-800">{{ user.phone_number }}</td>
+                        <td class="px-4 py-3">
+                            {% if user.ra %}
+                            <span class="px-2 py-1 text-xs rounded-full bg-blue-50 text-blue-700">{{ user.ra }}</span>
+                            {% else %}
+                            <span class="text-xs text-gray-400">Sem RA</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-4 py-3 text-gray-700">
+                            {% if user.selected_course %}
+                                {{ user.selected_course.name }}
+                            {% else %}
+                                <span class="text-xs text-gray-400">Sem curso</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-4 py-3">
+                            {% if user.is_authenticated_utfpr %}
+                            <span class="px-2 py-1 text-xs bg-green-100 text-green-700 rounded-full">Autenticado</span>
+                            {% else %}
+                            <span class="px-2 py-1 text-xs bg-yellow-100 text-yellow-700 rounded-full">Pendente</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-4 py-3 text-gray-700">{{ user.interactions.count }}</td>
+                        <td class="px-4 py-3 text-gray-500 text-xs">{{ user.last_activity|date:"d/m/Y H:i" }}</td>
+                        <td class="px-4 py-3 text-right space-x-2">
+                            <button
+                                class="px-3 py-1 text-xs rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100"
+                                @click="openEditModal({
+                                    id: {{ user.id }},
+                                    phone_number: '{{ user.phone_number }}',
+                                    ra: '{{ user.ra|default:'' }}',
+                                    is_authenticated_utfpr: {{ user.is_authenticated_utfpr|yesno:'true,false' }},
+                                })"
+                            >
+                                Editar
+                            </button>
+                            <button
+                                class="px-3 py-1 text-xs rounded-lg border border-red-300 text-red-600 hover:bg-red-50"
+                                @click="deleteUser({{ user.id }}, '{{ user.phone_number }}')"
+                            >
+                                Remover
+                            </button>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="px-6 py-10 text-center text-gray-500">
+                            Nenhum aluno encontrado ainda. Assim que usuários falarem com o bot, eles aparecerão aqui.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Modal: criar/editar aluno -->
+    <div
+        x-show="showModal"
+        class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+        x-transition
+    >
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg p-6" @click.away="closeModal()">
+            <div class="flex items-start justify-between">
+                <div>
+                    <h3 class="text-xl font-semibold text-gray-900" x-text="editingUser ? 'Editar aluno' : 'Novo aluno manual'"></h3>
+                    <p class="text-sm text-gray-600">Cadastre ou ajuste dados básicos de alunos vindos do WhatsApp.</p>
+                </div>
+                <button class="text-gray-400 hover:text-gray-600" @click="closeModal()">✕</button>
+            </div>
+
+            <div class="mt-6 space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Telefone (WAHA ID)</label>
+                    <input type="text" x-model="form.phone_number" class="w-full mt-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-green-500" placeholder="Ex: 554199999999@c.us" />
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">RA (opcional)</label>
+                    <input type="text" x-model="form.ra" class="w-full mt-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-green-500" placeholder="Ex: a1234567" />
+                </div>
+                <div class="flex items-center space-x-2">
+                    <input type="checkbox" id="is_authenticated" x-model="form.is_authenticated_utfpr" class="h-4 w-4 text-green-600 border-gray-300 rounded" />
+                    <label for="is_authenticated" class="text-sm text-gray-700">Marcado como autenticado na UTFPR</label>
+                </div>
+            </div>
+
+            <div class="mt-6 flex justify-end space-x-3">
+                <button class="px-4 py-2 rounded-lg border" @click="closeModal()">Cancelar</button>
+                <button
+                    class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-60"
+                    :disabled="isSubmitting"
+                    @click="saveUser()"
+                >
+                    <span x-show="!isSubmitting">Salvar</span>
+                    <span x-show="isSubmitting">Salvando...</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function getCsrfToken() {
+    return document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+}
+
+function usersManager() {
+    return {
+        search: '',
+        showModal: false,
+        isSubmitting: false,
+        editingUser: null,
+        form: {
+            phone_number: '',
+            ra: '',
+            is_authenticated_utfpr: false,
+        },
+        matchesFilter(phone, ra) {
+            const term = this.search.toLowerCase();
+            if (!term) return true;
+            return phone.toLowerCase().includes(term) || ra.toLowerCase().includes(term);
+        },
+        openCreateModal() {
+            this.editingUser = null;
+            this.form = { phone_number: '', ra: '', is_authenticated_utfpr: false };
+            this.showModal = true;
+        },
+        openEditModal(user) {
+            this.editingUser = user.id;
+            this.form = {
+                phone_number: user.phone_number,
+                ra: user.ra || '',
+                is_authenticated_utfpr: !!user.is_authenticated_utfpr,
+            };
+            this.showModal = true;
+        },
+        closeModal() {
+            this.showModal = false;
+        },
+        async saveUser() {
+            if (!this.form.phone_number) {
+                showToast('Informe o telefone (WAHA ID) do aluno', 'error');
+                return;
+            }
+            this.isSubmitting = true;
+            const payload = {
+                phone_number: this.form.phone_number,
+                ra: this.form.ra || null,
+                is_authenticated_utfpr: this.form.is_authenticated_utfpr,
+            };
+            try {
+                const url = this.editingUser ? `/api/users/${this.editingUser}/` : '/api/users/';
+                const method = this.editingUser ? 'PATCH' : 'POST';
+                const response = await fetch(url, {
+                    method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken(),
+                    },
+                    body: JSON.stringify(payload),
+                });
+                if (!response.ok) {
+                    showToast('Erro ao salvar aluno', 'error');
+                    return;
+                }
+                showToast('Aluno salvo com sucesso', 'success');
+                setTimeout(() => window.location.reload(), 800);
+            } catch (e) {
+                showToast('Erro ao salvar aluno', 'error');
+            } finally {
+                this.isSubmitting = false;
+            }
+        },
+        async deleteUser(id, phone) {
+            if (!confirm(`Remover o aluno ${phone}? Esta ação não pode ser desfeita.`)) {
+                return;
+            }
+            try {
+                const response = await fetch(`/api/users/${id}/`, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRFToken': getCsrfToken(),
+                    },
+                });
+                if (!response.ok) {
+                    showToast('Erro ao remover aluno', 'error');
+                    return;
+                }
+                showToast('Aluno removido com sucesso', 'success');
+                setTimeout(() => window.location.reload(), 800);
+            } catch (e) {
+                showToast('Erro ao remover aluno', 'error');
+            }
+        },
+    };
+}
+</script>
+{% endblock %}

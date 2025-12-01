@@ -12,12 +12,19 @@ from rest_framework.filters import SearchFilter, OrderingFilter
 from django.contrib.auth import get_user_model
 
 from apps.courses.models import Course, SearchTerm
+from apps.users.models import UserProfile
 from apps.bot.models import InteractionLog, BotHealthCheck, BotMetrics, BotConfiguration
 from apps.bot.health import BotHealthMonitor
 from apps.dashboard.serializers import (
-    CourseSerializer, CourseListSerializer, SearchTermSerializer,
-    InteractionLogSerializer, BotHealthCheckSerializer, BotStatusSerializer,
-    BotConfigurationSerializer
+    CourseSerializer,
+    CourseListSerializer,
+    SearchTermSerializer,
+    InteractionLogSerializer,
+    BotHealthCheckSerializer,
+    BotStatusSerializer,
+    BotConfigurationSerializer,
+    UserProfileSerializer,
+    UserProfileListSerializer,
 )
 
 
@@ -66,6 +73,21 @@ class CourseViewSet(viewsets.ModelViewSet):
         
         count = Course.objects.filter(id__in=ids).delete()[0]
         return Response({'message': f'{count} curso(s) deletado(s) com sucesso', 'count': count})
+
+
+class UserProfileViewSet(viewsets.ModelViewSet):
+    queryset = UserProfile.objects.select_related("selected_course").all()
+    permission_classes = [AllowAny]
+    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
+    filterset_fields = ["is_authenticated_utfpr", "selected_course"]
+    search_fields = ["phone_number", "ra"]
+    ordering_fields = ["last_activity", "created_at", "ra", "phone_number"]
+    ordering = ["-last_activity"]
+
+    def get_serializer_class(self):
+        if self.action == "list":
+            return UserProfileListSerializer
+        return UserProfileSerializer
 
 
 class SearchTermViewSet(viewsets.ModelViewSet):

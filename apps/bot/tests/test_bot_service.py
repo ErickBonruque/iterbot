@@ -70,11 +70,11 @@ class BotServiceFlowTests(TestCase):
 
         self.service.process_message(chat_id, "3", from_me=False)  # select course
         user.refresh_from_db()
-        self.assertEqual(user.current_action, "awaiting_course_choice")
+        self.assertEqual(user.current_action, "course_selection")
 
         self.service.process_message(chat_id, "1", from_me=False)  # pick first course
         user.refresh_from_db()
-        self.assertEqual(user.current_action, "awaiting_term_choice")
+        self.assertEqual(user.current_action, "term_selection")
         self.assertEqual(user.selected_course, course)
 
         self.job_service.search.return_value = [
@@ -89,3 +89,62 @@ class BotServiceFlowTests(TestCase):
         sent_text = self.waha_client.send_message.call_args[0][1]
         self.assertIn("Vagas para Engenharia", sent_text)
         self.assertIn("Python", sent_text)
+
+    def test_option_three_requires_authentication_before_listing_courses(self):
+        chat_id = "5511000000000@c.us"
+
+        # Usuário não autenticado tenta acessar opção 3
+        self.service.process_message(chat_id, "3", from_me=False)
+
+        user = UserProfile.objects.get(phone_number=chat_id)
+        self.assertFalse(user.is_authenticated_utfpr)
+
+        # Deve enviar mensagem pedindo cadastro antes de listar cursos
+        sent_text = self.waha_client.send_message.call_args[0][1]
+        self.assertIn("precisa se cadastrar", sent_text)
+
+    def test_option_three_lists_all_active_courses(self):
+        course1 = Course.objects.create(name="Engenharia de Software", is_active=True)
+        course2 = Course.objects.create(name="Ciência da Computação", is_active=True)
+        Course.objects.create(name="Curso Inativo", is_active=False)
+
+        chat_id = "5511999888777@c.us"
+        user = self._authenticate_user(chat_id)
+
+        self.service.process_message(chat_id, "3", from_me=False)
+        user.refresh_from_db()
+        self.assertEqual(user.current_action, "course_selection")
+
+        sent_text = self.waha_client.send_message.call_args[0][1]
+        self.assertIn("Selecione seu Curso", sent_text)
+        self.assertIn(course1.name, sent_text)
+        self.assertIn(course2.name, sent_text)
+        self.assertNotIn("Curso Inativo", sent_text)
+
+    def test_search_all_terms_option_uses_all_default_terms(self):
+        course = Course.objects.create(name="Engenharia", is_active=True)
+        SearchTerm.objects.create(course=course, term="Python", priority=2)
+        SearchTerm.objects.create(course=course, term="Django", priority=1)
+
+        chat_id = "5511777666555@c.us"
+        user = self._authenticate_user(chat_id)
+
+        # Inicia fluxo de curso
+        self.service.process_message(chat_id, "3", from_me=False)
+        user.refresh_from_db()
+        self.assertEqual(user.current_action, "course_selection")
+
+        # Escolhe o primeiro curso
+        self.service.process_message(chat_id, "1", from_me=False)
+        user.refresh_from_db()
+        self.assertEqual(user.current_action, "term_selection")
+
+        # Configura retorno de busca e escolhe opção "Buscar Todos"
+        self.job_service.search.return_value = [
+            {"company": "Empresa X", "title": "Dev Python", "url": "https://example.com"}
+        ]
+
+        # Há 2 termos default, então opção 3 corresponde a "Buscar Todos"
+        self.service.process_message(chat_id, "3", from_me=False)
+
+        self.job_service.search.assert_called_with(["Python", "Django"], limit=5)

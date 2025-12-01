@@ -11,7 +11,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 env = environ.Env(
     DEBUG=(bool, False),
     DJANGO_SECRET_KEY=(str, ""),
-    ALLOWED_HOSTS=(list, []),
+    ALLOWED_HOSTS=(str, "*"),
     DATABASE_URL=(str, ""),
     REDIS_URL=(str, "redis://redis:6379/0"),
     WAHA_URL=(str, "http://waha:3000"),
@@ -58,8 +58,12 @@ class DjangoSettings:
             "django_secret_key", "DJANGO_SECRET_KEY", "dev-secret-key-change-in-production"
         )
         self.debug = env("DEBUG")
-        allowed_hosts_str = env("ALLOWED_HOSTS", default="*")
-        self.allowed_hosts = [h.strip() for h in allowed_hosts_str.split(",") if h.strip()]
+        allowed_hosts_raw = env("ALLOWED_HOSTS", default="*")
+        if isinstance(allowed_hosts_raw, str):
+            allowed_hosts_iterable = allowed_hosts_raw.split(",")
+        else:
+            allowed_hosts_iterable = allowed_hosts_raw
+        self.allowed_hosts = [h.strip() for h in allowed_hosts_iterable if h and h.strip()]
 
 
 @dataclass

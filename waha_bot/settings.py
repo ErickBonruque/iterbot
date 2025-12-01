@@ -151,9 +151,6 @@ CACHES = {
     "default": {
         "BACKEND": "django.core.cache.backends.redis.RedisCache",
         "LOCATION": settings.redis.url,
-        "OPTIONS": {
-            "CLIENT_CLASS": "django_redis.client.DefaultClient",
-        },
         "KEY_PREFIX": "capyvagas",
     }
 }
