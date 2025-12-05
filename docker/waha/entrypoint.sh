@@ -15,31 +15,44 @@ echo "============================================"
 echo "🔐 WAHA Secret Loader"
 echo "============================================"
 
-# Function to load secret from file and export as environment variable
+# Function to load secret from file and export as environment variable.
+# Falls back to existing environment variables so the dashboard password can
+# be injected via traditional env vars when Docker secrets are not available
+# (e.g., during local testing or when running behind an external Traefik
+# instance that doesn't mount secrets).
 load_secret() {
     local secret_file=$1
     local env_var=$2
     local required=${3:-false}
-    
+
     if [ -f "$secret_file" ]; then
         local value=$(cat "$secret_file" | tr -d '\n\r' | tr -d ' ')
-        
+
         if [ -z "$value" ]; then
             echo "⚠️  WARNING: $secret_file exists but is empty!"
-            if [ "$required" = "true" ]; then
+            if [ "$required" = "true" ] && [ -z "${!env_var}" ]; then
                 echo "❌ ERROR: $env_var is required but empty"
                 exit 1
             fi
         else
             export "$env_var"="$value"
             echo "✅ $env_var loaded (length: ${#value} chars)"
+            return 0
         fi
     else
         echo "⚠️  WARNING: Secret file $secret_file not found"
-        if [ "$required" = "true" ]; then
-            echo "❌ ERROR: Required secret $env_var not found"
-            exit 1
-        fi
+    fi
+
+    # Fallback to an existing environment variable if provided
+    if [ -n "${!env_var}" ]; then
+        local env_value="${!env_var}"
+        echo "✅ $env_var sourced from environment (length: ${#env_value} chars)"
+        return 0
+    fi
+
+    if [ "$required" = "true" ]; then
+        echo "❌ ERROR: Required secret $env_var not found in $secret_file or env"
+        exit 1
     fi
 }
 

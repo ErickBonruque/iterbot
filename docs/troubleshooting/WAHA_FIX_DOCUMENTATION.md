@@ -4,12 +4,16 @@
 
 O WAHA não suporta nativamente variáveis de ambiente com sufixo `_FILE` (como `WAHA_API_KEY_FILE`). Quando essas variáveis eram usadas, o WAHA as ignorava e gerava senhas aleatórias automaticamente.
 
+Além disso, quando o dashboard era exposto via Traefik, proxies externos não montavam os Docker secrets, o que fazia o WAHA voltar a gerar senhas aleatórias. Agora o entrypoint também aceita variáveis de ambiente tradicionais como fallback (`WAHA_DASHBOARD_PASSWORD`, `WAHA_API_KEY` etc.), mantendo a autenticação mesmo sem secrets montados.
+
 ## ✅ Solução Implementada
 
 Criamos um **script entrypoint customizado** que:
 1. Lê os Docker Secrets de `/run/secrets/*`
 2. Exporta como variáveis de ambiente normais (`WAHA_API_KEY`, `WAHA_DASHBOARD_PASSWORD`)
 3. Inicia o WAHA com as credenciais corretas
+
+> Se os secrets não estiverem disponíveis (ex.: Traefik externo), basta definir as variáveis diretamente no `docker-compose.yml` ou `.env` que o entrypoint respeitará o valor.
 
 ## 🚀 Como Usar
 
