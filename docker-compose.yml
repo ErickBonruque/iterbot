@@ -124,8 +124,9 @@ services:
   # ==========================================================================
   # WAHA - WhatsApp HTTP API
   # ==========================================================================
-  # IMPORTANT: WAHA is accessed directly without Traefik to avoid
-  # authentication issues. Access via http://localhost:3000/dashboard
+  # Exposed both directly (port 3000) and via Traefik (waha.${DOMAIN}) to keep
+  # the dashboard usable behind HTTPS and custom domains without breaking
+  # authentication.
   # ==========================================================================
   waha:
     image: devlikeapro/waha
@@ -171,7 +172,12 @@ services:
       retries: 3
       start_period: 60s
     labels:
-      - "traefik.enable=false"  # Direct access, no proxy
+      - "traefik.enable=true"
+      - "traefik.http.routers.waha.rule=Host(`waha.${DOMAIN:-localhost}`) || Host(`waha.localhost`)"
+      - "traefik.http.routers.waha.entrypoints=web"
+      - "traefik.http.services.waha.loadbalancer.server.port=3000"
+      - "traefik.http.middlewares.waha-security.headers.customrequestheaders.X-Forwarded-Proto=https"
+      - "traefik.http.routers.waha.middlewares=waha-security,security-headers"
 
 # ============================================================================
 # Docker Secrets - Secure Credential Management
