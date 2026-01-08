@@ -3,6 +3,17 @@ version: '3.8'
 # ============================================================================
 # CapyVagas-UTFPR - Docker Compose Configuration
 # ============================================================================
+# 
+# ⚠️ IMPORTANTE: Configuração de Credenciais
+# 
+# Este arquivo usa variáveis de ambiente para senhas e chaves API.
+# NÃO ARMAZENE SENHAS NO GITHUB!
+#
+# Para configurar localmente:
+# 1. Copie .env.example para .env
+# 2. Ou execute: ./scripts/setup-local.sh
+# 3. Edite o arquivo .env com suas credenciais
+#
 # Production-ready configuration with:
 # - PostgreSQL for data persistence
 # - Redis for caching and sessions
@@ -141,15 +152,15 @@ services:
       
       # Dashboard Configuration
       - WAHA_DASHBOARD_ENABLED=true
-      - WAHA_DASHBOARD_USERNAME=admin
-      - WAHA_DASHBOARD_PASSWORD=admin123
+      - WAHA_DASHBOARD_USERNAME=${WAHA_DASHBOARD_USERNAME}
+      - WAHA_DASHBOARD_PASSWORD=${WAHA_DASHBOARD_PASSWORD}
       
       # Swagger Configuration
-      - WHATSAPP_SWAGGER_USERNAME=swagger
-      - WHATSAPP_SWAGGER_PASSWORD=admin123
+      - WHATSAPP_SWAGGER_USERNAME=${WHATSAPP_SWAGGER_USERNAME}
+      - WHATSAPP_SWAGGER_PASSWORD=${WHATSAPP_SWAGGER_PASSWORD}
       
       # API Configuration
-      - WAHA_API_KEY=***REMOVED***
+      - WAHA_API_KEY=${WAHA_API_KEY}
       
       # Logging
       - WAHA_LOG_LEVEL=info

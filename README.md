@@ -59,49 +59,48 @@ git clone https://github.com/ErickBonruque/CapyVagas-UTFPR.git
 cd CapyVagas-UTFPR
 ```
 
-### 2. Configure os secrets
+### 2. Configure as credenciais locais
 
 ```bash
-./deployment/scripts/setup_secrets.sh
-```
+# Opção 1: Script automático (recomendado)
+./scripts/setup-local.sh
 
-Este script gera automaticamente todos os secrets necessários com valores seguros.
-
-### 3. Configure as variáveis de ambiente
-
-```bash
+# Opção 2: Manual
 cp .env.example .env
-# Edite .env conforme necessário
+# Edite .env com suas credenciais
 ```
 
-### 4. Inicie os serviços
+### 3. Inicie os serviços
 
 ```bash
 docker-compose up -d
 ```
 
-### 5. Execute as migrações
+### 4. Execute as migrações
 
 ```bash
 docker-compose exec backend python manage.py migrate
 docker-compose exec backend python manage.py createsuperuser
 ```
 
-### 6. Acesse os serviços
+### 5. Acesse os serviços
 
 | Serviço | URL | Credenciais |
 |---------|-----|-------------|
-| **WAHA Dashboard** | http://localhost:3000/dashboard/ | `admin` / `admin123` |
-| **Backend Dashboard** | http://localhost:8000/dashboard/ | `admin` / `changeme` |
-| **Django Admin** | http://localhost:8000/admin/ | `admin` / `changeme` |
+| **WAHA Dashboard** | http://localhost:3000/dashboard/ | Ver `.env` local |
+| **Backend Dashboard** | http://localhost:8000/dashboard/ | Ver `.env` local |
+| **Django Admin** | http://localhost:8000/admin/ | Ver `.env` local |
 | **API Docs** | http://localhost:8000/api/docs/ | - |
-| **WAHA Swagger** | http://localhost:3000/swagger | `swagger` / `admin123` |
+| **WAHA Swagger** | http://localhost:3000/swagger | Ver `.env` local |
 | **Traefik Dashboard** | http://localhost:8080 | - |
+
+> ⚠️ **Importante**: As credenciais são configuradas no arquivo `.env` local. Execute `./scripts/setup-local.sh` para gerar credenciais seguras.
 
 ## 📚 Documentação
 
 ### Guias
 
+- **[Configuração Local](docs/guides/CONFIGURACAO_LOCAL.md)** - Configure o ambiente de desenvolvimento
 - **[Instalação Completa](docs/guides/COMO_RODAR_DOCKER.md)** - Guia detalhado de instalação
 - **[Credenciais](docs/guides/CREDENCIAIS.md)** - Credenciais de acesso aos serviços
 - **[Dashboard](docs/guides/DASHBOARD_DOCUMENTATION.md)** - Documentação do dashboard

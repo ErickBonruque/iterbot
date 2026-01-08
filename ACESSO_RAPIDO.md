@@ -4,18 +4,17 @@
 
 ### 📱 WAHA WhatsApp Dashboard
 - **URL**: http://localhost:3000/dashboard/
-- **Login**: admin / admin123
-- **API Key**: ***REMOVED***
+- **Credenciais**: Ver arquivo `.env` local
 
 ### 🖥️ Backend Django
 - **Dashboard**: http://localhost:8000/dashboard/
 - **Admin**: http://localhost:8000/admin/
-- **Login**: admin / changeme
+- **Credenciais**: Ver arquivo `.env` local
 
 ### 📊 Monitoramento
 - **Traefik**: http://localhost:8080
 - **API Docs**: http://localhost:8000/api/docs/
-- **WAHA Swagger**: http://localhost:3000/swagger (swagger/admin123)
+- **WAHA Swagger**: http://localhost:3000/swagger
 
 ## Comandos Úteis
 
@@ -38,12 +37,24 @@ docker compose down
 docker compose up -d
 ```
 
+## 🔐 Configurar Credenciais
+
+Se ainda não configurou:
+
+```bash
+./scripts/setup-local.sh
+```
+
+Este script irá gerar senhas seguras e exibir as credenciais.
+
 ## Conectar WhatsApp
 
 1. Acesse: http://localhost:3000/dashboard/
-2. Login: admin / admin123
+2. Faça login com as credenciais do .env
 3. Escaneie o QR Code com o WhatsApp
+4. Pronto! O WhatsApp estará conectado ao CapyVagas
 
 ## 📚 Documentação Completa
+- [Configuração Local](docs/guides/CONFIGURACAO_LOCAL.md)
 - [Credenciais Detalhadas](docs/guides/CREDENCIAIS.md)
 - [Guia de Instalação](docs/guides/COMO_RODAR_DOCKER.md)
