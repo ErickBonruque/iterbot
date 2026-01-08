@@ -40,7 +40,7 @@ validate:
 ## start: Start all services
 start:
 	@echo "$(BLUE)🚀 Starting CapyVagas...$(NC)"
-	@docker-compose up -d
+	@docker compose up -d
 	@echo "$(GREEN)✅ Services started!$(NC)"
 	@echo ""
 	@make status
@@ -48,31 +48,31 @@ start:
 ## stop: Stop all services
 stop:
 	@echo "$(BLUE)🛑 Stopping CapyVagas...$(NC)"
-	@docker-compose stop
+	@docker compose stop
 	@echo "$(GREEN)✅ Services stopped!$(NC)"
 
 ## restart: Restart all services
 restart:
 	@echo "$(BLUE)🔄 Restarting CapyVagas...$(NC)"
-	@docker-compose restart
+	@docker compose restart
 	@echo "$(GREEN)✅ Services restarted!$(NC)"
 
 ## logs: Show logs from all services
 logs:
-	@docker-compose logs -f
+	@docker compose logs -f
 
 ## logs-waha: Show logs from WAHA service
 logs-waha:
-	@docker-compose logs -f waha
+	@docker compose logs -f waha
 
 ## logs-backend: Show logs from backend service
 logs-backend:
-	@docker-compose logs -f backend
+	@docker compose logs -f backend
 
 ## status: Show status of all services
 status:
 	@echo "$(BLUE)📊 Service Status:$(NC)"
-	@docker-compose ps
+	@docker compose ps
 	@echo ""
 	@echo "$(BLUE)🔗 Access URLs:$(NC)"
 	@echo "  $(GREEN)WAHA Dashboard:$(NC)  http://localhost:3000/dashboard"
@@ -85,50 +85,50 @@ status:
 clean:
 	@echo "$(YELLOW)⚠️  This will remove all containers and volumes!$(NC)"
 	@read -p "Are you sure? (y/N): " confirm && [ "$$confirm" = "y" ] || exit 1
-	@docker-compose down -v
+	@docker compose down -v
 	@echo "$(GREEN)✅ Cleaned!$(NC)"
 
 ## rebuild: Rebuild and restart all services
 rebuild:
 	@echo "$(BLUE)🔨 Rebuilding CapyVagas...$(NC)"
-	@docker-compose down
-	@docker-compose build --no-cache
-	@docker-compose up -d
+	@docker compose down
+	@docker compose build --no-cache
+	@docker compose up -d
 	@echo "$(GREEN)✅ Rebuilt and started!$(NC)"
 
 ## test: Run tests
 test:
 	@echo "$(BLUE)🧪 Running tests...$(NC)"
-	@docker-compose exec backend pytest
+	@docker compose exec backend pytest
 	@echo "$(GREEN)✅ Tests completed!$(NC)"
 
 ## migrate: Run database migrations
 migrate:
 	@echo "$(BLUE)📦 Running migrations...$(NC)"
-	@docker-compose exec backend python manage.py migrate
+	@docker compose exec backend python manage.py migrate
 	@echo "$(GREEN)✅ Migrations completed!$(NC)"
 
 ## makemigrations: Create new migrations
 makemigrations:
 	@echo "$(BLUE)📝 Creating migrations...$(NC)"
-	@docker-compose exec backend python manage.py makemigrations
+	@docker compose exec backend python manage.py makemigrations
 	@echo "$(GREEN)✅ Migrations created!$(NC)"
 
 ## createsuperuser: Create Django superuser
 createsuperuser:
 	@echo "$(BLUE)👤 Creating superuser...$(NC)"
-	@docker-compose exec backend python manage.py createsuperuser
+	@docker compose exec backend python manage.py createsuperuser
 
 ## shell: Open Django shell
 shell:
-	@docker-compose exec backend python manage.py shell
+	@docker compose exec backend python manage.py shell
 
 ## waha-restart: Restart only WAHA service
 waha-restart:
 	@echo "$(BLUE)🔄 Restarting WAHA...$(NC)"
-	@docker-compose stop waha
-	@docker-compose rm -f waha
-	@docker-compose up -d waha
+	@docker compose stop waha
+	@docker compose rm -f waha
+	@docker compose up -d waha
 	@echo "$(GREEN)✅ WAHA restarted!$(NC)"
 	@echo ""
 	@echo "$(BLUE)📋 WAHA Credentials:$(NC)"
@@ -139,7 +139,7 @@ waha-restart:
 ## waha-logs: Show WAHA logs with secret validation
 waha-logs:
 	@echo "$(BLUE)🔍 WAHA Logs:$(NC)"
-	@docker-compose logs waha | grep -E "(🔐|✅|❌|⚠️|🚀)"
+	@docker compose logs waha | grep -E "(🔐|✅|❌|⚠️|🚀)"
 
 ## health: Check health of all services
 health:
@@ -149,15 +149,15 @@ health:
 	@echo -n "  WAHA:       "
 	@curl -sf http://localhost:3000/health > /dev/null && echo "$(GREEN)✅ OK$(NC)" || echo "$(YELLOW)⚠️  Down$(NC)"
 	@echo -n "  PostgreSQL: "
-	@docker-compose exec -T db pg_isready > /dev/null 2>&1 && echo "$(GREEN)✅ OK$(NC)" || echo "$(YELLOW)⚠️  Down$(NC)"
+	@docker compose exec -T db pg_isready > /dev/null 2>&1 && echo "$(GREEN)✅ OK$(NC)" || echo "$(YELLOW)⚠️  Down$(NC)"
 	@echo -n "  Redis:      "
-	@docker-compose exec -T redis redis-cli ping > /dev/null 2>&1 && echo "$(GREEN)✅ OK$(NC)" || echo "$(YELLOW)⚠️  Down$(NC)"
+	@docker compose exec -T redis redis-cli ping > /dev/null 2>&1 && echo "$(GREEN)✅ OK$(NC)" || echo "$(YELLOW)⚠️  Down$(NC)"
 
 ## backup: Backup database and secrets
 backup:
 	@echo "$(BLUE)💾 Creating backup...$(NC)"
 	@mkdir -p backups
-	@docker-compose exec -T db pg_dump -U capyvagas_user capyvagas > backups/db_backup_$$(date +%Y%m%d_%H%M%S).sql
+	@docker compose exec -T db pg_dump -U capyvagas_user capyvagas > backups/db_backup_$$(date +%Y%m%d_%H%M%S).sql
 	@tar -czf backups/secrets_backup_$$(date +%Y%m%d_%H%M%S).tar.gz secrets/
 	@echo "$(GREEN)✅ Backup created in backups/$(NC)"
 

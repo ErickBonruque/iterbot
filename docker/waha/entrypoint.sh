@@ -89,4 +89,4 @@ echo "============================================"
 echo ""
 
 # Start WAHA with the standard command
-exec xvfb-run -a node dist/server.js
+exec xvfb-run -a node dist/main.js

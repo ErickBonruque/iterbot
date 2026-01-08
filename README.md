@@ -91,10 +91,11 @@ docker-compose exec backend python manage.py createsuperuser
 
 | Serviço | URL | Credenciais |
 |---------|-----|-------------|
-| **WAHA Dashboard** | http://localhost:3000/dashboard | `admin` / Ver `secrets/waha_dashboard_password.txt` |
-| **Backend Dashboard** | http://localhost:8000/dashboard/ | Ver [docs/guides/CREDENCIAIS.md](docs/guides/CREDENCIAIS.md) |
-| **Django Admin** | http://localhost:8000/admin/ | Superuser criado |
+| **WAHA Dashboard** | http://localhost:3000/dashboard/ | `admin` / `admin123` |
+| **Backend Dashboard** | http://localhost:8000/dashboard/ | `admin` / `changeme` |
+| **Django Admin** | http://localhost:8000/admin/ | `admin` / `changeme` |
 | **API Docs** | http://localhost:8000/api/docs/ | - |
+| **WAHA Swagger** | http://localhost:3000/swagger | `swagger` / `admin123` |
 | **Traefik Dashboard** | http://localhost:8080 | - |
 
 ## 📚 Documentação

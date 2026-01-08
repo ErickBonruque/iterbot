@@ -132,7 +132,7 @@ services:
     image: devlikeapro/waha
     container_name: capyvagas_waha
     restart: unless-stopped
-    entrypoint: ["/entrypoint.sh"]
+    # Usando entrypoint padrão do WAHA
     environment:
       # WhatsApp Engine Configuration
       - WHATSAPP_DEFAULT_ENGINE=WEBJS
@@ -141,27 +141,22 @@ services:
       
       # Dashboard Configuration
       - WAHA_DASHBOARD_ENABLED=true
-      - WAHA_DASHBOARD_USERNAME=${WAHA_DASHBOARD_USERNAME:-admin}
-      # WAHA_DASHBOARD_PASSWORD is loaded from secret via entrypoint.sh
+      - WAHA_DASHBOARD_USERNAME=admin
+      - WAHA_DASHBOARD_PASSWORD=admin123
       
       # Swagger Configuration
-      - WHATSAPP_SWAGGER_USERNAME=${WHATSAPP_SWAGGER_USERNAME:-swagger}
-      # WHATSAPP_SWAGGER_PASSWORD is loaded from secret via entrypoint.sh
+      - WHATSAPP_SWAGGER_USERNAME=swagger
+      - WHATSAPP_SWAGGER_PASSWORD=admin123
       
       # API Configuration
-      # WAHA_API_KEY is loaded from secret via entrypoint.sh
+      - WAHA_API_KEY=***REMOVED***
       
       # Logging
       - WAHA_LOG_LEVEL=info
       - WAHA_LOG_FORMAT=PRETTY
     ports:
       - "3000:3000"  # Direct access - no Traefik proxy
-    secrets:
-      - waha_api_key
-      - waha_dashboard_password
-      - waha_swagger_password
     volumes:
-      - ./docker/waha/entrypoint.sh:/entrypoint.sh:ro
       - waha_sessions:/app/.sessions
     networks:
       - web
