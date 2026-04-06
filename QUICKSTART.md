@@ -49,6 +49,21 @@ make waha-restart
 make stop
 ```
 
+## 📱 Conectar WhatsApp
+
+1. Acesse: http://localhost:3000/dashboard/
+2. Faça login com as credenciais do `.env`
+3. Escaneie o QR Code com o WhatsApp
+4. Pronto! O WhatsApp estará conectado ao CapyVagas
+
+## 📊 Monitoramento
+
+| Serviço | URL |
+|---------|-----|
+| **Traefik** | http://localhost:8080 |
+| **API Docs** | http://localhost:8000/api/ |
+| **WAHA Swagger** | http://localhost:3000/swagger |
+
 ## Troubleshooting
 
 ### WAHA não funciona?
