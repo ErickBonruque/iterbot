@@ -9,6 +9,18 @@ class UserProfile(TimeStampedModel):
     Armazena credenciais da UTFPR (criptografadas idealmente, aqui simplificado para MVP).
     """
     phone_number = models.CharField(max_length=50, unique=True, help_text="ID do usuário no WhatsApp (ex: 554199999999@c.us)")
+    email = models.EmailField(
+        unique=True,
+        blank=True,
+        null=True,
+        help_text="E-mail do aluno (@alunos.utfpr.edu.br)"
+    )
+    password = models.CharField(
+        max_length=128,
+        blank=True,
+        null=True,
+        help_text="Senha hash (Django User integração futura)"
+    )
     ra = models.CharField(max_length=20, blank=True, null=True, help_text="Registro Acadêmico")
     utfpr_password = EncryptedCharField(max_length=512, blank=True, null=True, help_text="Senha do Portal (criptografada)")
     is_authenticated_utfpr = models.BooleanField(default=False)
