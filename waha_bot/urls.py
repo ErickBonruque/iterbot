@@ -9,6 +9,8 @@ urlpatterns = [
     path('health/', HealthCheckView.as_view(), name='health'),
     path('admin/', admin.site.urls),
     path('webhook/', webhook),
+    path('accounts/', include('allauth.urls')),
+    path('accounts/', include('apps.users.urls')),
     path('dashboard/', include('apps.dashboard.urls')),
     path('api/', include('apps.dashboard.api_urls')),
 ]

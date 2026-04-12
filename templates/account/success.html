@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}Bem-vindo - CapyVagas UTFPR{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6 col-lg-5">
+        <div class="card">
+            <div class="card-header text-center">
+                <h4 class="mb-0">🐧 Bem-vindo ao CapyVagas!</h4>
+            </div>
+            <div class="card-body text-center">
+                <div class="alert alert-success">
+                    <strong>Login realizado com sucesso!</strong>
+                </div>
+
+                <p class="mb-4">
+                    Olá, <strong>{{ user.email }}</strong>
+                </p>
+
+                <p>
+                    Você está autenticado no sistema CapyVagas UTFPR.
+                </p>
+
+                <hr class="my-4">
+
+                <div class="d-grid gap-2">
+                    <a href="{% url 'account_logout' %}" class="btn btn-outline-secondary">Sair</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

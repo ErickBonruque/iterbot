@@ -1,0 +1,13 @@
+Olá!
+
+Você se cadastrou no CapyVagas UTFPR.
+
+Para confirmar seu e-mail e ativar sua conta, acesse o link abaixo:
+
+{{ activate_url }}
+
+Se você não solicitou este cadastro, ignore este e-mail.
+
+--
+CapyVagas UTFPR
+Sistema de Divulgação de Vagas de Estágio

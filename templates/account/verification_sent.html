@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}Verifique seu e-mail - CapyVagas UTFPR{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6 col-lg-5">
+        <div class="card">
+            <div class="card-header text-center">
+                <h4 class="mb-0">✅ Verifique seu e-mail</h4>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-success">
+                    <strong>Cadastro iniciado com sucesso!</strong>
+                </div>
+                
+                <p>Enviamos um link de confirmação para:</p>
+                <p class="text-center">
+                    <strong>{{ email }}</strong>
+                </p>
+
+                <p class="mt-4">
+                    Acesse sua caixa de entrada e clique no link para ativar sua conta.
+                </p>
+
+                <div class="alert alert-warning mt-4">
+                    <strong>Dica:</strong> Se não encontrar o e-mail, verifique a pasta de spam.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

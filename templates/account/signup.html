@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}Cadastro - CapyVagas UTFPR{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6 col-lg-5">
+        <div class="card">
+            <div class="card-header text-center">
+                <h4 class="mb-0">Cadastro de Aluno</h4>
+            </div>
+            <div class="card-body">
+                <p class="text-muted text-center mb-4">
+                    Crie sua conta com seu e-mail institucional UTFPR
+                </p>
+
+                <form method="post" action="{% url 'account_signup' %}" id="signup_form">
+                    {% csrf_token %}
+                    
+                    {% if form.non_field_errors %}
+                    <div class="alert alert-danger">
+                        {{ form.non_field_errors }}
+                    </div>
+                    {% endif %}
+
+                    <div class="mb-3">
+                        <label for="id_email" class="form-label">E-mail institucional *</label>
+                        <input type="email" 
+                               name="email" 
+                               class="form-control {% if form.email.errors %}is-invalid{% endif %}" 
+                               id="id_email" 
+                               placeholder="seu.nome@alunos.utfpr.edu.br"
+                               value="{{ form.email.value|default:'' }}"
+                               required>
+                        {% if form.email.errors %}
+                        <div class="invalid-feedback">
+                            {{ form.email.errors.0 }}
+                        </div>
+                        {% endif %}
+                        <small class="form-text text-muted">
+                            Apenas e-mails @alunos.utfpr.edu.br são aceitos
+                        </small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="id_password1" class="form-label">Senha *</label>
+                        <input type="password" 
+                               name="password1" 
+                               class="form-control {% if form.password1.errors %}is-invalid{% endif %}" 
+                               id="id_password1"
+                               required>
+                        {% if form.password1.errors %}
+                        <div class="invalid-feedback">
+                            {{ form.password1.errors.0 }}
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="id_password2" class="form-label">Confirmar senha *</label>
+                        <input type="password" 
+                               name="password2" 
+                               class="form-control {% if form.password2.errors %}is-invalid{% endif %}" 
+                               id="id_password2"
+                               required>
+                        {% if form.password2.errors %}
+                        <div class="invalid-feedback">
+                            {{ form.password2.errors.0 }}
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    {{ form.hidden_fields }}
+
+                    <div class="d-grid gap-2 mt-4">
+                        <button type="submit" class="btn btn-primary btn-lg">Criar Conta</button>
+                    </div>
+                </form>
+
+                <hr class="my-4">
+                
+                <p class="text-center mb-0">
+                    Já tem uma conta? <a href="{% url 'account_login' %}">Entrar</a>
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.getElementById('id_email').addEventListener('blur', function() {
+    const email = this.value;
+    if (email && !email.endsWith('@alunos.utfpr.edu.br')) {
+        this.classList.add('is-invalid');
+        const feedback = this.nextElementSibling;
+        if (!feedback || !feedback.classList.contains('invalid-feedback')) {
+            const div = document.createElement('div');
+            div.className = 'invalid-feedback';
+            div.textContent = 'Apenas e-mails @alunos.utfpr.edu.br são aceitos';
+            this.parentNode.insertBefore(div, this.nextElementSibling);
+        }
+    } else {
+        this.classList.remove('is-invalid');
+    }
+});
+</script>
+{% endblock %}

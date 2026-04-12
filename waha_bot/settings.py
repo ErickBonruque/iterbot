@@ -30,9 +30,12 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "django.contrib.sites",
     # Third Party Apps
     "rest_framework",
     "django_filters",
+    "allauth",
+    "allauth.account",
     # Local Apps
     "apps.core",
     "apps.users",
@@ -41,6 +44,8 @@ INSTALLED_APPS = [
     "apps.bot",
     "apps.dashboard",
 ]
+
+SITE_ID = 1
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
@@ -51,6 +56,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "allauth.account.middleware.AccountMiddleware",
     "infra.middleware.correlation_id.CorrelationIdMiddleware",
     "infra.middleware.structured_logging.StructuredLoggingMiddleware",
 ]
@@ -60,7 +66,7 @@ ROOT_URLCONF = "waha_bot.urls"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [],
+        "DIRS": [BASE_DIR / "templates"],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
@@ -104,6 +110,31 @@ AUTH_PASSWORD_VALIDATORS = [
         "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
     },
 ]
+
+# django-allauth Configuration
+AUTHENTICATION_BACKENDS = [
+    "django.contrib.auth.backends.ModelBackend",
+    "allauth.account.auth_backends.AuthenticationBackend",
+]
+
+ACCOUNT_AUTHENTICATION_METHOD = "email"
+ACCOUNT_EMAIL_REQUIRED = True
+ACCOUNT_EMAIL_VERIFICATION = "mandatory"
+ACCOUNT_UNIQUE_EMAIL = True
+ACCOUNT_USERNAME_REQUIRED = False
+ACCOUNT_ADAPTER = "apps.users.adapters.UTFPRAccountAdapter"
+LOGIN_REDIRECT_URL = "/accounts/success/"
+ACCOUNT_LOGOUT_REDIRECT_URL = "/accounts/login/"
+ACCOUNT_EMAIL_CONFIRMATION_ANONYMOUS_REDIRECT_URL = "/accounts/email-confirmed/"
+
+# Email Configuration (dev usa console, prod usa variáveis de ambiente)
+EMAIL_BACKEND = settings.email.backend
+EMAIL_HOST = settings.email.host
+EMAIL_PORT = settings.email.port
+EMAIL_USE_TLS = settings.email.use_tls
+EMAIL_HOST_USER = settings.email.user
+EMAIL_HOST_PASSWORD = settings.email.password
+DEFAULT_FROM_EMAIL = settings.email.from_email
 
 
 # Internationalization

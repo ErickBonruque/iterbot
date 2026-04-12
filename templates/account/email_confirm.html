@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}Confirmar e-mail - CapyVagas UTFPR{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6 col-lg-5">
+        <div class="card">
+            <div class="card-header text-center">
+                <h4 class="mb-0">Confirmar E-mail</h4>
+            </div>
+            <div class="card-body">
+                {% if confirmation %}
+                    <p class="mb-4">
+                        Por favor, confirme que <strong>{{ confirmation.email_address.email }}</strong> é seu endereço de e-mail.
+                    </p>
+
+                    <form method="post" action="{% url 'account_confirm_email' confirmation.key %}">
+                        {% csrf_token %}
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary btn-lg">Confirmar</button>
+                        </div>
+                    </form>
+                {% else %}
+                    <div class="alert alert-danger">
+                        <strong>Link inválido ou expirado</strong>
+                    </div>
+                    <p>
+                        O link de confirmação é inválido ou já foi utilizado.
+                    </p>
+                    <div class="d-grid gap-2 mt-3">
+                        <a href="{% url 'account_signup' %}" class="btn btn-primary">Fazer novo cadastro</a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

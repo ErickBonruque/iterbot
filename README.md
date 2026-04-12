@@ -13,6 +13,7 @@ Bot de WhatsApp integrado ao WAHA com dashboard administrativo em Django/DRF. Ar
 - ✅ **Robusto**: Restart policies, connection pooling, tratamento de erros
 - ✅ **Manutenível**: SOLID principles, type hints, documentação completa
 - ✅ **Testável**: Framework de testes, cobertura de código
+- ✅ **Autenticação Institucional**: Sistema de registro e login para alunos UTFPR via e-mail @alunos.utfpr.edu.br
 
 ## 📁 Estrutura do Projeto
 
@@ -90,6 +91,8 @@ docker-compose exec backend python manage.py createsuperuser
 | **WAHA Dashboard** | http://localhost:3000/dashboard/ | Ver `.env` local |
 | **Backend Dashboard** | http://localhost:8000/dashboard/ | Ver `.env` local |
 | **Django Admin** | http://localhost:8000/admin/ | Ver `.env` local |
+| **Cadastro de Alunos** | http://localhost:8000/accounts/signup/ | E-mail @alunos.utfpr.edu.br |
+| **Login de Alunos** | http://localhost:8000/accounts/login/ | Após cadastro |
 | **API Docs** | http://localhost:8000/api/docs/ | - |
 | **WAHA Swagger** | http://localhost:3000/swagger | Ver `.env` local |
 | **Traefik Dashboard** | http://localhost:8080 | - |
@@ -104,6 +107,7 @@ docker-compose exec backend python manage.py createsuperuser
 - **[Instalação Completa](docs/guides/COMO_RODAR_DOCKER.md)** - Guia detalhado de instalação
 - **[Credenciais](docs/guides/CREDENCIAIS.md)** - Credenciais de acesso aos serviços
 - **[Dashboard](docs/guides/DASHBOARD_DOCUMENTATION.md)** - Documentação do dashboard
+- **[AWS SES Setup](docs/guides/AWS_SES_SETUP.md)** - Configuração de e-mail em produção
 
 ### Troubleshooting
 

@@ -1,4 +1,62 @@
-# Changelog - CapyVagas Refactoring
+# Changelog - CapyVagas UTFPR
+
+## [Fase 2] - 2026-04-12
+
+### Autenticação de Alunos
+
+**Implementado:**
+- ✅ Sistema de registro e login para alunos via django-allauth
+- ✅ Validação de domínio institucional (@alunos.utfpr.edu.br)
+- ✅ Confirmação de e-mail obrigatória
+- ✅ Recuperação de senha via e-mail
+- ✅ Integração UserProfile com django.contrib.auth.User
+- ✅ Templates responsivos com identidade visual UTFPR
+- ✅ Configuração AWS SES para produção
+- ✅ Console backend para desenvolvimento local
+- ✅ Testes de integração completos (7 testes)
+
+**Arquivos Criados:**
+- `apps/users/adapters.py` - Adapter customizado do allauth
+- `apps/users/validators.py` - Validador de domínio @alunos.utfpr.edu.br
+- `apps/users/signals.py` - Sincronização User ↔ UserProfile
+- `apps/users/views.py` - View de sucesso pós-login
+- `apps/users/urls.py` - Rotas de autenticação
+- `apps/users/apps.py` - Configuração do app
+- `templates/base.html` - Template base com Bootstrap 5
+- `templates/account/*.html` - 11 templates de autenticação
+- `apps/users/tests/test_auth_flow.py` - 7 testes de integração
+- `docs/guides/AWS_SES_SETUP.md` - Guia de configuração SES
+
+**Arquivos Modificados:**
+- `pyproject.toml` - Adicionado django-allauth 0.57.0
+- `waha_bot/settings.py` - Configuração allauth e e-mail
+- `waha_bot/urls.py` - Rotas do allauth
+- `config/env.py` - EmailSettings para configuração de e-mail
+- `apps/users/models.py` - Campo OneToOne user em UserProfile
+- `.env.example` - Variáveis de e-mail
+- `README.md` - Documentação de autenticação
+
+**Requisitos Atendidos:**
+- AUTH-01: Registro com @alunos.utfpr.edu.br ✅
+- AUTH-02: E-mail de confirmação via AWS SES ✅
+- AUTH-03: Login e logout ✅
+- AUTH-04: Recuperação de senha ✅
+- AUTH-05: Rejeição de domínios não institucionais ✅
+
+**Testes:**
+```bash
+poetry run python manage.py test apps.users.tests.test_auth_flow --settings=apps.users.tests.test_settings -v 2
+# Ran 7 tests in 1.840s - OK
+```
+
+**Rotas Disponíveis:**
+- `/accounts/signup/` - Cadastro de alunos
+- `/accounts/login/` - Login
+- `/accounts/logout/` - Logout
+- `/accounts/password/reset/` - Recuperação de senha
+- `/accounts/success/` - Página pós-login
+
+---
 
 ## Branch: `fix/waha-auth-complete-refactor`
 

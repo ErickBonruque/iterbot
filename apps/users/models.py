@@ -1,13 +1,24 @@
+from django.contrib.auth.models import User
 from django.db import models
+
 from apps.core.models import TimeStampedModel
 from apps.courses.models import Course, SearchTerm
 from infra.security.fields import EncryptedCharField
+
 
 class UserProfile(TimeStampedModel):
     """
     Representa um usuário do sistema, vinculado ao número de telefone (WAHA ID).
     Armazena credenciais da UTFPR (criptografadas idealmente, aqui simplificado para MVP).
     """
+    user = models.OneToOneField(
+        User,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="profile",
+        help_text="Vínculo com django.contrib.auth.User para autenticação web"
+    )
     phone_number = models.CharField(max_length=50, unique=True, help_text="ID do usuário no WhatsApp (ex: 554199999999@c.us)")
     email = models.EmailField(
         unique=True,

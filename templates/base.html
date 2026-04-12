@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}CapyVagas UTFPR{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --utfpr-yellow: #FFD100;
+            --utfpr-black: #000000;
+            --utfpr-white: #FFFFFF;
+        }
+        body {
+            background-color: #f8f9fa;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .navbar {
+            background-color: var(--utfpr-black) !important;
+        }
+        .navbar-brand {
+            color: var(--utfpr-yellow) !important;
+            font-weight: 700;
+        }
+        .btn-primary {
+            background-color: var(--utfpr-yellow);
+            border-color: var(--utfpr-yellow);
+            color: var(--utfpr-black);
+            font-weight: 600;
+        }
+        .btn-primary:hover {
+            background-color: #e6bb00;
+            border-color: #e6bb00;
+            color: var(--utfpr-black);
+        }
+        .card {
+            border: none;
+            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+        }
+        .card-header {
+            background-color: var(--utfpr-black);
+            color: var(--utfpr-yellow);
+            font-weight: 600;
+        }
+        .main-content {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            padding: 2rem 0;
+        }
+        .footer {
+            background-color: var(--utfpr-black);
+            color: var(--utfpr-white);
+            padding: 1rem 0;
+            margin-top: auto;
+        }
+        a {
+            color: var(--utfpr-black);
+        }
+        a:hover {
+            color: #333;
+        }
+        .alert-warning {
+            background-color: #fff3cd;
+            border-color: #ffc107;
+        }
+        {% block extra_css %}{% endblock %}
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-dark">
+        <div class="container">
+            <span class="navbar-brand mb-0 h1">🐧 CapyVagas UTFPR</span>
+        </div>
+    </nav>
+
+    <main class="main-content">
+        <div class="container">
+            {% if messages %}
+                {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+                {% endfor %}
+            {% endif %}
+
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+
+    <footer class="footer text-center">
+        <div class="container">
+            <small>CapyVagas UTFPR - Sistema de Divulgação de Vagas de Estágio</small>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

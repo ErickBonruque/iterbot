@@ -23,6 +23,13 @@ env = environ.Env(
     DJANGO_ADMIN_USERNAME=(str, "admin"),
     DJANGO_ADMIN_PASSWORD=(str, "admin"),
     DOMAIN=(str, "localhost"),
+    EMAIL_BACKEND=(str, "django.core.mail.backends.console.EmailBackend"),
+    EMAIL_HOST=(str, ""),
+    EMAIL_PORT=(int, 587),
+    EMAIL_USE_TLS=(bool, True),
+    EMAIL_HOST_USER=(str, ""),
+    EMAIL_HOST_PASSWORD=(str, ""),
+    DEFAULT_FROM_EMAIL=(str, "noreply@capyvagas.utfpr.edu.br"),
 )
 
 # Read .env file if it exists
@@ -129,6 +136,26 @@ class DjangoAdminCredentials:
 
 
 @dataclass
+class EmailSettings:
+    backend: str
+    host: str
+    port: int
+    use_tls: bool
+    user: str
+    password: str
+    from_email: str
+
+    def __init__(self) -> None:
+        self.backend = env("EMAIL_BACKEND")
+        self.host = env("EMAIL_HOST")
+        self.port = env("EMAIL_PORT")
+        self.use_tls = env("EMAIL_USE_TLS")
+        self.user = env("EMAIL_HOST_USER")
+        self.password = _get_secret_or_env("email_password", "EMAIL_HOST_PASSWORD", "")
+        self.from_email = env("DEFAULT_FROM_EMAIL")
+
+
+@dataclass
 class AppConfig:
     django: DjangoSettings
     database: DatabaseSettings
@@ -136,6 +163,7 @@ class AppConfig:
     waha: WahaSettings
     dashboard_credentials: BotDashboardCredentials
     admin_credentials: DjangoAdminCredentials
+    email: EmailSettings
 
     def __init__(self) -> None:
         self.django = DjangoSettings()
@@ -144,6 +172,7 @@ class AppConfig:
         self.waha = WahaSettings()
         self.dashboard_credentials = BotDashboardCredentials()
         self.admin_credentials = DjangoAdminCredentials()
+        self.email = EmailSettings()
 
 
 settings = AppConfig()
