@@ -3,6 +3,19 @@ from apps.core.models import TimeStampedModel
 from apps.users.models import UserProfile
 
 
+class CompanyStatus(models.TextChoices):
+    PENDING = 'pending', 'Pendente'
+    APPROVED = 'approved', 'Aprovada'
+    BLOCKED = 'blocked', 'Bloqueada'
+
+
+class JobStatus(models.TextChoices):
+    DRAFT = 'draft', 'Rascunho'
+    PENDING = 'pending', 'Pendente'
+    APPROVED = 'approved', 'Aprovada'
+    EXPIRED = 'expired', 'Expirada'
+
+
 class JobSearchLog(TimeStampedModel):
     """
     Log de buscas por vagas realizadas pelos usuários.
