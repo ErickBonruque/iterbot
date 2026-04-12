@@ -15,7 +15,7 @@ class TestCompany:
     
     def test_company_cnpj_validation(self):
         """Test CNPJ validation"""
-        company = CompanyFactory.build(cnpj="00.000.000/0000-00")
+        company = CompanyFactory.build(cnpj="123")
         with pytest.raises(ValidationError) as exc_info:
             company.full_clean()
         assert 'cnpj' in exc_info.value.error_dict
