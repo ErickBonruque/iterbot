@@ -654,6 +654,21 @@ files = [
 Django = ">=3.2"
 
 [[package]]
+name = "django-jazzmin"
+version = "3.0.4"
+description = "Drop-in theme for django admin, that utilises AdminLTE 3 & Bootstrap 5 to make yo' admin look jazzy"
+optional = false
+python-versions = ">=3.10"
+groups = ["main"]
+files = [
+    {file = "django_jazzmin-3.0.4-py3-none-any.whl", hash = "sha256:70935a17604cc530e99be68d3d2b8c576095e1dac4af50464c827d66646f40fa"},
+    {file = "django_jazzmin-3.0.4.tar.gz", hash = "sha256:e8aef8b75edd8792408a69407c22ece924ab7a3d5c9d6f84d7a4eb57e06e7a44"},
+]
+
+[package.dependencies]
+django = ">=4.2"
+
+[[package]]
 name = "django-stubs"
 version = "4.2.7"
 description = "Mypy stubs for Django"
@@ -2156,4 +2171,4 @@ brotli = ["brotli"]
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.11"
-content-hash = "ad26f4b84954162e2f6a82981e8b253c60c3aa7eef7f6d75e22823d2fa5087dc"
+content-hash = "07f59c488bee86e891364f0c6faf12e300f37b91e32e3669de50e277df939baf"

@@ -3,15 +3,14 @@ from django.urls import path, include
 from django.views.generic import RedirectView
 from apps.bot.views import webhook
 from apps.core.views import HealthCheckView
+from apps.core.admin import capyvagas_admin
 
 urlpatterns = [
-    path('', RedirectView.as_view(url='/dashboard/', permanent=False)),
+    path('', RedirectView.as_view(url='/admin/', permanent=False)),
     path('health/', HealthCheckView.as_view(), name='health'),
-    path('admin/', admin.site.urls),
+    path('admin/', capyvagas_admin.urls),
     path('webhook/', webhook),
     path('empresas/', include('apps.companies.urls')),
     path('accounts/', include('allauth.urls')),
     path('accounts/', include('apps.users.urls')),
-    path('dashboard/', include('apps.dashboard.urls')),
-    path('api/', include('apps.dashboard.api_urls')),
 ]

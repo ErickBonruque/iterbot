@@ -24,6 +24,7 @@ ALLOWED_HOSTS = settings.django.allowed_hosts
 # Application definition
 
 INSTALLED_APPS = [
+    "jazzmin",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -42,7 +43,6 @@ INSTALLED_APPS = [
     "apps.courses",
     "apps.jobs",
     "apps.bot",
-    "apps.dashboard",
     "apps.companies",
 ]
 
@@ -156,8 +156,11 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
-STATIC_URL = "static/"
-STATIC_ROOT = BASE_DIR / "staticfiles"
+STATIC_URL = '/static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATICFILES_DIRS = [
+    BASE_DIR / 'static',
+]
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 WHITENOISE_AUTOREFRESH = DEBUG
 
@@ -229,6 +232,106 @@ structlog.configure(
     logger_factory=structlog.stdlib.LoggerFactory(),
     cache_logger_on_first_use=True,
 )
+
+# django-jazzmin Configuration
+JAZZMIN_SETTINGS = {
+    "site_title": "CapyVagas Admin",
+    "site_header": "CapyVagas",
+    "site_brand": "CapyVagas UTFPR",
+    "welcome_sign": "Painel Administrativo CapyVagas UTFPR",
+    "copyright": "CapyVagas UTFPR",
+    "search_model": ["auth.User", "jobs.Company", "jobs.Job"],
+    "show_sidebar": True,
+    "navigation_expanded": True,
+    "order_with_respect_to": [
+        "auth",
+        "users",
+        "users.UserProfile",
+        "jobs",
+        "jobs.Company",
+        "jobs.Job",
+        "jobs.JobApplication",
+        "bot",
+        "bot.BotConfiguration",
+        "bot.BotMessage",
+        "bot.BotHealthCheck",
+        "bot.BotMetrics",
+        "bot.InteractionLog",
+        "courses",
+    ],
+    "hide_apps": ["sites"],
+    "hide_models": [],
+    "icons": {
+        "auth": "fas fa-users-cog",
+        "auth.user": "fas fa-user",
+        "auth.Group": "fas fa-users",
+        "users.UserProfile": "fas fa-user-graduate",
+        "jobs.Company": "fas fa-building",
+        "jobs.Job": "fas fa-briefcase",
+        "jobs.JobApplication": "fas fa-file-alt",
+        "jobs.JobSearchLog": "fas fa-search",
+        "bot.BotConfiguration": "fas fa-cog",
+        "bot.BotMessage": "fas fa-comment-dots",
+        "bot.BotHealthCheck": "fas fa-heartbeat",
+        "bot.BotMetrics": "fas fa-chart-bar",
+        "bot.InteractionLog": "fas fa-history",
+        "courses.Course": "fas fa-graduation-cap",
+        "courses.SearchTerm": "fas fa-search",
+    },
+    "default_icon_parents": "fas fa-chevron-circle-right",
+    "default_icon_children": "fas fa-circle",
+    "related_modal_active": False,
+    "use_google_fonts_cdn": True,
+    "show_ui_builder": False,
+    "changeform_format": "horizontal_tabs",
+    "language_chooser": False,
+    "custom_css": "css/admin_custom.css",
+    "custom_links": {
+        "CapyVagas": [
+            {
+                "name": "GitHub",
+                "url": "https://github.com/ErickBonruque/CapyVagas-UTFPR",
+                "new_window": True,
+                "icon": "fab fa-github",
+            },
+        ],
+    },
+}
+
+JAZZMIN_UI_TWEAKS = {
+    "navbar_small_text": False,
+    "footer_small_text": False,
+    "body_small_text": False,
+    "brand_small_text": False,
+    "brand_colour": "navbar-dark",
+    "accent": "accent-warning",
+    "navbar": "navbar-dark",
+    "no_navbar_border": False,
+    "navbar_fixed": True,
+    "layout_boxed": False,
+    "footer_fixed": False,
+    "sidebar_fixed": True,
+    "sidebar": "sidebar-dark-warning",
+    "sidebar_nav_small_text": False,
+    "sidebar_disable_expand": False,
+    "sidebar_nav_child_indent": False,
+    "sidebar_nav_compact_style": False,
+    "sidebar_nav_legacy_style": False,
+    "sidebar_nav_flat_style": False,
+    "theme": "default",
+    "dark_mode_theme": None,
+    "button_classes": {
+        "primary": "btn-primary",
+        "secondary": "btn-secondary",
+        "info": "btn-info",
+        "warning": "btn-warning",
+        "danger": "btn-danger",
+        "success": "btn-success",
+    },
+}
+
+# Custom Admin Site
+ADMIN_SITE = 'apps.core.admin.capyvagas_admin'
 
 LOGGING = {
     "version": 1,

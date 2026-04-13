@@ -1,26 +1,111 @@
 from django.contrib import admin
-from apps.jobs.models import Company, Job, JobApplication
+from django.shortcuts import redirect
+from django.urls import reverse
+from django.utils.html import format_html
+from apps.jobs.models import Company, Job, JobApplication, JobSearchLog, CompanyStatus, JobStatus
 
 
 @admin.register(Company)
 class CompanyAdmin(admin.ModelAdmin):
-    list_display = ['nome', 'cnpj', 'email', 'status', 'created_at']
-    list_filter = ['status', 'created_at']
-    search_fields = ['nome', 'cnpj', 'email']
-    readonly_fields = ['created_at', 'updated_at']
+    list_display = ('nome', 'cnpj', 'email', 'telefone', 'status_badge', 'created_at')
+    list_filter = ('status', 'created_at')
+    search_fields = ('nome', 'cnpj', 'email', 'contato_nome')
+    readonly_fields = ('created_at', 'updated_at')
+    fieldsets = (
+        ('Dados da Empresa', {
+            'fields': ('nome', 'cnpj', 'email', 'telefone', 'endereco', 'descricao')
+        }),
+        ('Responsavel', {
+            'fields': ('contato_nome', 'contato_cargo')
+        }),
+        ('Status', {
+            'fields': ('status', 'user')
+        }),
+        ('Datas', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+
+    def status_badge(self, obj):
+        colors = {
+            CompanyStatus.PENDING: '#ffc107',
+            CompanyStatus.APPROVED: '#28a745',
+            CompanyStatus.BLOCKED: '#dc3545',
+        }
+        color = colors.get(obj.status, '#6c757d')
+        return format_html(
+            '<span style="background:{}; color:white; padding:3px 10px; border-radius:3px;">{}</span>',
+            color, obj.get_status_display()
+        )
+    status_badge.short_description = 'Status'
 
 
 @admin.register(Job)
 class JobAdmin(admin.ModelAdmin):
-    list_display = ['titulo', 'company', 'tipo', 'status', 'created_at']
-    list_filter = ['status', 'tipo', 'created_at']
-    search_fields = ['titulo', 'descricao', 'company__nome']
-    readonly_fields = ['created_at', 'updated_at']
+    list_display = ('titulo', 'company', 'tipo', 'status_badge', 'created_at')
+    list_filter = ('status', 'tipo', 'company', 'created_at')
+    search_fields = ('titulo', 'descricao', 'company__nome')
+    readonly_fields = ('created_at', 'updated_at')
+
+    def status_badge(self, obj):
+        colors = {
+            JobStatus.DRAFT: '#6c757d',
+            JobStatus.PENDING: '#ffc107',
+            JobStatus.APPROVED: '#28a745',
+            JobStatus.REJECTED: '#dc3545',
+            JobStatus.EXPIRED: '#6c757d',
+        }
+        color = colors.get(obj.status, '#6c757d')
+        return format_html(
+            '<span style="background:{}; color:white; padding:3px 10px; border-radius:3px;">{}</span>',
+            color, obj.get_status_display()
+        )
+    status_badge.short_description = 'Status'
+    fieldsets = (
+        (None, {
+            'fields': ('company', 'titulo', 'descricao', 'requisitos', 'salario', 'tipo')
+        }),
+        ('Status', {
+            'fields': ('status', 'rejection_reason'),
+            'classes': ('wide',),
+        }),
+        ('Datas', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',),
+        }),
+    )
+    
+    def response_change(self, request, obj):
+        """Handle custom approve/reject actions."""
+        if '_approve_job' in request.POST:
+            obj.status = JobStatus.APPROVED
+            obj.rejection_reason = ''
+            obj.save(update_fields=['status', 'rejection_reason'])
+            self.message_user(request, f'Vaga "{obj.titulo}" aprovada com sucesso.')
+            return redirect(reverse('admin:jobs_job_changelist'))
+
+        if '_reject_job' in request.POST:
+            obj.status = JobStatus.REJECTED
+            # Salva o motivo de rejeição se foi preenchido
+            obj.save(update_fields=['status', 'rejection_reason'])
+            self.message_user(request, f'Vaga "{obj.titulo}" foi rejeitada.')
+            return redirect(reverse('admin:jobs_job_changelist'))
+
+        return super().response_change(request, obj)
 
 
 @admin.register(JobApplication)
 class JobApplicationAdmin(admin.ModelAdmin):
-    list_display = ['user', 'job', 'created_at']
-    list_filter = ['created_at']
-    search_fields = ['user__phone_number', 'job__titulo']
-    readonly_fields = ['created_at', 'updated_at']
+    list_display = ('user', 'job', 'created_at')
+    list_filter = ('created_at', 'job__company')
+    search_fields = ('user__phone_number', 'user__email', 'job__titulo')
+    readonly_fields = ('created_at', 'updated_at')
+
+
+@admin.register(JobSearchLog)
+class JobSearchLogAdmin(admin.ModelAdmin):
+    list_display = ('user', 'search_term', 'results_count', 'created_at')
+    list_filter = ('created_at',)
+    search_fields = ('user__phone_number', 'search_term')
+    readonly_fields = ('created_at', 'updated_at', 'filters', 'results_preview')

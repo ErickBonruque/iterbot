@@ -16,6 +16,7 @@ class JobStatus(models.TextChoices):
     DRAFT = 'draft', 'Rascunho'
     PENDING = 'pending', 'Pendente'
     APPROVED = 'approved', 'Aprovada'
+    REJECTED = 'rejected', 'Rejeitada'
     EXPIRED = 'expired', 'Expirada'
 
 
@@ -119,6 +120,11 @@ class Job(TimeStampedModel):
         choices=JobStatus.choices,
         default=JobStatus.DRAFT,
         help_text="Status da vaga no sistema"
+    )
+    rejection_reason = models.TextField(
+        blank=True,
+        null=True,
+        help_text="Motivo da rejeição (preenchido automaticamente ao rejeitar)"
     )
     
     class Meta:

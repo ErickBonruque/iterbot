@@ -1,0 +1,118 @@
+/* Cores UTFPR para Django Admin com jazzmin */
+:root {
+    --utfpr-yellow: #FFD100;
+    --utfpr-black: #000000;
+    --utfpr-white: #FFFFFF;
+}
+
+/* Accent links e botões primários */
+.btn-primary,
+.bg-primary {
+    background-color: var(--utfpr-yellow) !important;
+    border-color: var(--utfpr-yellow) !important;
+    color: var(--utfpr-black) !important;
+}
+
+.btn-primary:hover,
+.bg-primary:hover {
+    background-color: #E6BC00 !important;
+    border-color: #E6BC00 !important;
+    color: var(--utfpr-black) !important;
+}
+
+/* Badge de vagas pendentes */
+.small-box.bg-warning {
+    background-color: var(--utfpr-yellow) !important;
+}
+.small-box.bg-warning .inner h3,
+.small-box.bg-warning .inner p {
+    color: var(--utfpr-black) !important;
+}
+
+/* Header do jazzmin */
+.jazzmin-navbar {
+    background-color: var(--utfpr-black) !important;
+}
+
+/* Sidebar */
+.jazzmin-sidebar {
+    background-color: #1a1a1a !important;
+}
+
+/* Links do menu */
+.nav-sidebar .nav-link:not(.active):hover {
+    background-color: #333333 !important;
+    color: var(--utfpr-yellow) !important;
+}
+
+.nav-sidebar .nav-link.active {
+    background-color: var(--utfpr-yellow) !important;
+    color: var(--utfpr-black) !important;
+}
+
+/* Brand logo */
+.brand-link {
+    background-color: var(--utfpr-black) !important;
+    border-bottom: 1px solid #333333 !important;
+}
+
+/* Cards de métricas */
+.small-box {
+    border-radius: 8px !important;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
+}
+
+/* Status badges */
+.badge-success {
+    background-color: #28a745 !important;
+}
+
+.badge-danger {
+    background-color: #dc3545 !important;
+}
+
+.badge-warning {
+    background-color: var(--utfpr-yellow) !important;
+    color: var(--utfpr-black) !important;
+}
+
+.badge-secondary {
+    background-color: #6c757d !important;
+}
+
+/* Tabela de status do bot */
+.table-bordered td {
+    border-color: #dee2e6 !important;
+}
+
+/* Custom buttons para aprovar/rejeitar */
+.submit-row input[type="submit"].btn-success {
+    background-color: #28a745 !important;
+    border-color: #28a745 !important;
+    color: white !important;
+    margin-right: 10px !important;
+}
+
+.submit-row input[type="submit"].btn-danger {
+    background-color: #dc3545 !important;
+    border-color: #dc3545 !important;
+    color: white !important;
+}
+
+/* Timeline de conversa */
+.conversation-timeline {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+/* Footer */
+.main-footer {
+    background-color: var(--utfpr-black) !important;
+    color: var(--utfpr-white) !important;
+    border-top: 1px solid #333333 !important;
+}
+
+/* Page header */
+.content-header {
+    background-color: #f8f9fa !important;
+    border-bottom: 1px solid #dee2e6 !important;
+}

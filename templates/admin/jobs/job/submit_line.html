@@ -1,0 +1,15 @@
+{% extends "admin/submit_line.html" %}
+{% load i18n %}
+
+{% block extra-actions %}
+{% if original and original.status == 'pending' %}
+<div class="submit-row">
+    <div class="form-group">
+        <input type="submit" class="btn btn-success" value="Aprovar Vaga" name="_approve_job">
+    </div>
+    <div class="form-group">
+        <input type="submit" class="btn btn-danger" value="Rejeitar Vaga" name="_reject_job">
+    </div>
+</div>
+{% endif %}
+{% endblock %}
