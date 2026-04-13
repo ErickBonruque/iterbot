@@ -1,43 +1,52 @@
-import logging
-from typing import List, Dict, Any
-# from jobspy import scrape_jobs # Comentado para evitar erro de import se não estiver instalado ainda
+import structlog
+from typing import Any
 
-logger = logging.getLogger(__name__)
+from jobspy import scrape_jobs
+
+logger = structlog.get_logger(__name__)
+
 
 class JobSearchService:
-    """
-    Serviço para buscar vagas usando o JobSpy.
-    """
-    
-    def search(self, terms: List[str], location: str = "Curitiba, PR", limit: int = 10) -> List[Dict[str, Any]]:
-        """
-        Busca vagas para os termos fornecidos.
-        """
-        # Mock implementation for now to avoid dependency issues during initial setup
-        # Real implementation would use scrape_jobs
-        
-        results = []
-        logger.info(f"Buscando vagas para: {terms} em {location}")
-        
-        # Simulação de retorno
-        for term in terms:
-            results.append({
-                "title": f"Vaga de {term}",
-                "company": "Empresa Exemplo",
-                "location": location,
-                "url": "https://example.com/vaga",
-                "description": f"Descrição da vaga de {term}..."
-            })
-            
-        return results
+    """Busca vagas em LinkedIn, Indeed e Glassdoor via python-jobspy."""
 
-    # def search_real(self, terms: List[str], location: str = "Curitiba, PR", limit: int = 10) -> List[Dict[str, Any]]:
-    #     jobs = scrape_jobs(
-    #         site_name=["linkedin", "indeed", "glassdoor"],
-    #         search_term=" ".join(terms),
-    #         location=location,
-    #         results_wanted=limit,
-    #         hours_old=72,
-    #         country_indeed='Brazil'
-    #     )
-    #     return jobs.to_dict('records')
+    def search(
+        self,
+        terms: list[str],
+        location: str = "Curitiba, PR",
+        limit: int = 10,
+        hours_old: int = 72,
+    ) -> list[dict[str, Any]]:
+        """
+        Busca vagas para os termos fornecidos em multiplas plataformas.
+
+        Args:
+            terms: Lista de termos de busca (ex: ["estagio python", "desenvolvedor junior"])
+            location: Localizacao geografica da busca
+            limit: Numero maximo de resultados por term
+            hours_old: Vagas publicadas nas ultimas N horas
+
+        Returns:
+            Lista de dicts com campos: title, company, location, job_type, job_url, date_posted
+        """
+        results = []
+        for term in terms:
+            try:
+                jobs_df = scrape_jobs(
+                    site_name=["linkedin", "indeed", "glassdoor"],
+                    search_term=term,
+                    location=location,
+                    results_wanted=limit,
+                    hours_old=hours_old,
+                    country_indeed="Brazil",
+                )
+                results.extend(jobs_df.to_dict("records"))
+                logger.info("jobspy_search_success", term=term, count=len(jobs_df))
+            except Exception as exc:
+                logger.warning(
+                    "jobspy_search_failed",
+                    term=term,
+                    location=location,
+                    error=str(exc),
+                )
+                # Nao re-raise - continua para o proximo term
+        return results
