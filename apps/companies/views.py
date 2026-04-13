@@ -78,13 +78,17 @@ class JobUpdateView(CompanyRequiredMixin, UpdateView):
 
     def get_object(self, queryset=None):
         job = super().get_object(queryset)
-        if job.company != self.request.user.company:
+        try:
+            user_company = self.request.user.company
+        except Exception:
+            raise PermissionDenied("Voce nao tem permissao para editar esta vaga.")
+        if job.company != user_company:
             raise PermissionDenied("Voce nao tem permissao para editar esta vaga.")
         return job
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['job'] = self.get_object()
+        context['job'] = self.object
         return context
 
     def form_valid(self, form):

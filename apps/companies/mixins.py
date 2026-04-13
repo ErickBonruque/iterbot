@@ -11,6 +11,8 @@ class CompanyRequiredMixin(LoginRequiredMixin):
         response = super().dispatch(request, *args, **kwargs)
         if hasattr(response, 'status_code') and response.status_code == 302:
             return response
-        if not hasattr(request.user, 'company'):
+        try:
+            request.user.company
+        except Exception:
             raise PermissionDenied("Usuario nao possui empresa vinculada.")
         return response
