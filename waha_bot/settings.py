@@ -128,6 +128,9 @@ LOGIN_REDIRECT_URL = "/accounts/success/"
 ACCOUNT_LOGOUT_REDIRECT_URL = "/accounts/login/"
 ACCOUNT_EMAIL_CONFIRMATION_ANONYMOUS_REDIRECT_URL = "/accounts/email-confirmed/"
 
+# Portal de Empresas (usado pelo bot para enviar links)
+PORTAL_BASE_URL = getattr(settings.django, 'portal_base_url', "http://localhost:8000")
+
 # Email Configuration (dev usa console, prod usa variáveis de ambiente)
 EMAIL_BACKEND = settings.email.backend
 EMAIL_HOST = settings.email.host
