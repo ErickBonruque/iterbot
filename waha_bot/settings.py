@@ -206,9 +206,20 @@ CELERY_TIMEZONE = TIME_ZONE
 from celery.schedules import crontab
 
 CELERY_BEAT_SCHEDULE = {
+    # Envio semanal de review de vagas — toda segunda-feira às 08:00 (Brasília)
     "send-weekly-job-review": {
         "task": "apps.jobs.tasks.send_weekly_job_review",
         "schedule": crontab(hour=8, minute=0, day_of_week="monday"),
+    },
+    # Health check da sessão WAHA — a cada 5 minutos (STAB-01)
+    "check-waha-health": {
+        "task": "apps.bot.tasks.check_waha_health",
+        "schedule": crontab(minute="*/5"),
+    },
+    # Limpeza de registros BotHealthCheck antigos — todo domingo às 02:00
+    "clean-old-health-checks": {
+        "task": "apps.bot.tasks.clean_old_health_checks",
+        "schedule": crontab(hour=2, minute=0, day_of_week="sunday"),
     },
 }
 
