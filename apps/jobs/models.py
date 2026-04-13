@@ -1,5 +1,8 @@
+from django.contrib.auth.models import User
 from django.db import models
+
 from apps.core.models import TimeStampedModel
+from apps.jobs.validators import validate_cnpj
 from apps.users.models import UserProfile
 
 
@@ -20,8 +23,14 @@ class Company(TimeStampedModel):
     """
     Empresa local que cadastra vagas para alunos da UTFPR.
     """
-    from apps.jobs.validators import validate_cnpj
-    
+    user = models.OneToOneField(
+        User,
+        on_delete=models.CASCADE,
+        related_name='company',
+        null=True,
+        blank=True,
+        help_text="Usuario vinculado a esta empresa"
+    )
     cnpj = models.CharField(
         max_length=18,
         unique=True,
