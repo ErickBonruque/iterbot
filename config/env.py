@@ -30,6 +30,9 @@ env = environ.Env(
     EMAIL_HOST_USER=(str, ""),
     EMAIL_HOST_PASSWORD=(str, ""),
     DEFAULT_FROM_EMAIL=(str, "noreply@capyvagas.utfpr.edu.br"),
+    AWS_ACCESS_KEY_ID=(str, ""),
+    AWS_SECRET_ACCESS_KEY=(str, ""),
+    AWS_DEFAULT_REGION=(str, "us-east-1"),
 )
 
 # Read .env file if it exists
@@ -156,6 +159,22 @@ class EmailSettings:
 
 
 @dataclass
+class AwsSettings:
+    access_key_id: str
+    secret_access_key: str
+    default_region: str
+
+    def __init__(self) -> None:
+        self.access_key_id = _get_secret_or_env(
+            "aws_access_key_id", "AWS_ACCESS_KEY_ID", ""
+        )
+        self.secret_access_key = _get_secret_or_env(
+            "aws_secret_access_key", "AWS_SECRET_ACCESS_KEY", ""
+        )
+        self.default_region = env("AWS_DEFAULT_REGION")
+
+
+@dataclass
 class AppConfig:
     django: DjangoSettings
     database: DatabaseSettings
@@ -164,6 +183,7 @@ class AppConfig:
     dashboard_credentials: BotDashboardCredentials
     admin_credentials: DjangoAdminCredentials
     email: EmailSettings
+    aws: AwsSettings
 
     def __init__(self) -> None:
         self.django = DjangoSettings()
@@ -173,6 +193,7 @@ class AppConfig:
         self.dashboard_credentials = BotDashboardCredentials()
         self.admin_credentials = DjangoAdminCredentials()
         self.email = EmailSettings()
+        self.aws = AwsSettings()
 
 
 settings = AppConfig()
