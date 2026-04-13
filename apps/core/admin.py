@@ -1,10 +1,10 @@
 from django.contrib import admin
 from django.db.models import Count, Q
 
-# Custom Admin Site para CapyVagas
+
 class CapyVagasAdminSite(admin.AdminSite):
     """Site de administração customizado para CapyVagas UTFPR com métricas na home."""
-    
+
     site_header = "CapyVagas UTFPR"
     site_title = "CapyVagas Admin"
     index_title = "Painel Administrativo"
@@ -50,8 +50,9 @@ class CapyVagasAdminSite(admin.AdminSite):
         return super().index(request, extra_context=extra_context)
 
 
-# Instância do admin site customizado
-capyvagas_admin = CapyVagasAdminSite(name='admin')
+# Patch the existing admin.site instance's class in-place so all @admin.register()
+# decorators (which run before this module is imported) keep their registrations.
+admin.site.__class__ = CapyVagasAdminSite
 
-# Substitui o site padrão para que @admin.register use o customizado
-admin.site = capyvagas_admin
+# Alias used by urls.py
+capyvagas_admin = admin.site
