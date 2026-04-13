@@ -4,7 +4,7 @@ Sistema de health check e monitoramento do bot WAHA.
 import os
 import time
 import requests
-import logging
+import structlog
 from datetime import datetime, timedelta
 
 from django.utils import timezone
@@ -14,7 +14,7 @@ from django.db.models import Avg
 from apps.bot.models import BotHealthCheck, BotMetrics
 from config.env import settings
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 class BotHealthMonitor:
@@ -86,7 +86,11 @@ class BotHealthMonitor:
         except Exception as e:
             result['status'] = 'error'
             result['error_message'] = str(e)
-            logger.error(f"Erro ao verificar status do bot: {e}")
+            logger.error(
+                "health_check_error",
+                session_name=self.session_name,
+                error=str(e),
+            )
         
         # Salvar no banco
         BotHealthCheck.objects.create(
@@ -182,5 +186,9 @@ class BotHealthMonitor:
         """
         cutoff = timezone.now() - timedelta(days=days)
         deleted_count = BotHealthCheck.objects.filter(created_at__lt=cutoff).delete()[0]
-        logger.info(f"Removidos {deleted_count} registros de health check antigos")
+        logger.info(
+            "health_checks_cleaned",
+            deleted_count=deleted_count,
+            days_threshold=days,
+        )
         return deleted_count

@@ -1,11 +1,11 @@
-import logging
+import structlog
 from typing import Optional
 
 import requests
 
 from config.env import WahaSettings
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 class WahaClient:
@@ -39,11 +39,70 @@ class WahaClient:
             )
             if not 200 <= response.status_code < 300:
                 logger.error(
-                    "Erro WAHA (%s): %s", response.status_code, response.text
+                    "waha_send_message_error",
+                    session_name=self.settings.session_name,
+                    status_code=response.status_code,
                 )
                 return False
         except Exception as error:  # pragma: no cover - defensive logging
-            logger.error("Erro ao enviar mensagem WAHA: %s", error)
+            logger.error(
+                "waha_send_message_exception",
+                session_name=self.settings.session_name,
+                error=str(error),
+            )
             return False
 
         return True
+
+    def start_session(self) -> bool:
+        """Inicia (ou reinicia) a sessão WAHA via API.
+
+        Retorna True se a sessão entrou em estado WORKING ou STARTING,
+        False em caso de erro HTTP, timeout ou falha de conexão.
+        """
+        url = f"{self.settings.base_url}/api/sessions/{self.settings.session_name}/start"
+        headers = {
+            "X-Api-Key": self.settings.api_key,
+            "Content-Type": "application/json",
+        }
+        try:
+            response = requests.post(
+                url,
+                headers=headers,
+                timeout=self.settings.timeout_seconds,
+            )
+            if 200 <= response.status_code < 300:
+                logger.info(
+                    "waha_session_start_success",
+                    session_name=self.settings.session_name,
+                    status_code=response.status_code,
+                )
+                return True
+            else:
+                logger.error(
+                    "waha_session_start_failed",
+                    session_name=self.settings.session_name,
+                    status_code=response.status_code,
+                )
+                return False
+        except requests.exceptions.Timeout:
+            logger.error(
+                "waha_session_start_timeout",
+                session_name=self.settings.session_name,
+                timeout_seconds=self.settings.timeout_seconds,
+            )
+            return False
+        except requests.exceptions.ConnectionError as error:
+            logger.error(
+                "waha_session_start_connection_error",
+                session_name=self.settings.session_name,
+                error=str(error),
+            )
+            return False
+        except Exception as error:  # pragma: no cover - defensive
+            logger.error(
+                "waha_session_start_unexpected_error",
+                session_name=self.settings.session_name,
+                error=str(error),
+            )
+            return False
