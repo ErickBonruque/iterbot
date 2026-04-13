@@ -1,7 +1,7 @@
 """Refactored bot service using handler pattern and separation of concerns."""
 import structlog
 
-from apps.bot.handlers import AuthenticationHandler, JobSearchHandler, MenuHandler
+from apps.bot.handlers import AuthenticationHandler, JobReviewHandler, JobSearchHandler, MenuHandler
 from apps.bot.models import BotConfiguration, InteractionLog
 from apps.users.models import UserProfile
 from apps.users.services import UTFPRAuthService
@@ -42,6 +42,7 @@ class BotService:
         self.auth_handler = AuthenticationHandler(self.waha_client, self.auth_service)
         self.job_handler = JobSearchHandler(self.waha_client, self.job_service)
         self.menu_handler = MenuHandler(self.waha_client)
+        self.review_handler = JobReviewHandler(self.waha_client, self.job_service)
 
     def process_message(self, chat_id: str, message: str, from_me: bool) -> None:
         """
@@ -104,6 +105,10 @@ class BotService:
 
         if text in {"3", "vagas", "buscar", "cursos"}:
             self.job_handler.start_course_selection(user, chat_id)
+            return
+
+        if text in {"4", "review", "vagas da semana"}:
+            self.review_handler.send_review(user, chat_id)
             return
 
         # Unknown command

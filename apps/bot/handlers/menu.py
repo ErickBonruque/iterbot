@@ -26,7 +26,8 @@ class MenuHandler(BaseHandler):
                 "📋 *Menu Principal*:\n"
                 "1️⃣ Atualizar Cadastro\n"
                 "2️⃣ Sair da Conta\n"
-                "3️⃣ Buscar Vagas\n\n"
+                "3️⃣ Buscar Vagas\n"
+                "4️⃣ Ver Review de Vagas\n\n"
                 "Digite o número da opção desejada."
             )
         else:
