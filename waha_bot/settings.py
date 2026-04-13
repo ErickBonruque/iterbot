@@ -201,6 +201,17 @@ CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = TIME_ZONE
 
+# Celery Beat Schedule - envio semanal de review de vagas
+# Roda toda segunda-feira as 08:00 horario de Brasilia (CELERY_TIMEZONE = "America/Sao_Paulo")
+from celery.schedules import crontab
+
+CELERY_BEAT_SCHEDULE = {
+    "send-weekly-job-review": {
+        "task": "apps.jobs.tasks.send_weekly_job_review",
+        "schedule": crontab(hour=8, minute=0, day_of_week="monday"),
+    },
+}
+
 # Security Settings
 if not DEBUG:
     SECURE_SSL_REDIRECT = True
