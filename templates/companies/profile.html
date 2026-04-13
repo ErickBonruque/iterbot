@@ -1,0 +1,154 @@
+{% extends "companies/base_company.html" %}
+
+{% block title %}Dados da Empresa - CapyVagas UTFPR{% endblock %}
+
+{% block company_content %}
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+        <div class="card">
+            <div class="card-header text-center">
+                <h4 class="mb-0">Dados da Empresa</h4>
+            </div>
+            <div class="card-body">
+                <p class="text-muted mb-3"><strong>CNPJ:</strong> {{ company.cnpj }}</p>
+
+                <form method="post" action="">
+                    {% csrf_token %}
+
+                    {% if form.non_field_errors %}
+                    <div class="alert alert-danger">
+                        {{ form.non_field_errors }}
+                    </div>
+                    {% endif %}
+
+                    <div class="mb-3">
+                        <label for="id_nome" class="form-label">Nome da Empresa *</label>
+                        <input type="text"
+                               name="nome"
+                               class="form-control {% if form.nome.errors %}is-invalid{% endif %}"
+                               id="id_nome"
+                               value="{{ form.nome.value|default:'' }}"
+                               required>
+                        {% if form.nome.errors %}
+                        <div class="invalid-feedback">
+                            {{ form.nome.errors.0 }}
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="id_telefone" class="form-label">Telefone *</label>
+                        <input type="text"
+                               name="telefone"
+                               class="form-control {% if form.telefone.errors %}is-invalid{% endif %}"
+                               id="id_telefone"
+                               value="{{ form.telefone.value|default:'' }}"
+                               required>
+                        {% if form.telefone.errors %}
+                        <div class="invalid-feedback">
+                            {{ form.telefone.errors.0 }}
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="id_endereco" class="form-label">Endereco</label>
+                        <textarea name="endereco"
+                                  class="form-control {% if form.endereco.errors %}is-invalid{% endif %}"
+                                  id="id_endereco"
+                                  rows="3">{{ form.endereco.value|default:'' }}</textarea>
+                        {% if form.endereco.errors %}
+                        <div class="invalid-feedback">
+                            {{ form.endereco.errors.0 }}
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="id_descricao" class="form-label">Descricao</label>
+                        <textarea name="descricao"
+                                  class="form-control {% if form.descricao.errors %}is-invalid{% endif %}"
+                                  id="id_descricao"
+                                  rows="4">{{ form.descricao.value|default:'' }}</textarea>
+                        {% if form.descricao.errors %}
+                        <div class="invalid-feedback">
+                            {{ form.descricao.errors.0 }}
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="id_contato_nome" class="form-label">Nome do Responsavel *</label>
+                        <input type="text"
+                               name="contato_nome"
+                               class="form-control {% if form.contato_nome.errors %}is-invalid{% endif %}"
+                               id="id_contato_nome"
+                               value="{{ form.contato_nome.value|default:'' }}"
+                               required>
+                        {% if form.contato_nome.errors %}
+                        <div class="invalid-feedback">
+                            {{ form.contato_nome.errors.0 }}
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="id_contato_cargo" class="form-label">Cargo do Responsavel *</label>
+                        <input type="text"
+                               name="contato_cargo"
+                               class="form-control {% if form.contato_cargo.errors %}is-invalid{% endif %}"
+                               id="id_contato_cargo"
+                               value="{{ form.contato_cargo.value|default:'' }}"
+                               required>
+                        {% if form.contato_cargo.errors %}
+                        <div class="invalid-feedback">
+                            {{ form.contato_cargo.errors.0 }}
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="d-grid gap-2 mt-4">
+                        <button type="submit" class="btn btn-primary">Salvar Alteracoes</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        {% if company.jobs.exists %}
+        <div class="card mt-4">
+            <div class="card-header text-center">
+                <h4 class="mb-0">Minhas Vagas</h4>
+            </div>
+            <div class="card-body">
+                {% for job in company.jobs.all %}
+                <div class="d-flex justify-content-between align-items-center mb-3 pb-3 {% if not forloop.last %}border-bottom{% endif %}">
+                    <div>
+                        <strong>{{ job.titulo }}</strong>
+                        <br>
+                        <small class="text-muted">{{ job.get_tipo_display|default:job.tipo }}</small>
+                        {% if job.status == 'pending' %}
+                        <span class="badge bg-warning text-dark ms-2">Pendente</span>
+                        {% elif job.status == 'approved' %}
+                        <span class="badge bg-success ms-2">Aprovada</span>
+                        {% elif job.status == 'expired' %}
+                        <span class="badge bg-secondary ms-2">Expirada</span>
+                        {% elif job.status == 'draft' %}
+                        <span class="badge bg-info ms-2">Rascunho</span>
+                        {% endif %}
+                    </div>
+                    <a href="/empresas/vagas/{{ job.pk }}/editar/" class="btn btn-sm btn-outline-dark">Editar</a>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% else %}
+        <div class="card mt-4">
+            <div class="card-body text-center text-muted">
+                <p class="mb-2">Nenhuma vaga cadastrada ainda.</p>
+                <a href="/empresas/vagas/nova/" class="btn btn-primary">Cadastrar Primeira Vaga</a>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
