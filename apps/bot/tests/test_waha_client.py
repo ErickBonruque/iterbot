@@ -26,7 +26,7 @@ def _make_settings(
 
 class WahaClientTests(TestCase):
     def test_send_message_success(self):
-        settings = WahaSettings(base_url="http://localhost:3000", api_key="token", session_name="session")
+        settings = _make_settings(base_url="http://localhost:3000", api_key="token", session_name="session")
         client = WahaClient(settings=settings)
 
         with patch("infra.waha.client.requests.post") as post_mock:
