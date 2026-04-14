@@ -30,12 +30,12 @@ help:
 ## setup: Initial setup (secrets + validation)
 setup:
 	@echo "$(BLUE)🔧 Setting up CapyVagas...$(NC)"
-	@./deployment/scripts/setup_secrets.sh
-	@./deployment/scripts/validate_environment.sh
+	@bash ./deployment/scripts/setup_secrets.sh
+	@bash ./deployment/scripts/validate_environment.sh
 
 ## validate: Validate environment configuration
 validate:
-	@./deployment/scripts/validate_environment.sh
+	@bash ./deployment/scripts/validate_environment.sh
 
 ## start: Start all services
 start:

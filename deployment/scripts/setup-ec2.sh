@@ -6,7 +6,7 @@
 #
 # Uso: sudo ./deployment/scripts/setup-ec2.sh
 # ============================================================================
-set -e
+set -euo pipefail
 
 # Cores
 GREEN='\033[0;32m'
@@ -15,6 +15,12 @@ NC='\033[0m'
 
 REPO_URL="${REPO_URL:-https://github.com/ErickBonruque/CapyVagas-UTFPR.git}"
 PROJECT_DIR="/home/ubuntu/waha_capyvaga"
+# Naming AWS padronizado (para identificacao em contas com multiplos projetos)
+# EC2 Instance:   capyvagas-utfpr-prod
+# Security Group: capyvagas-utfpr-sg
+# Key Pair:       capyvagas-utfpr-key
+# S3 Bucket:      capyvagas-utfpr-backups
+# IAM Role (EC2): capyvagas-utfpr-ec2-role
 
 echo -e "${BLUE}============================================${NC}"
 echo -e "${BLUE}  CapyVagas - Provisionamento EC2${NC}"
@@ -83,7 +89,7 @@ fi
 # 9. Configurar crontab para backup semanal (domingo 02:00)
 echo -e "${GREEN}[9/9] Configurando crontab para backup semanal...${NC}"
 CRON_CMD="0 2 * * 0 /bin/bash ${PROJECT_DIR}/deployment/scripts/backup-postgres.sh >> /var/log/capyvagas-backup.log 2>&1"
-(crontab -u ubuntu -l 2>/dev/null | grep -v "backup-postgres.sh"; echo "${CRON_CMD}") | crontab -u ubuntu -
+(crontab -u ubuntu -l 2>/dev/null | grep -v "backup-postgres.sh" || true; echo "${CRON_CMD}") | crontab -u ubuntu -
 
 echo ""
 echo -e "${BLUE}============================================${NC}"
@@ -95,8 +101,8 @@ echo "  1. Faca logout e login novamente (para aplicar grupo docker)"
 echo "  2. cd ${PROJECT_DIR}"
 echo "  3. cp .env.production.example .env"
 echo "  4. Edite .env com seus valores reais (DOMAIN, senhas, etc)"
-echo "  5. ./deployment/scripts/setup_secrets.sh"
-echo "  6. ./deployment/scripts/validate_environment.sh --ec2"
+echo "  5. bash ./deployment/scripts/setup_secrets.sh"
+echo "  6. bash ./deployment/scripts/validate_environment.sh --ec2"
 echo "  7. docker compose -f docker-compose.yml -f docker-compose.prod.yml up --build -d"
-echo "  8. ./deployment/scripts/smoke-check.sh SEU-IP.sslip.io"
+echo "  8. bash ./deployment/scripts/smoke-check.sh SEU-IP.sslip.io"
 echo ""

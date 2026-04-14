@@ -27,9 +27,11 @@ services:
   # Traefik - Reverse Proxy & Load Balancer
   # ==========================================================================
   traefik:
-    image: traefik:v2.10
+    image: traefik:v3.6
     container_name: capyvagas_traefik
     restart: unless-stopped
+    environment:
+      - DOCKER_API_VERSION=1.54
     command:
       - "--configFile=/etc/traefik/traefik.yml"
     ports:
@@ -172,7 +174,7 @@ services:
     networks:
       - web
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/health"]
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --header=\"X-Api-Key: $WAHA_API_KEY\" --spider http://localhost:3000/health || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3

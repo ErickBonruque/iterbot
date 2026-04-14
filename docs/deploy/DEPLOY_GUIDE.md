@@ -21,7 +21,7 @@ git clone https://github.com/ErickBonruque/CapyVagas-UTFPR.git /home/ubuntu/waha
 cd /home/ubuntu/waha_capyvaga
 
 # Executar script de provisionamento
-sudo ./deployment/scripts/setup-ec2.sh
+sudo bash ./deployment/scripts/setup-ec2.sh
 
 # Re-logar para aplicar grupo docker
 exit
@@ -57,7 +57,7 @@ nano .env
 ./deployment/scripts/setup_secrets.sh
 
 # Validar ambiente
-./deployment/scripts/validate_environment.sh --ec2
+bash ./deployment/scripts/validate_environment.sh --ec2
 ```
 
 ## 4. Primeiro Deploy
@@ -73,7 +73,7 @@ sleep 90
 docker compose ps
 
 # Executar smoke check
-./deployment/scripts/smoke-check.sh SEU-IP-COM-HIFENS.sslip.io
+bash ./deployment/scripts/smoke-check.sh SEU-IP-COM-HIFENS.sslip.io
 ```
 
 ## 5. Configurar CI/CD (GitHub Actions)

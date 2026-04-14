@@ -11,7 +11,7 @@ set -euo pipefail
 
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 BACKUP_FILE="capyvagas_backup_${TIMESTAMP}.sql.gz"
-S3_BUCKET="${S3_BACKUP_BUCKET:-capyvagas-backups}"
+S3_BUCKET="${S3_BACKUP_BUCKET:-capyvagas-utfpr-backups}"
 S3_PREFIX="${S3_BACKUP_PREFIX:-weekly}"
 S3_PATH="${S3_PREFIX}/${BACKUP_FILE}"
 PROJECT_DIR="${PROJECT_DIR:-/home/ubuntu/waha_capyvaga}"
