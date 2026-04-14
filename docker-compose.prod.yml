@@ -43,3 +43,64 @@ services:
       - "traefik.http.routers.waha.tls.certresolver=letsencrypt"
       - "traefik.http.routers.waha.middlewares=security-headers@file"
       - "traefik.http.services.waha.loadbalancer.server.port=3000"
+
+  # ==========================================================================
+  # Celery Worker - Executa tasks do beat (review semanal, health check)
+  # ==========================================================================
+  celery_worker:
+    build:
+      context: .
+      dockerfile: docker/django/Dockerfile
+    container_name: capyvagas_celery_worker
+    restart: unless-stopped
+    command: celery -A waha_bot worker -l info --concurrency=1 --without-gossip --without-mingle
+    env_file:
+      - .env
+    secrets:
+      - django_secret_key
+      - postgres_password
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - web
+    labels:
+      - "traefik.enable=false"
+
+  # ==========================================================================
+  # Celery Beat - Scheduler que dispara tasks periodicamente
+  # ==========================================================================
+  celery_beat:
+    build:
+      context: .
+      dockerfile: docker/django/Dockerfile
+    container_name: capyvagas_celery_beat
+    restart: unless-stopped
+    command: celery -A waha_bot beat -l info --schedule=/app/celerybeat-schedule
+    env_file:
+      - .env
+    secrets:
+      - django_secret_key
+      - postgres_password
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - celerybeat_data:/app
+    networks:
+      - web
+    labels:
+      - "traefik.enable=false"
+
+# ============================================================================
+# Volumes - Production-only volumes
+# ============================================================================
+volumes:
+  traefik_certs:
+    driver: local
+  celerybeat_data:
+    driver: local
