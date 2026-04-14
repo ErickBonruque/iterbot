@@ -90,6 +90,7 @@ create_secret "postgres_password.txt" generate_password
 create_secret "waha_api_key.txt" generate_password
 create_secret "waha_dashboard_password.txt" generate_password
 create_secret "waha_swagger_password.txt" generate_password
+create_secret "email_password.txt" generate_password
 
 echo ""
 echo -e "${BLUE}============================================${NC}"
@@ -132,5 +133,7 @@ echo -e "To view your password:"
 echo -e "  ${BLUE}cat secrets/waha_dashboard_password.txt${NC}"
 echo ""
 
-echo -e "${GREEN}🚀 Ready to start! Run: docker-compose up -d${NC}"
+echo -e "${YELLOW}Nota: Em producao (EC2), use secrets diferentes dos valores locais.${NC}"
+echo ""
+echo -e "${GREEN}Ready to start! Run: docker compose up -d${NC}"
 echo ""
