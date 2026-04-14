@@ -112,9 +112,18 @@ services:
       - "8000:8000"
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.backend.rule=Host(`${DOMAIN:-localhost}`) || Host(`backend.${DOMAIN:-localhost}`)"
+      # HTTP → redireciona para HTTPS
+      - "traefik.http.routers.backend.rule=Host(`${DOMAIN:-localhost}`)"
       - "traefik.http.routers.backend.entrypoints=web"
+      - "traefik.http.routers.backend.middlewares=redirect-to-https"
+      # HTTPS router
+      - "traefik.http.routers.backend-secure.rule=Host(`${DOMAIN:-localhost}`)"
+      - "traefik.http.routers.backend-secure.entrypoints=websecure"
+      - "traefik.http.routers.backend-secure.tls=true"
       - "traefik.http.services.backend.loadbalancer.server.port=8000"
+      # Middleware de redirect HTTP→HTTPS
+      - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
+      - "traefik.http.middlewares.redirect-to-https.redirectscheme.permanent=true"
     env_file:
       - .env
     secrets:
@@ -181,11 +190,15 @@ services:
       start_period: 60s
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.waha.rule=Host(`waha.${DOMAIN:-localhost}`) || Host(`waha.localhost`)"
+      # HTTP router para WAHA dashboard
+      - "traefik.http.routers.waha.rule=Host(`waha.${DOMAIN:-localhost}`)"
       - "traefik.http.routers.waha.entrypoints=web"
+      - "traefik.http.routers.waha.middlewares=redirect-to-https"
+      # HTTPS router para WAHA dashboard
+      - "traefik.http.routers.waha-secure.rule=Host(`waha.${DOMAIN:-localhost}`)"
+      - "traefik.http.routers.waha-secure.entrypoints=websecure"
+      - "traefik.http.routers.waha-secure.tls=true"
       - "traefik.http.services.waha.loadbalancer.server.port=3000"
-      - "traefik.http.middlewares.waha-security.headers.customrequestheaders.X-Forwarded-Proto=https"
-      - "traefik.http.routers.waha.middlewares=waha-security,security-headers"
 
 # ============================================================================
 # Docker Secrets - Secure Credential Management
