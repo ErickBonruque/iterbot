@@ -1,0 +1,45 @@
+version: '3.8'
+
+# ============================================================================
+# CapyVagas - Docker Compose Production Override
+# ============================================================================
+# Uso: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+# ============================================================================
+
+services:
+  traefik:
+    command:
+      - "--configFile=/etc/traefik/traefik.yml"
+    ports:
+      - "80:80"
+      - "443:443"
+      # Porta 8080 removida em producao (dashboard desabilitado)
+    volumes:
+      - ./infra/traefik/traefik.prod.yml:/etc/traefik/traefik.yml:ro
+      - ./infra/traefik/dynamic:/etc/traefik/dynamic:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - traefik_certs:/letsencrypt
+
+  backend:
+    ports: []  # Remove porta 8000 exposta (Traefik roteia via rede interna)
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.backend.rule=Host(`${DOMAIN}`)"
+      - "traefik.http.routers.backend.entrypoints=websecure"
+      - "traefik.http.routers.backend.tls=true"
+      - "traefik.http.routers.backend.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.backend.middlewares=security-headers@file"
+      - "traefik.http.services.backend.loadbalancer.server.port=8000"
+    environment:
+      - DJANGO_SETTINGS_MODULE=waha_bot.settings
+
+  waha:
+    ports: []  # Remove porta 3000 exposta (acesso via Traefik apenas)
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.waha.rule=Host(`waha.${DOMAIN}`)"
+      - "traefik.http.routers.waha.entrypoints=websecure"
+      - "traefik.http.routers.waha.tls=true"
+      - "traefik.http.routers.waha.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.waha.middlewares=security-headers@file"
+      - "traefik.http.services.waha.loadbalancer.server.port=3000"
