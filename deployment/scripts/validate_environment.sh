@@ -6,7 +6,7 @@
 # This script validates that the environment is correctly configured before
 # starting the application.
 #
-# Usage: ./deployment/scripts/validate_environment.sh
+# Usage: ./deployment/scripts/validate_environment.sh [--ec2]
 # ============================================================================
 
 set -e
@@ -20,6 +20,12 @@ NC='\033[0m'
 
 ERRORS=0
 WARNINGS=0
+
+# Detectar modo EC2
+EC2_MODE=false
+if [[ "${1:-}" == "--ec2" ]]; then
+    EC2_MODE=true
+fi
 
 echo -e "${BLUE}============================================${NC}"
 echo -e "${BLUE}🔍 CapyVagas Environment Validation${NC}"
@@ -76,14 +82,35 @@ check_file() {
 # Check required commands
 echo -e "${BLUE}📦 Checking required commands...${NC}"
 check_command "docker" true
-check_command "docker-compose" true
 check_command "git" true
+
+# Checar docker compose plugin (sem hifen)
+if docker compose version &>/dev/null; then
+    echo -e "${GREEN}docker compose plugin disponivel${NC}"
+else
+    echo -e "${RED}docker compose plugin NAO encontrado (required)${NC}"
+    ((ERRORS++))
+fi
 echo ""
 
 # Check optional commands
 echo -e "${BLUE}📦 Checking optional commands...${NC}"
 check_command "python3" false
 check_command "openssl" false
+if [ "$EC2_MODE" = true ]; then
+    check_command "aws" true
+    # Verificar IAM Role na EC2
+    if command -v aws &> /dev/null; then
+        if aws sts get-caller-identity &> /dev/null; then
+            echo -e "${GREEN}IAM Role funcional${NC}"
+        else
+            echo -e "${RED}IAM Role NAO configurada (required para backup S3)${NC}"
+            ((ERRORS++))
+        fi
+    fi
+else
+    check_command "aws" false
+fi
 echo ""
 
 # Check secrets directory
@@ -138,7 +165,11 @@ echo ""
 
 # Check .env file
 echo -e "${BLUE}⚙️  Checking configuration files...${NC}"
-check_file ".env" false
+if [ "$EC2_MODE" = true ]; then
+    check_file ".env" true
+else
+    check_file ".env" false
+fi
 check_file ".env.example" true
 check_file "docker-compose.yml" true
 echo ""
@@ -154,17 +185,17 @@ fi
 echo ""
 
 # Check docker-compose syntax
-echo -e "${BLUE}🔧 Validating docker-compose.yml...${NC}"
-if docker-compose config > /dev/null 2>&1; then
-    echo -e "${GREEN}✅ docker-compose.yml is valid${NC}"
+echo -e "${BLUE} Validating docker-compose.yml...${NC}"
+if docker compose config > /dev/null 2>&1; then
+    echo -e "${GREEN}docker-compose.yml is valid${NC}"
 else
-    echo -e "${RED}❌ docker-compose.yml has syntax errors${NC}"
+    echo -e "${RED}docker-compose.yml has syntax errors${NC}"
     ((ERRORS++))
 fi
 echo ""
 
 # Check entrypoint permissions
-echo -e "${BLUE}🔐 Checking entrypoint permissions...${NC}"
+echo -e "${BLUE} Checking entrypoint permissions...${NC}"
 if [ -f "docker/waha/entrypoint.sh" ]; then
     if [ -x "docker/waha/entrypoint.sh" ]; then
         echo -e "${GREEN}✅ docker/waha/entrypoint.sh is executable${NC}"
@@ -190,8 +221,8 @@ if [ $ERRORS -eq 0 ] && [ $WARNINGS -eq 0 ]; then
     echo -e "${GREEN}✅ Environment is ready to start!${NC}"
     echo ""
     echo -e "${BLUE}Next steps:${NC}"
-    echo -e "  1. ${GREEN}docker-compose up -d${NC}"
-    echo -e "  2. ${GREEN}docker-compose logs -f${NC}"
+    echo -e "  1. ${GREEN}docker compose up -d${NC}"
+    echo -e "  2. ${GREEN}docker compose logs -f${NC}"
     exit 0
 elif [ $ERRORS -eq 0 ]; then
     echo -e "${YELLOW}⚠️  Found $WARNINGS warning(s)${NC}"
