@@ -21,7 +21,7 @@ jobs:
           COMMAND_ID=$(aws ssm send-command \
             --instance-ids ***REMOVED*** \
             --document-name "AWS-RunShellScript" \
-            --parameters 'commands=["bash -euo pipefail -c \"cd /home/ubuntu/waha_capyvaga && git pull origin master && docker compose -f docker-compose.yml -f docker-compose.prod.yml up --build -d && docker image prune -f && set -a && . ./.env && set +a && bash ./deployment/scripts/smoke-check.sh ${DOMAIN:-localhost} && echo Deploy concluido em $(date -Iseconds)\""]' \
+            --parameters 'commands=["bash -euo pipefail -c \"git config --global --add safe.directory /home/ubuntu/waha_capyvaga && cd /home/ubuntu/waha_capyvaga && git pull origin master && docker compose -f docker-compose.yml -f docker-compose.prod.yml up --build -d && docker image prune -f && set -a && . ./.env && set +a && bash ./deployment/scripts/smoke-check.sh ${DOMAIN:-localhost} && echo Deploy concluido em $(date -Iseconds)\""]' \
             --comment "Deploy from GitHub Actions run ${{ github.run_id }}" \
             --query 'Command.CommandId' \
             --output text)
