@@ -43,11 +43,26 @@ class CompanyProfileView(LoginRequiredMixin, UpdateView):
     login_url = '/empresas/login/'
 
     def get_object(self, queryset=None):
-        return self.request.user.company
+        try:
+            return self.request.user.company
+        except Exception:
+            return None
+
+    def get(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        if self.object is None:
+            return redirect('/empresas/signup/')
+        return super().get(request, *args, **kwargs)
+
+    def post(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        if self.object is None:
+            return redirect('/empresas/signup/')
+        return super().post(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['company'] = self.get_object()
+        context['company'] = self.object
         return context
 
     def form_valid(self, form):
