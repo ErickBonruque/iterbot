@@ -58,6 +58,7 @@ services:
       - .env
     secrets:
       - django_secret_key
+      - email_password
       - postgres_password
     depends_on:
       db:
@@ -83,6 +84,7 @@ services:
       - .env
     secrets:
       - django_secret_key
+      - email_password
       - postgres_password
     depends_on:
       db:

@@ -128,6 +128,7 @@ services:
       - .env
     secrets:
       - django_secret_key
+      - email_password
       - postgres_password
     depends_on:
       db:
@@ -214,6 +215,8 @@ secrets:
     file: ./secrets/waha_dashboard_password.txt
   waha_swagger_password:
     file: ./secrets/waha_swagger_password.txt
+  email_password:
+    file: ./secrets/email_password.txt
 
 # ============================================================================
 # Volumes - Data Persistence
