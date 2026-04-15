@@ -143,9 +143,13 @@ echo ""
 echo "[DEPL-04] Backup S3"
 check_command "aws cli disponivel" command -v aws
 if command -v aws > /dev/null 2>&1; then
-    check_command "IAM Role funcional" aws sts get-caller-identity
+    if curl -s --max-time 1 http://169.254.169.254/latest/meta-data/iam/security-credentials/ > /dev/null 2>&1; then
+        check_command "IAM Role funcional" aws sts get-caller-identity
+    else
+        check_skip "IAM Role funcional" "sem instance profile - backup usa credenciais do .env"
+    fi
 else
-    check_skip "IAM Role" "aws cli nao instalado"
+    check_skip "IAM Role funcional" "aws cli nao instalado"
 fi
 echo ""
 
