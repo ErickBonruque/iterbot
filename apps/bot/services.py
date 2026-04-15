@@ -1,5 +1,6 @@
 """Refactored bot service using handler pattern and separation of concerns."""
 import structlog
+from django.conf import settings
 
 from apps.bot.handlers import AuthenticationHandler, JobReviewHandler, JobSearchHandler, MenuHandler
 from apps.bot.models import BotConfiguration, InteractionLog
@@ -74,7 +75,19 @@ class BotService:
         self._log_received(user, message)
 
         # --- GLOBAL COMMANDS (Highest Priority) ---
-        if text in {"menu", "inicio", "início", "start", "começar"}:
+        if text in {
+            "menu",
+            "inicio",
+            "início",
+            "start",
+            "começar",
+            "oi",
+            "ola",
+            "olá",
+            "bom dia",
+            "boa tarde",
+            "boa noite",
+        }:
             self._reset_state(user)
             self.menu_handler.send_menu(user, chat_id)
             return
@@ -97,6 +110,16 @@ class BotService:
         # --- MAIN MENU COMMANDS ---
         if text in {"1", "cadastrar", "login", "entrar"}:
             self.auth_handler.start_login_flow(user, chat_id)
+            return
+
+        if (
+            not user.is_authenticated_utfpr
+            and text in {"2", "empresa", "sou empresa", "cadastrar vaga", "publicar vaga"}
+        ):
+            user.current_action = "company_onboarding_selection"
+            user.flow_data = {}
+            user.save(update_fields=["current_action", "flow_data", "last_activity"])
+            self.menu_handler.send_company_onboarding_menu(user, chat_id)
             return
 
         if text in {"2", "logout", "deslogar"}:
@@ -134,6 +157,32 @@ class BotService:
 
         # Try job search handler
         if self.job_handler.handle(user, chat_id, text):
+            return True
+
+        if user.current_action == "company_onboarding_selection":
+            if text in {"1", "2"}:
+                sent = self.menu_handler.send_company_onboarding_links(
+                    user,
+                    chat_id,
+                    text,
+                    settings.PORTAL_BASE_URL,
+                )
+                if not sent:
+                    self.waha_client.send_message(
+                        chat_id,
+                        "⚠️ Portal de empresas temporariamente indisponivel. "
+                        "Tente novamente em alguns minutos.",
+                    )
+                    logger.error(
+                        "company_onboarding_portal_unavailable",
+                        user_id=user.id,
+                        portal_base_url=settings.PORTAL_BASE_URL,
+                    )
+
+                self._reset_state(user)
+                return True
+
+            self.menu_handler.send_company_onboarding_menu(user, chat_id)
             return True
 
         return False

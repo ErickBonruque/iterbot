@@ -1,6 +1,7 @@
 """Menu handler for displaying navigation options."""
 import structlog
 
+from apps.core.portal_links import build_portal_url
 from apps.users.models import UserProfile
 
 from .base import BaseHandler
@@ -35,12 +36,60 @@ class MenuHandler(BaseHandler):
                 f"{self.BRAND_HEADER}\n\n"
                 "📋 *Menu Principal*:\n"
                 "1️⃣ Fazer Cadastro/Login\n"
+                "2️⃣ Sou empresa (cadastrar vaga)\n"
                 "3️⃣ Buscar Vagas\n\n"
                 "Digite o número da opção desejada."
             )
 
         self.send_msg(user, chat_id, menu_text)
         logger.info("menu_displayed", user_id=user.id, authenticated=user.is_authenticated_utfpr)
+
+    def send_company_onboarding_menu(self, user: UserProfile, chat_id: str) -> None:
+        menu_text = (
+            f"{self.BRAND_HEADER}\n\n"
+            "🏢 *Onboarding para Empresas*\n\n"
+            "1️⃣ Cadastrar empresa\n"
+            "2️⃣ Ja tenho conta / publicar vaga\n\n"
+            "Digite 1 ou 2 para continuar."
+        )
+        self.send_msg(user, chat_id, menu_text)
+
+    def send_company_onboarding_links(
+        self,
+        user: UserProfile,
+        chat_id: str,
+        option: str,
+        portal_base_url: str,
+    ) -> bool:
+        if option == "1":
+            signup_url = build_portal_url(portal_base_url, "/empresas/signup/")
+            if signup_url is None:
+                return False
+
+            msg = (
+                "✅ *Cadastro de Empresa*\n\n"
+                f"1) Crie sua conta: {signup_url}\n"
+                "2) Confirme os dados da empresa\n"
+                "3) Entre no portal para publicar sua primeira vaga"
+            )
+            self.send_msg(user, chat_id, msg)
+            return True
+
+        if option == "2":
+            login_url = build_portal_url(portal_base_url, "/empresas/login/")
+            new_job_url = build_portal_url(portal_base_url, "/empresas/vagas/nova/")
+            if login_url is None or new_job_url is None:
+                return False
+
+            msg = (
+                "✅ *Publicar Vaga*\n\n"
+                f"Acesse sua conta: {login_url}\n"
+                f"Nova vaga: {new_job_url}"
+            )
+            self.send_msg(user, chat_id, msg)
+            return True
+
+        return False
 
     def send_unknown_command(self, user: UserProfile, chat_id: str) -> None:
         """
