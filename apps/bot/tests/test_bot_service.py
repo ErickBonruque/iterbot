@@ -19,7 +19,7 @@ class BotServiceMenuTests(TestCase):
 
         sent_text = self.waha_client.send_message.call_args[0][1]
         self.assertIn("CapyVagas", sent_text)
-        self.assertIn("Opção 1", sent_text)
+        self.assertIn("1️⃣ Fazer Cadastro/Login", sent_text)
 
     def test_logout_clears_state(self):
         user = UserProfile.objects.create(phone_number="5511999999999@c.us", is_authenticated_utfpr=True)
@@ -49,11 +49,15 @@ class BotServiceFlowTests(TestCase):
         self.service.process_message(chat_id, "1", from_me=False)
 
         user = UserProfile.objects.get(phone_number=chat_id)
-        self.assertEqual(user.current_action, "awaiting_credentials")
+        self.assertEqual(user.current_action, "login_step_ra")
 
-        # complete login
+        # complete login (RA -> senha)
+        self.service.process_message(chat_id, "ra123", from_me=False)
+        user.refresh_from_db()
+        self.assertEqual(user.current_action, "login_step_password")
+
         self.service.auth_service.authenticate = MagicMock(return_value=True)
-        self.service.process_message(chat_id, "ra123 senha", from_me=False)
+        self.service.process_message(chat_id, "senha123", from_me=False)
 
         user.refresh_from_db()
         self.assertIsNone(user.current_action)
@@ -148,3 +152,69 @@ class BotServiceFlowTests(TestCase):
         self.service.process_message(chat_id, "3", from_me=False)
 
         self.job_service.search.assert_called_with(["Python", "Django"], limit=5)
+
+    def test_company_menu_option_opens_onboarding_submenu(self):
+        chat_id = "5511999000111@c.us"
+
+        self.service.process_message(chat_id, "2", from_me=False)
+
+        user = UserProfile.objects.get(phone_number=chat_id)
+        self.assertEqual(user.current_action, "company_onboarding_selection")
+        sent_text = self.waha_client.send_message.call_args[0][1]
+        self.assertIn("Cadastrar empresa", sent_text)
+        self.assertIn("Ja tenho conta / publicar vaga", sent_text)
+
+    def test_company_onboarding_new_company_contains_signup_link(self):
+        chat_id = "5511999000222@c.us"
+
+        with self.settings(PORTAL_BASE_URL="https://52-201-248-14.sslip.io"):
+            self.service.process_message(chat_id, "2", from_me=False)
+            self.waha_client.send_message.reset_mock()
+
+            self.service.process_message(chat_id, "1", from_me=False)
+
+        sent_text = self.waha_client.send_message.call_args[0][1]
+        self.assertIn("/empresas/signup/", sent_text)
+
+    def test_company_onboarding_existing_company_contains_login_and_new_job(self):
+        chat_id = "5511999000333@c.us"
+
+        with self.settings(PORTAL_BASE_URL="https://52-201-248-14.sslip.io"):
+            self.service.process_message(chat_id, "2", from_me=False)
+            self.waha_client.send_message.reset_mock()
+
+            self.service.process_message(chat_id, "2", from_me=False)
+
+        sent_text = self.waha_client.send_message.call_args[0][1]
+        self.assertIn("/empresas/login/", sent_text)
+        self.assertIn("/empresas/vagas/nova/", sent_text)
+
+    def test_company_onboarding_with_invalid_portal_base_url_sends_unavailable_message(self):
+        chat_id = "5511999000444@c.us"
+
+        with self.settings(PORTAL_BASE_URL="localhost:8000"):
+            self.service.process_message(chat_id, "2", from_me=False)
+            self.waha_client.send_message.reset_mock()
+
+            self.service.process_message(chat_id, "1", from_me=False)
+
+        sent_text = self.waha_client.send_message.call_args[0][1]
+        self.assertIn("Portal de empresas temporariamente indisponivel", sent_text)
+        self.assertNotIn("localhost:8000", sent_text)
+
+    def test_student_menu_routes_keep_working_with_company_flow_added(self):
+        chat_id = "5511999000555@c.us"
+        user = self._authenticate_user(chat_id)
+
+        self.service.auth_handler.start_login_flow = MagicMock()
+        self.service.job_handler.start_course_selection = MagicMock()
+        self.service.review_handler.send_review = MagicMock()
+
+        self.service.process_message(chat_id, "1", from_me=False)
+        self.service.auth_handler.start_login_flow.assert_called_once_with(user, chat_id)
+
+        self.service.process_message(chat_id, "3", from_me=False)
+        self.service.job_handler.start_course_selection.assert_called_once_with(user, chat_id)
+
+        self.service.process_message(chat_id, "4", from_me=False)
+        self.service.review_handler.send_review.assert_called_once_with(user, chat_id)
