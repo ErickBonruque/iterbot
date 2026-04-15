@@ -23,6 +23,11 @@ Contas AWS novas tem o SES em modo sandbox. Nesse modo:
 
 ## Passo 2: Solicitar Saida do Sandbox
 
+Checklist bloqueante antes do submit:
+- [ ] `DEFAULT_FROM_EMAIL` na EC2 esta igual a identidade SES verificada desta fase (`bonruque@alunos.utfpr.edu.br`)
+- [ ] Regiao ativa do SES conferida como `us-east-1`
+- [ ] `EMAIL_HOST_USER` e `secrets/email_password.txt` preparados para receber as credenciais SMTP reais
+
 1. Acessar console AWS -> SES -> Account dashboard
 2. Clicar "Request production access"
 3. Preencher:
@@ -70,10 +75,18 @@ EMAIL_HOST=email-smtp.us-east-1.amazonaws.com
 EMAIL_PORT=587
 EMAIL_USE_TLS=True
 EMAIL_HOST_USER=<SMTP username gerado no passo 3>
-DEFAULT_FROM_EMAIL=noreply@capyvagas.utfpr.edu.br
+DEFAULT_FROM_EMAIL=bonruque@alunos.utfpr.edu.br
 ```
 
 O `EMAIL_HOST_PASSWORD` e lido de `secrets/email_password.txt`.
+
+## Checklist pos-aprovacao
+
+- [ ] Confirmar `ProductionAccessEnabled=true` e `SendingEnabled=true` no `sesv2 get-account` em `us-east-1`
+- [ ] Atualizar `secrets/email_password.txt` com a senha SMTP real do SES (nunca commitar)
+- [ ] Reiniciar `backend`, `celery_worker` e `celery_beat` apos atualizar credenciais SMTP
+- [ ] Executar testes E2E (SMTP externo, confirmacao de conta, alerta offline)
+- [ ] Registrar evidencias em `.planning/phases/11-aws-ses-saida-sandbox/evidence/`
 
 ## Troubleshooting
 
