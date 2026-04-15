@@ -100,6 +100,10 @@ Siga o guia completo em [SES_SANDBOX_EXIT.md](./SES_SANDBOX_EXIT.md):
 4. Atualizar `.env` e `secrets/email_password.txt`
 5. Testar envio de email
 
+> IMPORTANTE: `setup_secrets.sh` gera `secrets/email_password.txt` apenas como placeholder.
+> Em producao, substitua esse arquivo pela senha SMTP real gerada no AWS SES
+> antes de subir/reiniciar `backend`, `celery_worker` e `celery_beat`.
+
 ## 7. Verificar Backup
 
 ```bash

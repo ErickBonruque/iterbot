@@ -134,6 +134,8 @@ echo -e "  ${BLUE}cat secrets/waha_dashboard_password.txt${NC}"
 echo ""
 
 echo -e "${YELLOW}Nota: Em producao (EC2), use secrets diferentes dos valores locais.${NC}"
+echo -e "${YELLOW}ATENCAO: secrets/email_password.txt gerado por este script e placeholder.${NC}"
+echo -e "${YELLOW}Substitua pelo SMTP password real do AWS SES antes de subir em producao.${NC}"
 echo ""
 echo -e "${GREEN}Ready to start! Run: docker compose up -d${NC}"
 echo ""

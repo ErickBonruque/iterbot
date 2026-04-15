@@ -138,6 +138,11 @@ check_file "./secrets/postgres_password.txt" true
 check_file "./secrets/waha_api_key.txt" true
 check_file "./secrets/waha_dashboard_password.txt" true
 check_file "./secrets/waha_swagger_password.txt" true
+if [ "$EC2_MODE" = true ]; then
+    check_file "./secrets/email_password.txt" true
+else
+    check_file "./secrets/email_password.txt" false
+fi
 echo ""
 
 # Check for invalid characters in secrets
