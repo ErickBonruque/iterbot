@@ -8,6 +8,7 @@ from celery import shared_task
 from django.conf import settings
 from django.db.models import Q
 
+from apps.core.portal_links import build_portal_url
 from apps.jobs.models import Job, JobStatus
 from apps.users.models import UserProfile
 from infra.jobspy.service import JobSearchService
@@ -40,18 +41,28 @@ def _get_local_jobs_for_course(course) -> list[dict[str, Any]]:
         .select_related("company")
         .order_by("-created_at")[:10]
     )
-    portal_base = getattr(settings, "PORTAL_BASE_URL", "http://localhost:8000")
-    return [
-        {
-            "title": job.titulo,
-            "company": job.company.nome,
-            "location": job.company.endereco or "Curitiba, PR",
-            "job_type": job.tipo,
-            "job_url": f"{portal_base}/empresas/vagas/{job.pk}/",
-            "source": "local",
-        }
-        for job in jobs
-    ]
+    local_jobs: list[dict[str, Any]] = []
+    for job in jobs:
+        job_url = build_portal_url(settings.PORTAL_BASE_URL, f"/empresas/vagas/{job.pk}/")
+        if job_url is None:
+            logger.error(
+                "invalid_portal_base_url_for_review",
+                portal_base_url=settings.PORTAL_BASE_URL,
+                job_id=job.pk,
+            )
+
+        local_jobs.append(
+            {
+                "title": job.titulo,
+                "company": job.company.nome,
+                "location": job.company.endereco or "Curitiba, PR",
+                "job_type": job.tipo,
+                "job_url": job_url,
+                "source": "local",
+            }
+        )
+
+    return local_jobs
 
 
 def _get_online_jobs_for_course(course, job_service: JobSearchService) -> list[dict[str, Any]]:
