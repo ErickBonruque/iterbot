@@ -23,6 +23,7 @@ env = environ.Env(
     DJANGO_ADMIN_USERNAME=(str, "admin"),
     DJANGO_ADMIN_PASSWORD=(str, "admin"),
     DOMAIN=(str, "localhost"),
+    PORTAL_BASE_URL=(str, ""),
     EMAIL_BACKEND=(str, "django.core.mail.backends.console.EmailBackend"),
     EMAIL_HOST=(str, ""),
     EMAIL_PORT=(int, 587),
@@ -62,6 +63,7 @@ class DjangoSettings:
     secret_key: str
     debug: bool
     allowed_hosts: list[str]
+    portal_base_url: str
 
     def __init__(self) -> None:
         self.secret_key = _get_secret_or_env(
@@ -74,6 +76,7 @@ class DjangoSettings:
         else:
             allowed_hosts_iterable = allowed_hosts_raw
         self.allowed_hosts = [h.strip() for h in allowed_hosts_iterable if h and h.strip()]
+        self.portal_base_url = env("PORTAL_BASE_URL")
 
 
 @dataclass

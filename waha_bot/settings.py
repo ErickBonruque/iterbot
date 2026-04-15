@@ -2,6 +2,7 @@ from pathlib import Path
 
 import dj_database_url
 import structlog
+from django.core.exceptions import ImproperlyConfigured
 
 from config.env import settings
 
@@ -129,7 +130,15 @@ ACCOUNT_LOGOUT_REDIRECT_URL = "/accounts/login/"
 ACCOUNT_EMAIL_CONFIRMATION_ANONYMOUS_REDIRECT_URL = "/accounts/email-confirmed/"
 
 # Portal de Empresas (usado pelo bot para enviar links)
-PORTAL_BASE_URL = getattr(settings.django, 'portal_base_url', "http://localhost:8000")
+PORTAL_BASE_URL = settings.django.portal_base_url
+
+if not DEBUG and (
+    not PORTAL_BASE_URL
+    or not PORTAL_BASE_URL.startswith(("http://", "https://"))
+):
+    raise ImproperlyConfigured(
+        "PORTAL_BASE_URL must be set with http:// or https:// when DEBUG=False"
+    )
 
 # Email Configuration (dev usa console, prod usa variáveis de ambiente)
 EMAIL_BACKEND = settings.email.backend
