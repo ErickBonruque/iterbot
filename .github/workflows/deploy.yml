@@ -9,22 +9,58 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Deploy via SSH
-        uses: appleboy/ssh-action@v1.2.5
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
         with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USER }}
-          key: ${{ secrets.EC2_SSH_KEY }}
-          port: 22
-          command_timeout: 10m
-          script: |
-            set -euo pipefail
-            cd /home/ubuntu/waha_capyvaga
-            git pull origin master
-            docker compose -f docker-compose.yml -f docker-compose.prod.yml up --build -d
-            docker image prune -f
-            set -a
-            [ -f .env ] && . ./.env
-            set +a
-            bash ./deployment/scripts/smoke-check.sh "${DOMAIN:-localhost}"
-            echo "Deploy concluido em $(date -Iseconds)"
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Deploy via SSM
+        run: |
+          COMMAND_ID=$(aws ssm send-command \
+            --instance-ids ***REMOVED*** \
+            --document-name "AWS-RunShellScript" \
+            --parameters 'commands=[
+              "set -euo pipefail",
+              "cd /home/ubuntu/waha_capyvaga",
+              "git pull origin master",
+              "docker compose -f docker-compose.yml -f docker-compose.prod.yml up --build -d",
+              "docker image prune -f",
+              "set -a; [ -f .env ] && . ./.env; set +a",
+              "bash ./deployment/scripts/smoke-check.sh \"${DOMAIN:-localhost}\"",
+              "echo Deploy concluido em $(date -Iseconds)"
+            ]' \
+            --comment "Deploy from GitHub Actions run ${{ github.run_id }}" \
+            --query 'Command.CommandId' \
+            --output text)
+
+          echo "SSM Command ID: $COMMAND_ID"
+
+          # Aguarda até 10 minutos
+          for i in $(seq 1 60); do
+            sleep 10
+            STATUS=$(aws ssm get-command-invocation \
+              --command-id "$COMMAND_ID" \
+              --instance-id ***REMOVED*** \
+              --query 'Status' --output text)
+            echo "[$i/60] Status: $STATUS"
+            if [ "$STATUS" = "Success" ]; then
+              echo "Deploy concluido com sucesso"
+              aws ssm get-command-invocation \
+                --command-id "$COMMAND_ID" \
+                --instance-id ***REMOVED*** \
+                --query 'StandardOutputContent' --output text
+              exit 0
+            elif [ "$STATUS" = "Failed" ] || [ "$STATUS" = "TimedOut" ] || [ "$STATUS" = "Cancelled" ]; then
+              echo "Deploy falhou com status: $STATUS"
+              aws ssm get-command-invocation \
+                --command-id "$COMMAND_ID" \
+                --instance-id ***REMOVED*** \
+                --query '[StandardOutputContent, StandardErrorContent]' --output json
+              exit 1
+            fi
+          done
+
+          echo "Timeout aguardando SSM command"
+          exit 1
