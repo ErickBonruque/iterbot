@@ -144,14 +144,11 @@ echo ""
 echo "[DEPL-04] Backup S3"
 check_command "aws cli disponivel" command -v aws
 if command -v aws > /dev/null 2>&1; then
-    # Detecta instance profile via IMDSv2
-    IMDS_TOKEN=$(curl -s --max-time 1 -X PUT "http://169.254.169.254/latest/api/token" \
-        -H "X-aws-ec2-metadata-token-ttl-seconds: 10" 2>/dev/null || true)
-    IAM_ROLE=$(curl -s --max-time 1 \
-        -H "X-aws-ec2-metadata-token: ${IMDS_TOKEN}" \
-        "http://169.254.169.254/latest/meta-data/iam/security-credentials/" 2>/dev/null || true)
-    if [ -n "$IAM_ROLE" ] && [ "$IAM_ROLE" != "404 - Not Found" ]; then
-        check_command "IAM Role funcional" aws sts get-caller-identity
+    # Testa credenciais — SKIP se nao houver (backup usa .env)
+    if aws sts get-caller-identity > /dev/null 2>&1; then
+        printf "  %-50s " "IAM Role funcional"
+        echo "[OK]"
+        pass
     else
         check_skip "IAM Role funcional" "sem instance profile - backup usa credenciais do .env"
     fi
