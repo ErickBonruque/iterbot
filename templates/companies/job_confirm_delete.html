@@ -1,0 +1,27 @@
+{% extends "companies/base_company.html" %}
+
+{% block title %}Confirmar Remoção - CapyVagas UTFPR{% endblock %}
+
+{% block company_content %}
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+        <div class="card">
+            <div class="card-header text-center">
+                <h4 class="mb-0">Confirmar Remoção</h4>
+            </div>
+            <div class="card-body">
+                <p><strong>Vaga:</strong> {{ job.titulo }}</p>
+                <p><strong>Status:</strong> {{ job.get_status_display }}</p>
+                <div class="alert alert-warning">
+                    <strong>Atenção:</strong> Esta ação não pode ser desfeita. Não há restauração de vaga removida nesta fase.
+                </div>
+                <form method="post">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">Confirmar remoção</button>
+                    <a href="{% url 'companies:profile' %}" class="btn btn-secondary">Cancelar</a>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

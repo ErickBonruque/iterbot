@@ -18,6 +18,7 @@ class JobStatus(models.TextChoices):
     APPROVED = 'approved', 'Aprovada'
     REJECTED = 'rejected', 'Rejeitada'
     EXPIRED = 'expired', 'Expirada'
+    REMOVED = 'removed', 'Removida'
 
 
 class Company(TimeStampedModel):

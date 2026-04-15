@@ -11,4 +11,5 @@ urlpatterns = [
     path('perfil/', views.CompanyProfileView.as_view(), name='profile'),
     path('vagas/nova/', views.JobCreateView.as_view(), name='job_create'),
     path('vagas/<int:pk>/editar/', views.JobUpdateView.as_view(), name='job_update'),
+    path('vagas/<int:pk>/deletar/', views.JobDeleteView.as_view(), name='job_delete'),
 ]

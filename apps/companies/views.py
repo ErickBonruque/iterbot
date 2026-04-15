@@ -3,9 +3,11 @@ from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import PermissionDenied
 from django.urls import reverse_lazy
-from django.views.generic import CreateView, UpdateView
+from django.views.generic import CreateView, UpdateView, View
 
 from allauth.account.views import LoginView, LogoutView, SignupView
+from django.shortcuts import render, redirect
+from django.http import Http404
 
 from apps.companies.forms import CompanyProfileForm, CompanySignupForm, JobForm
 from apps.companies.mixins import CompanyRequiredMixin
@@ -94,3 +96,42 @@ class JobUpdateView(CompanyRequiredMixin, UpdateView):
     def form_valid(self, form):
         messages.success(self.request, 'Vaga atualizada com sucesso.')
         return super().form_valid(form)
+
+
+class JobDeleteView(CompanyRequiredMixin, View):
+    """View de remocao de vaga (soft delete)."""
+    template_name = 'companies/job_confirm_delete.html'
+    success_url = reverse_lazy('companies:profile')
+    login_url = '/empresas/login/'
+
+    def get_object(self, queryset=None):
+        """Obter vaga excluindo ja removidas (retorna 404 natural)."""
+        job = Job.objects.get(pk=self.kwargs['pk'])
+        if job.status == JobStatus.REMOVED:
+            raise Http404("Vaga ja removida.")
+        return job
+
+    def get(self, request, *args, **kwargs):
+        """Exibe pagina de confirmacao."""
+        job = self.get_object()
+        try:
+            user_company = request.user.company
+        except Exception:
+            raise PermissionDenied("Voce nao tem permissao para remover esta vaga.")
+        if job.company != user_company:
+            raise PermissionDenied("Voce nao tem permissao para remover esta vaga.")
+        return render(request, self.template_name, {'job': job})
+
+    def post(self, request, *args, **kwargs):
+        """Executa soft delete."""
+        job = self.get_object()
+        try:
+            user_company = request.user.company
+        except Exception:
+            raise PermissionDenied("Voce nao tem permissao para remover esta vaga.")
+        if job.company != user_company:
+            raise PermissionDenied("Voce nao tem permissao para remover esta vaga.")
+        job.status = JobStatus.REMOVED
+        job.save()
+        messages.success(request, 'Vaga removida com sucesso.')
+        return redirect(self.success_url)

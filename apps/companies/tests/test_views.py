@@ -1,5 +1,7 @@
 from django.contrib.auth.models import User
+from django.contrib.messages import get_messages
 from django.test import Client, TestCase, override_settings
+from django.urls import reverse
 
 from apps.jobs.models import Company, CompanyStatus, Job, JobStatus
 
@@ -276,3 +278,116 @@ class TestJobUpdateView(TestCase):
         self.client.force_login(self.user_no_company)
         response = self.client.get(f'/empresas/vagas/{self.job.pk}/editar/')
         self.assertEqual(response.status_code, 403)
+
+
+@override_settings(CACHES=CACHES_LOCMEM)
+class TestJobDeleteView(TestCase):
+    """Testes para JobDeleteView."""
+
+    def setUp(self):
+        self.user = User.objects.create_user(username='empresa1', email='empresa1@test.com', password='senha123')
+        self.company = Company.objects.create(
+            user=self.user,
+            cnpj='12.345.678/0001-90',
+            nome='Empresa Teste',
+            email='contato@empresa.com',
+            telefone='(41) 99999-9999',
+            contato_nome='Responsavel',
+            contato_cargo='Gerente'
+        )
+        self.job = Job.objects.create(
+            company=self.company,
+            titulo='Vaga Teste',
+            descricao='Descricao',
+            tipo='estagio',
+            status=JobStatus.PENDING
+        )
+        self.other_user = User.objects.create_user(username='empresa2', email='empresa2@test.com', password='senha123')
+        self.other_company = Company.objects.create(
+            user=self.other_user,
+            cnpj='98.765.432/0001-10',
+            nome='Outra Empresa',
+            email='contato@outra.com',
+            telefone='(41) 88888-8888',
+            contato_nome='Outro Responsavel',
+            contato_cargo='Outro Gerente'
+        )
+        self.other_job = Job.objects.create(
+            company=self.other_company,
+            titulo='Outra Vaga',
+            descricao='Descricao',
+            tipo='estagio',
+            status=JobStatus.PENDING
+        )
+
+    def test_get_confirmation_page_owner(self):
+        """Dono da vaga acessa pagina de confirmacao (200)."""
+        self.client.login(username='empresa1', password='senha123')
+        response = self.client.get(reverse('companies:job_delete', kwargs={'pk': self.job.pk}))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Vaga Teste')
+        self.assertContains(response, 'Confirmar Remo')
+
+    def test_get_confirmation_page_no_company(self):
+        """Usuario sem company recebe 403."""
+        user_no_company = User.objects.create_user(username='semempresa', email='semempresa@test.com', password='senha123')
+        self.client.login(username='semempresa', password='senha123')
+        response = self.client.get(reverse('companies:job_delete', kwargs={'pk': self.job.pk}))
+        self.assertEqual(response.status_code, 403)
+
+    def test_get_confirmation_page_other_company(self):
+        """Dono de outra empresa recebe 403."""
+        self.client.login(username='empresa2', password='senha123')
+        response = self.client.get(reverse('companies:job_delete', kwargs={'pk': self.job.pk}))
+        self.assertEqual(response.status_code, 403)
+
+    def test_get_confirmation_page_removed_job(self):
+        """Vaga ja removida retorna 404."""
+        self.job.status = JobStatus.REMOVED
+        self.job.save()
+        self.client.login(username='empresa1', password='senha123')
+        response = self.client.get(reverse('companies:job_delete', kwargs={'pk': self.job.pk}))
+        self.assertEqual(response.status_code, 404)
+
+    def test_post_delete_owner(self):
+        """Dono da vaga consegue remover (soft delete)."""
+        self.client.login(username='empresa1', password='senha123')
+        response = self.client.post(reverse('companies:job_delete', kwargs={'pk': self.job.pk}))
+        self.job.refresh_from_db()
+        self.assertEqual(self.job.status, JobStatus.REMOVED)
+        self.assertRedirects(response, reverse('companies:profile'))
+        messages_list = list(get_messages(response.wsgi_request))
+        self.assertEqual(str(messages_list[0]), 'Vaga removida com sucesso.')
+
+    def test_post_delete_no_company(self):
+        """Usuario sem company recebe 403 no POST."""
+        user_no_company = User.objects.create_user(username='semempresa2', email='semempresa2@test.com', password='senha123')
+        self.client.login(username='semempresa2', password='senha123')
+        response = self.client.post(reverse('companies:job_delete', kwargs={'pk': self.job.pk}))
+        self.assertEqual(response.status_code, 403)
+        self.job.refresh_from_db()
+        self.assertNotEqual(self.job.status, JobStatus.REMOVED)
+
+    def test_post_delete_other_company(self):
+        """Dono de outra empresa recebe 403 no POST."""
+        self.client.login(username='empresa2', password='senha123')
+        response = self.client.post(reverse('companies:job_delete', kwargs={'pk': self.job.pk}))
+        self.assertEqual(response.status_code, 403)
+        self.job.refresh_from_db()
+        self.assertNotEqual(self.job.status, JobStatus.REMOVED)
+
+    def test_post_delete_removed_job(self):
+        """Vaga ja removida retorna 404 no POST."""
+        self.job.status = JobStatus.REMOVED
+        self.job.save()
+        self.client.login(username='empresa1', password='senha123')
+        response = self.client.post(reverse('companies:job_delete', kwargs={'pk': self.job.pk}))
+        self.assertEqual(response.status_code, 404)
+
+    def test_removed_job_not_in_profile(self):
+        """Vaga removida nao aparece na listagem do profile."""
+        self.job.status = JobStatus.REMOVED
+        self.job.save()
+        self.client.login(username='empresa1', password='senha123')
+        response = self.client.get(reverse('companies:profile'))
+        self.assertNotContains(response, 'Vaga Teste')

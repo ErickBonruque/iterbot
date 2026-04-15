@@ -121,6 +121,7 @@
             </div>
             <div class="card-body">
                 {% for job in company.jobs.all %}
+                    {% if job.status != 'removed' %}
                 <div class="d-flex justify-content-between align-items-center mb-3 pb-3 {% if not forloop.last %}border-bottom{% endif %}">
                     <div>
                         <strong>{{ job.titulo }}</strong>
@@ -137,8 +138,11 @@
                         {% endif %}
                     </div>
                     <a href="/empresas/vagas/{{ job.pk }}/editar/" class="btn btn-sm btn-outline-dark">Editar</a>
+                    <a href="/empresas/vagas/{{ job.pk }}/editar/" class="btn btn-sm btn-outline-dark">Editar</a>
+                    <a href="/empresas/vagas/{{ job.pk }}/deletar/" class="btn btn-sm btn-outline-danger ms-2">Remover</a>
                 </div>
-                {% endfor %}
+                {% endif %}
+            {% endfor %}
             </div>
         </div>
         {% else %}
