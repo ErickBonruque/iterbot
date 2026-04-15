@@ -114,11 +114,27 @@ class WahaSettings:
     session_name: str
     timeout_seconds: int
 
-    def __init__(self) -> None:
-        self.base_url = env("WAHA_URL")
-        self.api_key = _get_secret_or_env("waha_api_key", "WAHA_API_KEY", "dev-api-key")
-        self.session_name = env("WAHA_SESSION_NAME")
-        self.timeout_seconds = env("WAHA_TIMEOUT_SECONDS")
+    def __init__(
+        self,
+        base_url: str | None = None,
+        api_key: str | None = None,
+        session_name: str | None = None,
+        timeout_seconds: int | None = None,
+    ) -> None:
+        self.base_url = base_url if base_url is not None else env("WAHA_URL")
+        self.api_key = (
+            api_key
+            if api_key is not None
+            else _get_secret_or_env("waha_api_key", "WAHA_API_KEY", "dev-api-key")
+        )
+        self.session_name = (
+            session_name if session_name is not None else env("WAHA_SESSION_NAME")
+        )
+        self.timeout_seconds = (
+            timeout_seconds
+            if timeout_seconds is not None
+            else env("WAHA_TIMEOUT_SECONDS")
+        )
 
 
 @dataclass
