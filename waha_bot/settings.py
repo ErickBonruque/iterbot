@@ -236,6 +236,11 @@ CELERY_BEAT_SCHEDULE = {
 if not DEBUG:
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
     SECURE_SSL_REDIRECT = True
+    # WAHA envia webhook internamente por HTTP na rede Docker
+    # (WHATSAPP_HOOK_URL=http://backend:8000/webhook/). Sem essa
+    # exceção, o SecurityMiddleware redireciona POST para HTTPS e o
+    # webhook não chega ao bot.
+    SECURE_REDIRECT_EXEMPT = [r"^webhook/$"]
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
     SECURE_BROWSER_XSS_FILTER = True
