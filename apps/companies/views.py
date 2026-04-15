@@ -9,9 +9,9 @@ from allauth.account.views import LoginView, LogoutView, SignupView
 from django.shortcuts import render, redirect
 from django.http import Http404
 
-from apps.companies.forms import CompanyProfileForm, CompanySignupForm, JobForm
+from apps.companies.forms import CompanyOnlyForm, CompanyProfileForm, CompanySignupForm, JobForm
 from apps.companies.mixins import CompanyRequiredMixin
-from apps.jobs.models import Company, Job, JobStatus
+from apps.jobs.models import Company, CompanyStatus, Job, JobStatus
 
 logger = structlog.get_logger(__name__)
 
@@ -51,13 +51,13 @@ class CompanyProfileView(LoginRequiredMixin, UpdateView):
     def get(self, request, *args, **kwargs):
         self.object = self.get_object()
         if self.object is None:
-            return redirect('/empresas/signup/')
+            return redirect('/empresas/criar/')
         return super().get(request, *args, **kwargs)
 
     def post(self, request, *args, **kwargs):
         self.object = self.get_object()
         if self.object is None:
-            return redirect('/empresas/signup/')
+            return redirect('/empresas/criar/')
         return super().post(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):
@@ -68,6 +68,41 @@ class CompanyProfileView(LoginRequiredMixin, UpdateView):
     def form_valid(self, form):
         messages.success(self.request, 'Dados atualizados com sucesso.')
         return super().form_valid(form)
+
+
+class CompanyCreateView(LoginRequiredMixin, View):
+    """View de criacao de empresa para usuarios ja autenticados sem empresa."""
+    login_url = '/empresas/login/'
+
+    def dispatch(self, request, *args, **kwargs):
+        if request.user.is_authenticated:
+            try:
+                request.user.company
+                return redirect('/empresas/perfil/')
+            except Exception:
+                pass
+        return super().dispatch(request, *args, **kwargs)
+
+    def get(self, request):
+        form = CompanyOnlyForm()
+        return render(request, 'companies/company_create.html', {'form': form})
+
+    def post(self, request):
+        form = CompanyOnlyForm(request.POST)
+        if form.is_valid():
+            Company.objects.create(
+                user=request.user,
+                cnpj=form.cleaned_data['cnpj'],
+                nome=form.cleaned_data['nome'],
+                email=request.user.email,
+                telefone=form.cleaned_data['telefone'],
+                contato_nome=form.cleaned_data['contato_nome'],
+                contato_cargo=form.cleaned_data['contato_cargo'],
+                status=CompanyStatus.PENDING,
+            )
+            messages.success(request, 'Empresa cadastrada com sucesso. Aguardando aprovacao.')
+            return redirect('/empresas/perfil/')
+        return render(request, 'companies/company_create.html', {'form': form})
 
 
 class JobCreateView(CompanyRequiredMixin, CreateView):

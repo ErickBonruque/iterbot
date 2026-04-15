@@ -80,6 +80,63 @@ class CompanySignupForm(SignupForm):
         return user
 
 
+class CompanyOnlyForm(forms.Form):
+    """
+    Formulario de criacao de empresa para usuarios ja autenticados.
+    Nao cria novo usuario — apenas cadastra a empresa vinculada ao usuario logado.
+    """
+    cnpj = forms.CharField(
+        max_length=18,
+        label="CNPJ",
+        validators=[validate_cnpj],
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'XX.XXX.XXX/XXXX-XX',
+        }),
+    )
+    nome = forms.CharField(
+        max_length=255,
+        label="Nome da Empresa",
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Razao social ou nome fantasia',
+        }),
+    )
+    telefone = forms.CharField(
+        max_length=20,
+        label="Telefone",
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': '(XX) XXXXX-XXXX',
+        }),
+    )
+    contato_nome = forms.CharField(
+        max_length=255,
+        label="Nome do Responsavel",
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Nome completo do responsavel',
+        }),
+    )
+    contato_cargo = forms.CharField(
+        max_length=100,
+        label="Cargo do Responsavel",
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Ex: Gerente de RH',
+        }),
+    )
+
+    def clean_cnpj(self):
+        value = self.cleaned_data.get('cnpj')
+        if Company.objects.filter(cnpj=value).exists():
+            raise ValidationError(
+                "Ja existe uma empresa cadastrada com este CNPJ.",
+                code='duplicate_cnpj',
+            )
+        return value
+
+
 class CompanyProfileForm(forms.ModelForm):
     """
     Formulario de edicao de perfil da empresa.

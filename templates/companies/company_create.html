@@ -1,0 +1,114 @@
+{% extends "companies/base_company.html" %}
+
+{% block title %}Cadastrar Empresa - CapyVagas UTFPR{% endblock %}
+
+{% block company_content %}
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+        <div class="card">
+            <div class="card-header text-center">
+                <h4 class="mb-0">Cadastrar Empresa</h4>
+            </div>
+            <div class="card-body">
+                <p class="text-muted text-center mb-4">
+                    Preencha os dados da sua empresa para publicar vagas de estagio
+                </p>
+
+                <form method="post" action="">
+                    {% csrf_token %}
+
+                    {% if form.non_field_errors %}
+                    <div class="alert alert-danger">
+                        {{ form.non_field_errors }}
+                    </div>
+                    {% endif %}
+
+                    <div class="mb-3">
+                        <label for="id_cnpj" class="form-label">CNPJ *</label>
+                        <input type="text"
+                               name="cnpj"
+                               class="form-control {% if form.cnpj.errors %}is-invalid{% endif %}"
+                               id="id_cnpj"
+                               placeholder="XX.XXX.XXX/XXXX-XX"
+                               value="{{ form.cnpj.value|default:'' }}"
+                               required>
+                        {% if form.cnpj.errors %}
+                        <div class="invalid-feedback">
+                            {{ form.cnpj.errors.0 }}
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="id_nome" class="form-label">Nome da Empresa *</label>
+                        <input type="text"
+                               name="nome"
+                               class="form-control {% if form.nome.errors %}is-invalid{% endif %}"
+                               id="id_nome"
+                               placeholder="Razao social ou nome fantasia"
+                               value="{{ form.nome.value|default:'' }}"
+                               required>
+                        {% if form.nome.errors %}
+                        <div class="invalid-feedback">
+                            {{ form.nome.errors.0 }}
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="id_telefone" class="form-label">Telefone *</label>
+                        <input type="text"
+                               name="telefone"
+                               class="form-control {% if form.telefone.errors %}is-invalid{% endif %}"
+                               id="id_telefone"
+                               placeholder="(XX) XXXXX-XXXX"
+                               value="{{ form.telefone.value|default:'' }}"
+                               required>
+                        {% if form.telefone.errors %}
+                        <div class="invalid-feedback">
+                            {{ form.telefone.errors.0 }}
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="id_contato_nome" class="form-label">Nome do Responsavel *</label>
+                        <input type="text"
+                               name="contato_nome"
+                               class="form-control {% if form.contato_nome.errors %}is-invalid{% endif %}"
+                               id="id_contato_nome"
+                               placeholder="Nome completo do responsavel"
+                               value="{{ form.contato_nome.value|default:'' }}"
+                               required>
+                        {% if form.contato_nome.errors %}
+                        <div class="invalid-feedback">
+                            {{ form.contato_nome.errors.0 }}
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="id_contato_cargo" class="form-label">Cargo do Responsavel *</label>
+                        <input type="text"
+                               name="contato_cargo"
+                               class="form-control {% if form.contato_cargo.errors %}is-invalid{% endif %}"
+                               id="id_contato_cargo"
+                               placeholder="Ex: Gerente de RH"
+                               value="{{ form.contato_cargo.value|default:'' }}"
+                               required>
+                        {% if form.contato_cargo.errors %}
+                        <div class="invalid-feedback">
+                            {{ form.contato_cargo.errors.0 }}
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="d-grid gap-2 mt-4">
+                        <button type="submit" class="btn btn-primary btn-lg">Cadastrar Empresa</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
