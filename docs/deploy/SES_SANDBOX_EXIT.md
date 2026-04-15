@@ -18,13 +18,13 @@ Contas AWS novas tem o SES em modo sandbox. Nesse modo:
 1. Acessar console AWS -> SES -> Verified identities
 2. Clicar "Create identity"
 3. Selecionar "Email address"
-4. Inserir: `bonruque@alunos.utfpr.edu.br` (ou o email remetente desejado)
+4. Inserir: `bonrqueruck@gmail.com` (ou o email remetente desejado)
 5. Confirmar via link recebido no email
 
 ## Passo 2: Solicitar Saida do Sandbox
 
 Checklist bloqueante antes do submit:
-- [ ] `DEFAULT_FROM_EMAIL` na EC2 esta igual a identidade SES verificada desta fase (`bonruque@alunos.utfpr.edu.br`)
+- [ ] `DEFAULT_FROM_EMAIL` na EC2 esta igual a identidade SES verificada desta fase (`bonrqueruck@gmail.com`)
 - [ ] Regiao ativa do SES conferida como `us-east-1`
 - [ ] `EMAIL_HOST_USER` e `secrets/email_password.txt` preparados para receber as credenciais SMTP reais
 
@@ -75,7 +75,7 @@ EMAIL_HOST=email-smtp.us-east-1.amazonaws.com
 EMAIL_PORT=587
 EMAIL_USE_TLS=True
 EMAIL_HOST_USER=<SMTP username gerado no passo 3>
-DEFAULT_FROM_EMAIL=bonruque@alunos.utfpr.edu.br
+DEFAULT_FROM_EMAIL=bonrqueruck@gmail.com
 ```
 
 O `EMAIL_HOST_PASSWORD` e lido de `secrets/email_password.txt`.

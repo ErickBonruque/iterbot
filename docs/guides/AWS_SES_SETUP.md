@@ -26,7 +26,7 @@ Este guia descreve como configurar o Amazon Simple Email Service (SES) para envi
 
 1. Acesse o **Amazon SES Console**
 2. Vá em **Email Addresses** → **Verify a New Email Address**
-3. Digite: `noreply@capyvagas.utfpr.edu.br` (ou outro e-mail institucional)
+3. Digite: `bonrqueruck@gmail.com` (ou outro e-mail remetente desejado)
 4. Acesse a caixa de entrada do e-mail e clique no link de verificação
 
 ### Opção B: Verificar Domínio Completo (Recomendado)
@@ -99,7 +99,7 @@ EMAIL_PORT=587
 EMAIL_USE_TLS=True
 EMAIL_HOST_USER=<SMTP_USERNAME>
 EMAIL_HOST_PASSWORD=<SMTP_PASSWORD>
-DEFAULT_FROM_EMAIL=noreply@capyvagas.utfpr.edu.br
+DEFAULT_FROM_EMAIL=bonrqueruck@gmail.com
 ```
 
 **Importante:** Use Docker Secrets para `EMAIL_HOST_PASSWORD`:
@@ -125,7 +125,7 @@ from django.core.mail import send_mail
 send_mail(
     'Teste CapyVagas',
     'E-mail de teste do sistema.',
-    'noreply@capyvagas.utfpr.edu.br',
+    'bonrqueruck@gmail.com',
     ['seu.email@alunos.utfpr.edu.br'],
     fail_silently=False,
 )
@@ -187,7 +187,7 @@ Para um sistema com ~500 alunos cadastrando/mês, o custo será **$0**.
 - Credenciais via variáveis de ambiente (não hardcoded)
 - Docker Secrets para senhas em produção
 - TLS/SSL para conexão SMTP
-- Validação de domínio institucional (@alunos.utfpr.edu.br)
+- Remetente verificado no SES (identidade de e-mail ou dominio)
 
 ---
 

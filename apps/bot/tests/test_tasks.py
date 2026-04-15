@@ -216,7 +216,7 @@ class TestSendOfflineAlert:
 
     @patch("apps.bot.tasks.send_mail")
     def test_alert_sent_to_correct_recipient(self, mock_send_mail):
-        """STAB-03: E-mail deve ser enviado para bonruque@alunos.utfpr.edu.br."""
+        """STAB-03: E-mail deve ser enviado para o destinatario configurado."""
         from apps.bot.tasks import _send_offline_alert, ALERT_EMAIL
         _send_offline_alert(
             session_name="default",

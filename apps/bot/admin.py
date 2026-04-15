@@ -9,11 +9,16 @@ class BotConfigurationAdmin(admin.ModelAdmin):
 
 @admin.register(InteractionLog)
 class InteractionLogAdmin(admin.ModelAdmin):
-    list_display = ('user', 'message_type_badge', 'message_preview', 'created_at')
-    list_filter = ('message_type', 'created_at')
-    search_fields = ('message_content', 'user__phone_number')
+    list_display = ('user', 'message_type_badge', 'message_preview', 'session_short', 'created_at')
+    list_filter = ('message_type', 'created_at', 'session_id')
+    search_fields = ('message_content', 'user__phone_number', 'session_id')
     readonly_fields = ('created_at', 'updated_at', 'conversation_timeline')
     date_hierarchy = 'created_at'
+    
+    def session_short(self, obj):
+        """Return shortened session ID for display"""
+        return obj.session_id[:20] + ('...' if len(obj.session_id) > 20 else '')
+    session_short.short_description = 'Sessão'
 
     def message_type_badge(self, obj):
         color = '#17a2b8' if obj.message_type == 'SENT' else '#6c757d'

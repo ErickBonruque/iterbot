@@ -9,8 +9,8 @@ from django.core.mail import send_mail
 
 logger = structlog.get_logger(__name__)
 
-# E-mail de alerta fixo — não configurável via admin neste milestone (D-05)
-ALERT_EMAIL = "bonruque@alunos.utfpr.edu.br"
+# E-mail de alerta fixo — nao configuravel via admin neste milestone (D-05)
+ALERT_EMAIL = "bonrqueruck@gmail.com"
 ALERT_SUBJECT = "[CapyVagas] ⚠️ Bot WhatsApp offline"
 
 # Backoff entre tentativas de reconexão em segundos (D-02)
