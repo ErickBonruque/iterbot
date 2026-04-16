@@ -1,8 +1,9 @@
 from django.contrib import admin
 from django.db.models import Count, Q
+from unfold.sites import UnfoldAdminSite
 
 
-class CapyVagasAdminSite(admin.AdminSite):
+class CapyVagasAdminSite(UnfoldAdminSite):
     """Site de administração customizado para CapyVagas UTFPR com métricas na home."""
 
     site_header = "CapyVagas UTFPR"
