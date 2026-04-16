@@ -191,14 +191,13 @@ ci-check:
 ## lint: Run code linters
 lint:
 	@echo "$(BLUE)🔍 Running linters...$(NC)"
-	@ruff check . || true
-	@black --check . || true
+	@poetry run ruff check .
 	@echo "$(GREEN)✅ Linting completed!$(NC)"
 
-## format: Format code with black
+## format: Format code with ruff
 format:
 	@echo "$(BLUE)✨ Formatting code...$(NC)"
-	@black .
+	@poetry run ruff format .
 	@echo "$(GREEN)✅ Code formatted!$(NC)"
 
 ## pre-commit-install: Install pre-commit hooks
