@@ -2,133 +2,84 @@
 {% load i18n %}
 
 {% block content %}
-<div class="row">
-    <!-- Cards de Métricas -->
-    <div class="col-lg-3 col-6">
-        <div class="small-box bg-info">
-            <div class="inner">
-                <h3>{{ total_alunos|default:"0" }}</h3>
-                <p>Alunos Cadastrados</p>
-            </div>
-            <div class="icon">
-                <i class="fas fa-user-graduate"></i>
-            </div>
-        </div>
+<section class="phase12-dashboard">
+    <div class="phase12-metrics-grid">
+        <article class="phase12-metric-card">
+            <p class="phase12-metric-label">Alunos Cadastrados</p>
+            <p class="phase12-metric-value">{{ total_alunos|default:"0" }}</p>
+        </article>
+        <article class="phase12-metric-card">
+            <p class="phase12-metric-label">Empresas Ativas</p>
+            <p class="phase12-metric-value">{{ empresas_ativas|default:"0" }}</p>
+        </article>
+        <article class="phase12-metric-card phase12-metric-card--accent">
+            <p class="phase12-metric-label">Vagas Pendentes</p>
+            <p class="phase12-metric-value">{{ vagas_pendentes|default:"0" }}</p>
+        </article>
+        <article class="phase12-metric-card">
+            <p class="phase12-metric-label">Vagas Aprovadas</p>
+            <p class="phase12-metric-value">{{ vagas_aprovadas|default:"0" }}</p>
+        </article>
     </div>
 
-    <div class="col-lg-3 col-6">
-        <div class="small-box bg-success">
-            <div class="inner">
-                <h3>{{ empresas_ativas|default:"0" }}</h3>
-                <p>Empresas Ativas</p>
-            </div>
-            <div class="icon">
-                <i class="fas fa-building"></i>
-            </div>
-        </div>
-    </div>
+    <div class="phase12-panels-grid">
+        <article class="phase12-panel">
+            <h2 class="phase12-panel-title">Status do Bot WhatsApp</h2>
+            <table class="phase12-table">
+                <tr>
+                    <th>Status</th>
+                    <td>
+                        {% if bot_status == 'online' %}
+                            <span class="phase12-status-badge phase12-status-badge--success">Online</span>
+                        {% elif bot_status == 'offline' %}
+                            <span class="phase12-status-badge phase12-status-badge--danger">Offline</span>
+                        {% elif bot_status == 'error' %}
+                            <span class="phase12-status-badge phase12-status-badge--warning">Erro</span>
+                        {% else %}
+                            <span class="phase12-status-badge phase12-status-badge--neutral">Desconhecido</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                <tr>
+                    <th>Sessao WAHA</th>
+                    <td>{{ bot_session_status|default:"N/A" }}</td>
+                </tr>
+                <tr>
+                    <th>Tempo de Resposta</th>
+                    <td>
+                        {% if bot_response_time %}
+                            {{ bot_response_time|floatformat:1 }} ms
+                        {% else %}
+                            N/A
+                        {% endif %}
+                    </td>
+                </tr>
+                <tr>
+                    <th>Ultimo Check</th>
+                    <td>{{ bot_last_check|default:"Nunca" }}</td>
+                </tr>
+            </table>
+        </article>
 
-    <div class="col-lg-3 col-6">
-        <div class="small-box bg-warning">
-            <div class="inner">
-                <h3>{{ vagas_pendentes|default:"0" }}</h3>
-                <p>Vagas Pendentes</p>
-            </div>
-            <div class="icon">
-                <i class="fas fa-briefcase"></i>
-            </div>
-        </div>
+        <article class="phase12-panel">
+            <h2 class="phase12-panel-title">Resumo Geral</h2>
+            <table class="phase12-table">
+                <tr>
+                    <th>Total de Vagas</th>
+                    <td>{{ vagas_total|default:"0" }}</td>
+                </tr>
+                <tr>
+                    <th>Empresas Pendentes</th>
+                    <td>{{ empresas_pendentes|default:"0" }}</td>
+                </tr>
+                <tr>
+                    <th>Total de Interacoes</th>
+                    <td>{{ total_interacoes|default:"0" }}</td>
+                </tr>
+            </table>
+        </article>
     </div>
-
-    <div class="col-lg-3 col-6">
-        <div class="small-box bg-primary">
-            <div class="inner">
-                <h3>{{ vagas_aprovadas|default:"0" }}</h3>
-                <p>Vagas Aprovadas</p>
-            </div>
-            <div class="icon">
-                <i class="fas fa-check-circle"></i>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Status do Bot -->
-<div class="row">
-    <div class="col-lg-6">
-        <div class="card">
-            <div class="card-header">
-                <h3 class="card-title">
-                    <i class="fas fa-robot mr-1"></i>
-                    Status do Bot WhatsApp
-                </h3>
-            </div>
-            <div class="card-body">
-                <table class="table table-bordered table-sm">
-                    <tr>
-                        <td><strong>Status</strong></td>
-                        <td>
-                            {% if bot_status == 'online' %}
-                                <span class="badge badge-success">Online</span>
-                            {% elif bot_status == 'offline' %}
-                                <span class="badge badge-danger">Offline</span>
-                            {% elif bot_status == 'error' %}
-                                <span class="badge badge-warning">Erro</span>
-                            {% else %}
-                                <span class="badge badge-secondary">Desconhecido</span>
-                            {% endif %}
-                        </td>
-                    </tr>
-                    <tr>
-                        <td><strong>Sessão WAHA</strong></td>
-                        <td>{{ bot_session_status|default:"N/A" }}</td>
-                    </tr>
-                    <tr>
-                        <td><strong>Tempo de Resposta</strong></td>
-                        <td>
-                            {% if bot_response_time %}
-                                {{ bot_response_time|floatformat:1 }} ms
-                            {% else %}
-                                N/A
-                            {% endif %}
-                        </td>
-                    </tr>
-                    <tr>
-                        <td><strong>Último Check</strong></td>
-                        <td>{{ bot_last_check|default:"Nunca" }}</td>
-                    </tr>
-                </table>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-lg-6">
-        <div class="card">
-            <div class="card-header">
-                <h3 class="card-title">
-                    <i class="fas fa-chart-bar mr-1"></i>
-                    Resumo Geral
-                </h3>
-            </div>
-            <div class="card-body">
-                <table class="table table-bordered table-sm">
-                    <tr>
-                        <td><strong>Total de Vagas</strong></td>
-                        <td>{{ vagas_total|default:"0" }}</td>
-                    </tr>
-                    <tr>
-                        <td><strong>Empresas Pendentes</strong></td>
-                        <td>{{ empresas_pendentes|default:"0" }}</td>
-                    </tr>
-                    <tr>
-                        <td><strong>Total de Interações</strong></td>
-                        <td>{{ total_interacoes|default:"0" }}</td>
-                    </tr>
-                </table>
-            </div>
-        </div>
-    </div>
-</div>
+</section>
 
 <!-- App list padrão do Django Admin -->
 {{ block.super }}
