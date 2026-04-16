@@ -13,11 +13,16 @@ logger = structlog.get_logger(__name__)
 
 
 class BotService:
-    """
-    Orchestrates bot conversation flow using specialized handlers.
+    """Orchestrates bot conversation flow using specialized handlers.
 
-    This refactored service follows SOLID principles by delegating
-    specific responsibilities to dedicated handler classes.
+    Attributes:
+        auth_service: UTFPR authentication service instance.
+        job_service: Job search service instance.
+        waha_client: WAHA client for WhatsApp messaging.
+        auth_handler: Authentication handler instance.
+        job_handler: Job search handler instance.
+        menu_handler: Menu handler instance.
+        review_handler: Job review handler instance.
     """
 
     def __init__(
@@ -26,13 +31,12 @@ class BotService:
         job_service: JobSearchService | None = None,
         waha_client: WahaClient | None = None,
     ) -> None:
-        """
-        Initialize bot service with dependencies.
+        """Initialize bot service with dependencies.
 
         Args:
-            auth_service: Authentication service (optional, will create default)
-            job_service: Job search service (optional, will create default)
-            waha_client: WAHA client (optional, will create default)
+            auth_service: Authentication service (optional, will create default).
+            job_service: Job search service (optional, will create default).
+            waha_client: WAHA client (optional, will create default).
         """
         waha_settings = BotConfiguration.get_active()
         self.auth_service = auth_service or UTFPRAuthService()
@@ -46,13 +50,12 @@ class BotService:
         self.review_handler = JobReviewHandler(self.waha_client, self.job_service)
 
     def process_message(self, chat_id: str, message: str, from_me: bool) -> None:
-        """
-        Process incoming WhatsApp message.
+        """Process incoming WhatsApp message.
 
         Args:
-            chat_id: WhatsApp chat identifier
-            message: Message text
-            from_me: Whether message was sent by the bot
+            chat_id: WhatsApp chat identifier.
+            message: Message text.
+            from_me: Whether message was sent by the bot.
         """
         # Ignore messages from bot itself
         if from_me:
@@ -141,16 +144,15 @@ class BotService:
         self.menu_handler.send_unknown_command(user, chat_id)
 
     def _handle_pending_action(self, user: UserProfile, chat_id: str, text: str) -> bool:
-        """
-        Delegate to appropriate handler based on current action.
+        """Delegate to appropriate handler based on current action.
 
         Args:
-            user: User profile
-            chat_id: WhatsApp chat ID
-            text: User message
+            user: User profile.
+            chat_id: WhatsApp chat ID.
+            text: User message.
 
         Returns:
-            True if action was handled
+            True if action was handled, False otherwise.
         """
         # Try authentication handler
         if self.auth_handler.handle(user, chat_id, text):
@@ -189,23 +191,21 @@ class BotService:
         return False
 
     def _reset_state(self, user: UserProfile) -> None:
-        """
-        Reset user conversation state.
+        """Reset user conversation state.
 
         Args:
-            user: User profile to reset
+            user: User profile to reset.
         """
         user.current_action = None
         user.flow_data = {}
         user.save(update_fields=["current_action", "flow_data", "last_activity"])
 
     def _log_received(self, user: UserProfile, message: str) -> None:
-        """
-        Log received message to database.
+        """Log received message to database.
 
         Args:
-            user: User profile
-            message: Message text received
+            user: User profile.
+            message: Message text received.
         """
         try:
             InteractionLog.objects.create(
