@@ -10,7 +10,11 @@ logger = structlog.get_logger(__name__)
 
 
 class AuthenticationHandler(BaseHandler):
-    """Handles user authentication (login/logout) flows."""
+    """Handles user authentication (login/logout) flows.
+
+    Attributes:
+        auth_service: UTFPRAuthService instance for authentication.
+    """
 
     def __init__(self, waha_client, auth_service: UTFPRAuthService) -> None:
         """
