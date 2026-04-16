@@ -1,4 +1,13 @@
-# Changelog - CapyVagas UTFPR
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Conventional Commits](https://www.conventionalcommits.org/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+---
 
 ## [Fase 2] - 2026-04-12
 
