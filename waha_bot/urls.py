@@ -8,6 +8,7 @@ from apps.core.admin import capyvagas_admin
 urlpatterns = [
     path('', RedirectView.as_view(url='/admin/', permanent=False)),
     path('health/', HealthCheckView.as_view(), name='health'),
+    path('api/', include('apps.dashboard.api_urls')),
     path('admin/', capyvagas_admin.urls),
     path('webhook/', webhook),
     path('empresas/', include('apps.companies.urls')),

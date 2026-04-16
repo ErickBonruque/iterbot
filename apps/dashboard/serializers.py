@@ -146,6 +146,9 @@ class BotStatusSerializer(serializers.Serializer):
 class BotConfigurationSerializer(serializers.ModelSerializer):
     """Serializer para configurar credenciais do bot/WAHA."""
 
+    # Aceita hosts internos/locais como `http://new` usados em testes e ambientes dev.
+    waha_url = serializers.CharField(required=False, allow_blank=True)
+
     class Meta:
         model = BotConfiguration
         fields = [

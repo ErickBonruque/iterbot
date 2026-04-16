@@ -194,14 +194,23 @@ REST_FRAMEWORK = {
     ],
 }
 
-# Cache (Redis for production, LocMem for development)
-CACHES = {
-    "default": {
-        "BACKEND": "django.core.cache.backends.redis.RedisCache",
-        "LOCATION": settings.redis.url,
-        "KEY_PREFIX": "capyvagas",
+# Cache (LocMem em desenvolvimento/tests, Redis em produção)
+if DEBUG:
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+            "LOCATION": "capyvagas-dev-cache",
+            "KEY_PREFIX": "capyvagas",
+        }
     }
-}
+else:
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.redis.RedisCache",
+            "LOCATION": settings.redis.url,
+            "KEY_PREFIX": "capyvagas",
+        }
+    }
 
 # Celery Configuration
 CELERY_BROKER_URL = settings.redis.url
