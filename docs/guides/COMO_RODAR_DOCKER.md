@@ -558,5 +558,5 @@ Se encontrar problemas:
 
 ---
 
-**Versão:** 2.0.0 (Refatorado para Produção)  
+**Versão:** 2.0.0 (Refatorado para Produção)
 **Data:** 2024-11-29

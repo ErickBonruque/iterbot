@@ -84,12 +84,10 @@ class TestBuildReviewForUser(TestCase):
     @patch("apps.jobs.tasks._get_local_jobs_for_course")
     def test_max_5_vagas(self, local_mock, online_mock):
         local_mock.return_value = [
-            {"title": f"Local {i}", "company": "Empresa L"}
-            for i in range(4)
+            {"title": f"Local {i}", "company": "Empresa L"} for i in range(4)
         ]
         online_mock.return_value = [
-            {"title": f"Online {i}", "company": "Empresa O"}
-            for i in range(4)
+            {"title": f"Online {i}", "company": "Empresa O"} for i in range(4)
         ]
 
         course = MagicMock()

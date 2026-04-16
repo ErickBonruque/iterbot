@@ -16,7 +16,7 @@ class StructuredLoggingMiddleware:
 
     def __call__(self, request: HttpRequest) -> HttpResponse:
         start_time = time.time()
-        
+
         # Log request
         logger.info(
             "request_started",
@@ -25,13 +25,13 @@ class StructuredLoggingMiddleware:
             user_agent=request.headers.get("User-Agent", ""),
             remote_addr=self._get_client_ip(request),
         )
-        
+
         # Process request
         response = self.get_response(request)
-        
+
         # Calculate duration
         duration_ms = (time.time() - start_time) * 1000
-        
+
         # Log response
         logger.info(
             "request_completed",
@@ -40,12 +40,10 @@ class StructuredLoggingMiddleware:
             status_code=response.status_code,
             duration_ms=round(duration_ms, 2),
         )
-        
+
         return response
 
-    def process_exception(
-        self, request: HttpRequest, exception: Exception
-    ) -> None:
+    def process_exception(self, request: HttpRequest, exception: Exception) -> None:
         """Log exceptions with full context."""
         logger.error(
             "request_exception",

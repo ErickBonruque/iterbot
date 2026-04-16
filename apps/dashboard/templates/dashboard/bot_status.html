@@ -11,7 +11,7 @@
                 <h2 class="text-2xl font-bold text-gray-900 mb-2">Status do Bot WAHA</h2>
                 <p class="text-gray-600">Monitoramento em tempo real da sessão: <code class="px-2 py-1 bg-gray-100 rounded text-sm">default</code></p>
             </div>
-            <button 
+            <button
                 @click="testBot()"
                 class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
             >
@@ -21,7 +21,7 @@
                 <span>Testar Bot Agora</span>
             </button>
         </div>
-        
+
         <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mt-8">
             <div class="text-center">
                 <div class="w-20 h-20 mx-auto rounded-full flex items-center justify-center
@@ -36,7 +36,7 @@
                     {% if current_status.status == 'online' %}Online{% elif current_status.status == 'offline' %}Offline{% else %}Erro{% endif %}
                 </p>
             </div>
-            
+
             <div class="text-center">
                 <div class="w-20 h-20 mx-auto bg-blue-100 rounded-full flex items-center justify-center">
                     <svg class="w-10 h-10 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -46,7 +46,7 @@
                 <p class="text-sm text-gray-600 mt-3">Tempo de Resposta</p>
                 <p class="text-2xl font-bold text-gray-900 mt-1">{{ current_status.response_time|default:"--" }}ms</p>
             </div>
-            
+
             <div class="text-center">
                 <div class="w-20 h-20 mx-auto bg-purple-100 rounded-full flex items-center justify-center">
                     <svg class="w-10 h-10 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -56,7 +56,7 @@
                 <p class="text-sm text-gray-600 mt-3">Uptime 24h</p>
                 <p class="text-2xl font-bold text-gray-900 mt-1">{{ metrics_24h.uptime_percentage }}%</p>
             </div>
-            
+
             <div class="text-center">
                 <div class="w-20 h-20 mx-auto bg-red-100 rounded-full flex items-center justify-center">
                     <svg class="w-10 h-10 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -92,7 +92,7 @@
                 </div>
             </div>
         </div>
-        
+
         <div class="bg-white rounded-lg shadow p-6">
             <h3 class="text-lg font-semibold text-gray-900 mb-4">Últimas 24 Horas</h3>
             <div class="space-y-3">
@@ -114,7 +114,7 @@
                 </div>
             </div>
         </div>
-        
+
         <div class="bg-white rounded-lg shadow p-6">
             <h3 class="text-lg font-semibold text-gray-900 mb-4">Últimos 7 Dias</h3>
             <div class="space-y-3">
@@ -202,13 +202,13 @@ function botStatusManager() {
                     }
                 });
                 const data = await response.json();
-                
+
                 if (data.success) {
                     showToast(data.message, 'success');
                 } else {
                     showToast(data.message, 'error');
                 }
-                
+
                 // Recarregar página após 2 segundos
                 setTimeout(() => location.reload(), 2000);
             } catch (error) {

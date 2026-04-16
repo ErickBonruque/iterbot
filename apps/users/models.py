@@ -11,29 +11,31 @@ class UserProfile(TimeStampedModel):
     Representa um usuário do sistema, vinculado ao número de telefone (WAHA ID).
     Armazena credenciais da UTFPR (criptografadas idealmente, aqui simplificado para MVP).
     """
+
     user = models.OneToOneField(
         User,
         on_delete=models.CASCADE,
         null=True,
         blank=True,
         related_name="profile",
-        help_text="Vínculo com django.contrib.auth.User para autenticação web"
+        help_text="Vínculo com django.contrib.auth.User para autenticação web",
     )
-    phone_number = models.CharField(max_length=50, unique=True, help_text="ID do usuário no WhatsApp (ex: 554199999999@c.us)")
+    phone_number = models.CharField(
+        max_length=50, unique=True, help_text="ID do usuário no WhatsApp (ex: 554199999999@c.us)"
+    )
     email = models.EmailField(
-        unique=True,
-        blank=True,
-        null=True,
-        help_text="E-mail do aluno (@alunos.utfpr.edu.br)"
+        unique=True, blank=True, null=True, help_text="E-mail do aluno (@alunos.utfpr.edu.br)"
     )
     password = models.CharField(
         max_length=128,
         blank=True,
         null=True,
-        help_text="Senha hash (Django User integração futura)"
+        help_text="Senha hash (Django User integração futura)",
     )
     ra = models.CharField(max_length=20, blank=True, null=True, help_text="Registro Acadêmico")
-    utfpr_password = EncryptedCharField(max_length=512, blank=True, null=True, help_text="Senha do Portal (criptografada)")
+    utfpr_password = EncryptedCharField(
+        max_length=512, blank=True, null=True, help_text="Senha do Portal (criptografada)"
+    )
     is_authenticated_utfpr = models.BooleanField(default=False)
     last_activity = models.DateTimeField(auto_now=True)
     current_action = models.CharField(
@@ -56,7 +58,9 @@ class UserProfile(TimeStampedModel):
         blank=True,
         null=True,
     )
-    flow_data = models.JSONField(default=dict, blank=True, help_text="Dados temporários do fluxo conversacional")
+    flow_data = models.JSONField(
+        default=dict, blank=True, help_text="Dados temporários do fluxo conversacional"
+    )
 
     def __str__(self):
         return f"{self.phone_number} ({self.ra if self.ra else 'Sem RA'})"

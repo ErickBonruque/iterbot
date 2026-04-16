@@ -1,6 +1,6 @@
-import structlog
 from typing import Any
 
+import structlog
 from jobspy import scrape_jobs
 
 logger = structlog.get_logger(__name__)

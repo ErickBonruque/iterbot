@@ -16,7 +16,7 @@ class UTFPRAccountAdapter(DefaultAccountAdapter):
         """
         email = super().clean_email(email)
         # Rotas de empresa nao tem restricao de dominio
-        if hasattr(self, 'request') and self.request and self.request.path.startswith('/empresas/'):
+        if hasattr(self, "request") and self.request and self.request.path.startswith("/empresas/"):
             return email
         validate_utfpr_email(email)
         return email

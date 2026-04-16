@@ -17,7 +17,7 @@
 
                 <form method="post" action="{% url 'account_signup' %}" id="signup_form">
                     {% csrf_token %}
-                    
+
                     {% if form.non_field_errors %}
                     <div class="alert alert-danger">
                         {{ form.non_field_errors }}
@@ -26,10 +26,10 @@
 
                     <div class="mb-3">
                         <label for="id_email" class="form-label">E-mail institucional *</label>
-                        <input type="email" 
-                               name="email" 
-                               class="form-control {% if form.email.errors %}is-invalid{% endif %}" 
-                               id="id_email" 
+                        <input type="email"
+                               name="email"
+                               class="form-control {% if form.email.errors %}is-invalid{% endif %}"
+                               id="id_email"
                                placeholder="seu.nome@alunos.utfpr.edu.br"
                                value="{{ form.email.value|default:'' }}"
                                required>
@@ -45,9 +45,9 @@
 
                     <div class="mb-3">
                         <label for="id_password1" class="form-label">Senha *</label>
-                        <input type="password" 
-                               name="password1" 
-                               class="form-control {% if form.password1.errors %}is-invalid{% endif %}" 
+                        <input type="password"
+                               name="password1"
+                               class="form-control {% if form.password1.errors %}is-invalid{% endif %}"
                                id="id_password1"
                                required>
                         {% if form.password1.errors %}
@@ -59,9 +59,9 @@
 
                     <div class="mb-3">
                         <label for="id_password2" class="form-label">Confirmar senha *</label>
-                        <input type="password" 
-                               name="password2" 
-                               class="form-control {% if form.password2.errors %}is-invalid{% endif %}" 
+                        <input type="password"
+                               name="password2"
+                               class="form-control {% if form.password2.errors %}is-invalid{% endif %}"
                                id="id_password2"
                                required>
                         {% if form.password2.errors %}
@@ -79,7 +79,7 @@
                 </form>
 
                 <hr class="my-4">
-                
+
                 <p class="text-center mb-0">
                     Já tem uma conta? <a href="{% url 'account_login' %}">Entrar</a>
                 </p>

@@ -9,7 +9,7 @@ class CompanyRequiredMixin(LoginRequiredMixin):
 
     def dispatch(self, request, *args, **kwargs):
         response = super().dispatch(request, *args, **kwargs)
-        if hasattr(response, 'status_code') and response.status_code == 302:
+        if hasattr(response, "status_code") and response.status_code == 302:
             return response
         try:
             request.user.company

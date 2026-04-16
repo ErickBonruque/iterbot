@@ -15,7 +15,7 @@ class MenuHandler(BaseHandler):
     def send_menu(self, user: UserProfile, chat_id: str) -> None:
         """
         Send main menu to user.
-        
+
         Args:
             user: User profile
             chat_id: WhatsApp chat ID
@@ -94,15 +94,14 @@ class MenuHandler(BaseHandler):
     def send_unknown_command(self, user: UserProfile, chat_id: str) -> None:
         """
         Send unknown command message.
-        
+
         Args:
             user: User profile
             chat_id: WhatsApp chat ID
         """
         msg = self.get_text(
             "unknown_command",
-            "❓ Comando não reconhecido.\n\n"
-            "Digite *menu* para ver as opções disponíveis.",
+            "❓ Comando não reconhecido.\n\n" "Digite *menu* para ver as opções disponíveis.",
         )
         self.send_msg(user, chat_id, msg)
         logger.debug("unknown_command_sent", user_id=user.id)
@@ -110,12 +109,12 @@ class MenuHandler(BaseHandler):
     def handle(self, user: UserProfile, chat_id: str, text: str) -> bool:
         """
         Handle menu-related commands.
-        
+
         Args:
             user: User profile
             chat_id: WhatsApp chat ID
             text: User message
-            
+
         Returns:
             True if message was handled
         """

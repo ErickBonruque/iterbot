@@ -20,32 +20,32 @@ class FieldEncryption:
     def encrypt(self, plaintext: str) -> str:
         """
         Encrypt a plaintext string.
-        
+
         Args:
             plaintext: The string to encrypt
-            
+
         Returns:
             Base64-encoded encrypted string
         """
         if not plaintext:
             return ""
-        
+
         encrypted_bytes = self._fernet.encrypt(plaintext.encode())
         return encrypted_bytes.decode()
 
     def decrypt(self, ciphertext: str) -> str:
         """
         Decrypt an encrypted string.
-        
+
         Args:
             ciphertext: The encrypted string to decrypt
-            
+
         Returns:
             Decrypted plaintext string
         """
         if not ciphertext:
             return ""
-        
+
         try:
             decrypted_bytes = self._fernet.decrypt(ciphertext.encode())
             return decrypted_bytes.decode()

@@ -15,7 +15,7 @@ class AuthenticationHandler(BaseHandler):
     def __init__(self, waha_client, auth_service: UTFPRAuthService) -> None:
         """
         Initialize authentication handler.
-        
+
         Args:
             waha_client: WAHA client for messaging
             auth_service: Service for UTFPR authentication
@@ -26,7 +26,7 @@ class AuthenticationHandler(BaseHandler):
     def start_login_flow(self, user: UserProfile, chat_id: str) -> None:
         """
         Start login flow by requesting RA.
-        
+
         Args:
             user: User profile
             chat_id: WhatsApp chat ID
@@ -54,7 +54,7 @@ class AuthenticationHandler(BaseHandler):
     def handle_login_ra(self, user: UserProfile, chat_id: str, text: str) -> None:
         """
         Handle RA input during login.
-        
+
         Args:
             user: User profile
             chat_id: WhatsApp chat ID
@@ -63,9 +63,7 @@ class AuthenticationHandler(BaseHandler):
         ra = text.strip().lower()
 
         if len(ra) < 5:
-            self.send_msg(
-                user, chat_id, "❌ RA muito curto. Tente novamente ou digite 'cancelar'."
-            )
+            self.send_msg(user, chat_id, "❌ RA muito curto. Tente novamente ou digite 'cancelar'.")
             return
 
         user.flow_data["temp_ra"] = ra
@@ -79,17 +77,15 @@ class AuthenticationHandler(BaseHandler):
         )
         self.send_msg(user, chat_id, msg)
 
-    def handle_login_password(
-        self, user: UserProfile, chat_id: str, text: str
-    ) -> bool:
+    def handle_login_password(self, user: UserProfile, chat_id: str, text: str) -> bool:
         """
         Handle password input and complete authentication.
-        
+
         Args:
             user: User profile
             chat_id: WhatsApp chat ID
             text: User input (password)
-            
+
         Returns:
             True if authentication succeeded
         """
@@ -97,9 +93,7 @@ class AuthenticationHandler(BaseHandler):
         ra = user.flow_data.get("temp_ra")
 
         if not ra:
-            self.send_msg(
-                user, chat_id, "❌ Erro de fluxo. Por favor, comece novamente."
-            )
+            self.send_msg(user, chat_id, "❌ Erro de fluxo. Por favor, comece novamente.")
             self.reset_state(user)
             return False
 
@@ -116,7 +110,7 @@ class AuthenticationHandler(BaseHandler):
                 "Escolha a opção 3 no menu.",
             )
             self.send_msg(user, chat_id, msg)
-            
+
             logger.info("user_authenticated", user_id=user.id, ra=ra)
             return True
         else:
@@ -127,21 +121,21 @@ class AuthenticationHandler(BaseHandler):
                 "Tente digitar a senha novamente ou digite 'cancelar' para sair.",
             )
             self.send_msg(user, chat_id, msg)
-            
+
             logger.warning("authentication_failed", user_id=user.id, ra=ra)
             return False
 
     def handle_logout(self, user: UserProfile, chat_id: str) -> None:
         """
         Handle user logout.
-        
+
         Args:
             user: User profile
             chat_id: WhatsApp chat ID
         """
         self.auth_service.logout(chat_id)
         self.send_msg(user, chat_id, "🔒 Você saiu do sistema. Até logo!")
-        
+
         user.current_action = None
         user.selected_course = None
         user.selected_term = None
@@ -153,13 +147,13 @@ class AuthenticationHandler(BaseHandler):
                 "last_activity",
             ]
         )
-        
+
         logger.info("user_logged_out", user_id=user.id)
 
     def reset_state(self, user: UserProfile) -> None:
         """
         Reset user conversation state.
-        
+
         Args:
             user: User profile to reset
         """
@@ -170,12 +164,12 @@ class AuthenticationHandler(BaseHandler):
     def handle(self, user: UserProfile, chat_id: str, text: str) -> bool:
         """
         Handle authentication-related messages.
-        
+
         Args:
             user: User profile
             chat_id: WhatsApp chat ID
             text: User message
-            
+
         Returns:
             True if message was handled
         """

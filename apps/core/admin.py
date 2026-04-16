@@ -1,5 +1,4 @@
 from django.contrib import admin
-from django.db.models import Count, Q
 from unfold.sites import UnfoldAdminSite
 
 
@@ -12,41 +11,37 @@ class CapyVagasAdminSite(UnfoldAdminSite):
 
     def index(self, request, extra_context=None):
         """Adiciona métricas ao contexto da página inicial do admin."""
-        from apps.users.models import UserProfile
-        from apps.jobs.models import Company, Job, CompanyStatus, JobStatus
         from apps.bot.models import BotHealthCheck, InteractionLog
+        from apps.jobs.models import Company, CompanyStatus, Job, JobStatus
+        from apps.users.models import UserProfile
 
         extra_context = extra_context or {}
 
         # Contadores
-        extra_context['total_alunos'] = UserProfile.objects.count()
-        extra_context['empresas_ativas'] = Company.objects.filter(
+        extra_context["total_alunos"] = UserProfile.objects.count()
+        extra_context["empresas_ativas"] = Company.objects.filter(
             status=CompanyStatus.APPROVED
         ).count()
-        extra_context['empresas_pendentes'] = Company.objects.filter(
+        extra_context["empresas_pendentes"] = Company.objects.filter(
             status=CompanyStatus.PENDING
         ).count()
-        extra_context['vagas_pendentes'] = Job.objects.filter(
-            status=JobStatus.PENDING
-        ).count()
-        extra_context['vagas_aprovadas'] = Job.objects.filter(
-            status=JobStatus.APPROVED
-        ).count()
-        extra_context['vagas_total'] = Job.objects.count()
-        extra_context['total_interacoes'] = InteractionLog.objects.count()
+        extra_context["vagas_pendentes"] = Job.objects.filter(status=JobStatus.PENDING).count()
+        extra_context["vagas_aprovadas"] = Job.objects.filter(status=JobStatus.APPROVED).count()
+        extra_context["vagas_total"] = Job.objects.count()
+        extra_context["total_interacoes"] = InteractionLog.objects.count()
 
         # Status do bot
-        ultimo_health = BotHealthCheck.objects.order_by('-created_at').first()
+        ultimo_health = BotHealthCheck.objects.order_by("-created_at").first()
         if ultimo_health:
-            extra_context['bot_status'] = ultimo_health.status
-            extra_context['bot_response_time'] = ultimo_health.response_time
-            extra_context['bot_last_check'] = ultimo_health.created_at
-            extra_context['bot_session_status'] = ultimo_health.session_status
+            extra_context["bot_status"] = ultimo_health.status
+            extra_context["bot_response_time"] = ultimo_health.response_time
+            extra_context["bot_last_check"] = ultimo_health.created_at
+            extra_context["bot_session_status"] = ultimo_health.session_status
         else:
-            extra_context['bot_status'] = 'unknown'
-            extra_context['bot_response_time'] = None
-            extra_context['bot_last_check'] = None
-            extra_context['bot_session_status'] = 'unknown'
+            extra_context["bot_status"] = "unknown"
+            extra_context["bot_response_time"] = None
+            extra_context["bot_last_check"] = None
+            extra_context["bot_session_status"] = "unknown"
 
         return super().index(request, extra_context=extra_context)
 

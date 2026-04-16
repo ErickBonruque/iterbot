@@ -1,13 +1,12 @@
 import structlog
+from allauth.account.views import LoginView, LogoutView, SignupView
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import PermissionDenied
+from django.http import Http404
+from django.shortcuts import redirect, render
 from django.urls import reverse_lazy
 from django.views.generic import CreateView, UpdateView, View
-
-from allauth.account.views import LoginView, LogoutView, SignupView
-from django.shortcuts import render, redirect
-from django.http import Http404
 
 from apps.companies.forms import CompanyOnlyForm, CompanyProfileForm, CompanySignupForm, JobForm
 from apps.companies.mixins import CompanyRequiredMixin
@@ -18,29 +17,33 @@ logger = structlog.get_logger(__name__)
 
 class CompanySignupView(SignupView):
     """View de registro de empresa."""
-    template_name = 'companies/signup.html'
+
+    template_name = "companies/signup.html"
     form_class = CompanySignupForm
-    success_url = '/empresas/perfil/'
+    success_url = "/empresas/perfil/"
 
 
 class CompanyLoginView(LoginView):
     """View de login de empresa."""
-    template_name = 'companies/login.html'
-    success_url = '/empresas/perfil/'
+
+    template_name = "companies/login.html"
+    success_url = "/empresas/perfil/"
 
 
 class CompanyLogoutView(LogoutView):
     """View de logout de empresa."""
-    next_page = '/empresas/login/'
+
+    next_page = "/empresas/login/"
 
 
 class CompanyProfileView(LoginRequiredMixin, UpdateView):
     """View de edicao de perfil da empresa."""
+
     model = Company
     form_class = CompanyProfileForm
-    template_name = 'companies/profile.html'
-    success_url = reverse_lazy('companies:profile')
-    login_url = '/empresas/login/'
+    template_name = "companies/profile.html"
+    success_url = reverse_lazy("companies:profile")
+    login_url = "/empresas/login/"
 
     def get_object(self, queryset=None):
         try:
@@ -51,82 +54,85 @@ class CompanyProfileView(LoginRequiredMixin, UpdateView):
     def get(self, request, *args, **kwargs):
         self.object = self.get_object()
         if self.object is None:
-            return redirect('/empresas/criar/')
+            return redirect("/empresas/criar/")
         return super().get(request, *args, **kwargs)
 
     def post(self, request, *args, **kwargs):
         self.object = self.get_object()
         if self.object is None:
-            return redirect('/empresas/criar/')
+            return redirect("/empresas/criar/")
         return super().post(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['company'] = self.object
+        context["company"] = self.object
         return context
 
     def form_valid(self, form):
-        messages.success(self.request, 'Dados atualizados com sucesso.')
+        messages.success(self.request, "Dados atualizados com sucesso.")
         return super().form_valid(form)
 
 
 class CompanyCreateView(LoginRequiredMixin, View):
     """View de criacao de empresa para usuarios ja autenticados sem empresa."""
-    login_url = '/empresas/login/'
+
+    login_url = "/empresas/login/"
 
     def dispatch(self, request, *args, **kwargs):
         if request.user.is_authenticated:
             try:
                 request.user.company
-                return redirect('/empresas/perfil/')
+                return redirect("/empresas/perfil/")
             except Exception:
                 pass
         return super().dispatch(request, *args, **kwargs)
 
     def get(self, request):
         form = CompanyOnlyForm()
-        return render(request, 'companies/company_create.html', {'form': form})
+        return render(request, "companies/company_create.html", {"form": form})
 
     def post(self, request):
         form = CompanyOnlyForm(request.POST)
         if form.is_valid():
             Company.objects.create(
                 user=request.user,
-                cnpj=form.cleaned_data['cnpj'],
-                nome=form.cleaned_data['nome'],
+                cnpj=form.cleaned_data["cnpj"],
+                nome=form.cleaned_data["nome"],
                 email=request.user.email,
-                telefone=form.cleaned_data['telefone'],
-                contato_nome=form.cleaned_data['contato_nome'],
-                contato_cargo=form.cleaned_data['contato_cargo'],
+                telefone=form.cleaned_data["telefone"],
+                contato_nome=form.cleaned_data["contato_nome"],
+                contato_cargo=form.cleaned_data["contato_cargo"],
                 status=CompanyStatus.PENDING,
             )
-            messages.success(request, 'Empresa cadastrada com sucesso. Aguardando aprovacao.')
-            return redirect('/empresas/perfil/')
-        return render(request, 'companies/company_create.html', {'form': form})
+            messages.success(request, "Empresa cadastrada com sucesso. Aguardando aprovacao.")
+            return redirect("/empresas/perfil/")
+        return render(request, "companies/company_create.html", {"form": form})
 
 
 class JobCreateView(CompanyRequiredMixin, CreateView):
     """View de criacao de vaga."""
+
     model = Job
     form_class = JobForm
-    template_name = 'companies/job_form.html'
-    success_url = reverse_lazy('companies:profile')
-    login_url = '/empresas/login/'
+    template_name = "companies/job_form.html"
+    success_url = reverse_lazy("companies:profile")
+    login_url = "/empresas/login/"
 
     def form_valid(self, form):
         form.instance.company = self.request.user.company
         form.instance.status = JobStatus.PENDING
-        messages.success(self.request, 'Vaga cadastrada com sucesso. Aguardando aprovacao.')
+        messages.success(self.request, "Vaga cadastrada com sucesso. Aguardando aprovacao.")
         return super().form_valid(form)
 
 
 class JobUpdateView(CompanyRequiredMixin, UpdateView):
     """View de edicao de vaga."""
+
     model = Job
     form_class = JobForm
-    template_name = 'companies/job_form.html'
-    success_url = reverse_lazy('companies:profile')
-    login_url = '/empresas/login/'
+    template_name = "companies/job_form.html"
+    success_url = reverse_lazy("companies:profile")
+    login_url = "/empresas/login/"
 
     def get_object(self, queryset=None):
         job = super().get_object(queryset)
@@ -140,23 +146,24 @@ class JobUpdateView(CompanyRequiredMixin, UpdateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['job'] = self.object
+        context["job"] = self.object
         return context
 
     def form_valid(self, form):
-        messages.success(self.request, 'Vaga atualizada com sucesso.')
+        messages.success(self.request, "Vaga atualizada com sucesso.")
         return super().form_valid(form)
 
 
 class JobDeleteView(CompanyRequiredMixin, View):
     """View de remocao de vaga (soft delete)."""
-    template_name = 'companies/job_confirm_delete.html'
-    success_url = reverse_lazy('companies:profile')
-    login_url = '/empresas/login/'
+
+    template_name = "companies/job_confirm_delete.html"
+    success_url = reverse_lazy("companies:profile")
+    login_url = "/empresas/login/"
 
     def get_object(self, queryset=None):
         """Obter vaga excluindo ja removidas (retorna 404 natural)."""
-        job = Job.objects.get(pk=self.kwargs['pk'])
+        job = Job.objects.get(pk=self.kwargs["pk"])
         if job.status == JobStatus.REMOVED:
             raise Http404("Vaga ja removida.")
         return job
@@ -170,7 +177,7 @@ class JobDeleteView(CompanyRequiredMixin, View):
             raise PermissionDenied("Voce nao tem permissao para remover esta vaga.")
         if job.company != user_company:
             raise PermissionDenied("Voce nao tem permissao para remover esta vaga.")
-        return render(request, self.template_name, {'job': job})
+        return render(request, self.template_name, {"job": job})
 
     def post(self, request, *args, **kwargs):
         """Executa soft delete."""
@@ -183,5 +190,5 @@ class JobDeleteView(CompanyRequiredMixin, View):
             raise PermissionDenied("Voce nao tem permissao para remover esta vaga.")
         job.status = JobStatus.REMOVED
         job.save()
-        messages.success(request, 'Vaga removida com sucesso.')
+        messages.success(request, "Vaga removida com sucesso.")
         return redirect(self.success_url)

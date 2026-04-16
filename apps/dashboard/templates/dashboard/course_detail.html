@@ -30,18 +30,18 @@
                 <p class="text-gray-700 mt-3">{{ course.description }}</p>
                 {% endif %}
                 <p class="text-sm text-gray-500 mt-3">
-                    Criado em {{ course.created_at|date:"d/m/Y H:i" }} • 
+                    Criado em {{ course.created_at|date:"d/m/Y H:i" }} •
                     Atualizado em {{ course.updated_at|date:"d/m/Y H:i" }}
                 </p>
             </div>
             <div class="flex items-center space-x-2">
-                <button 
+                <button
                     @click="editCourse()"
                     class="px-4 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors"
                 >
                     Editar Curso
                 </button>
-                <button 
+                <button
                     @click="toggleActive()"
                     class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
                 >
@@ -59,7 +59,7 @@
                     <h3 class="text-xl font-semibold text-gray-900">Termos de Busca</h3>
                     <p class="text-sm text-gray-600 mt-1">Palavras-chave usadas para buscar vagas deste curso</p>
                 </div>
-                <button 
+                <button
                     @click="openAddTermModal()"
                     class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center space-x-2"
                 >
@@ -94,7 +94,7 @@
                             </span>
                             {% endif %}
                         </div>
-                        <button 
+                        <button
                             @click="deleteTerm({{ term.id }}, '{{ term.term }}')"
                             class="text-red-600 hover:text-red-700"
                         >
@@ -113,7 +113,7 @@
                 </svg>
                 <h4 class="text-lg font-semibold text-gray-900 mb-2">Nenhum termo cadastrado</h4>
                 <p class="text-gray-600 mb-6">Adicione termos de busca para começar a encontrar vagas</p>
-                <button 
+                <button
                     @click="openAddTermModal()"
                     class="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
                 >
@@ -142,31 +142,31 @@
             <div class="space-y-4">
                 <div>
                     <label class="block text-sm font-medium text-gray-700">Termo</label>
-                    <input 
-                        type="text" 
-                        x-model="newTerm.term" 
-                        class="w-full mt-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-green-500" 
-                        placeholder="Ex: software, backend, frontend" 
+                    <input
+                        type="text"
+                        x-model="newTerm.term"
+                        class="w-full mt-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-green-500"
+                        placeholder="Ex: software, backend, frontend"
                     />
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700">Prioridade (opcional)</label>
-                    <input 
-                        type="number" 
-                        x-model="newTerm.priority" 
-                        class="w-full mt-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-green-500" 
-                        placeholder="1-10 (maior = mais importante)" 
+                    <input
+                        type="number"
+                        x-model="newTerm.priority"
+                        class="w-full mt-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-green-500"
+                        placeholder="1-10 (maior = mais importante)"
                         min="1"
                         max="10"
                     />
                 </div>
                 <div class="flex items-center space-x-2">
-                    <input 
-                        type="checkbox" 
-                        id="term_is_active" 
-                        x-model="newTerm.is_active" 
-                        class="h-4 w-4 text-green-600 border-gray-300 rounded" 
-                        checked 
+                    <input
+                        type="checkbox"
+                        id="term_is_active"
+                        x-model="newTerm.is_active"
+                        class="h-4 w-4 text-green-600 border-gray-300 rounded"
+                        checked
                     />
                     <label for="term_is_active" class="text-sm text-gray-700">Ativo</label>
                 </div>
@@ -232,7 +232,7 @@ function courseDetailManager() {
             try {
                 const response = await fetch('/api/terms/', {
                     method: 'POST',
-                    headers: { 
+                    headers: {
                         'Content-Type': 'application/json',
                         'X-CSRFToken': getCsrfToken()
                     },

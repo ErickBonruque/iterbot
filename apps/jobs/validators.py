@@ -10,6 +10,5 @@ def validate_cnpj(value):
     cnpj_validator = CNPJValidator()
     if not cnpj_validator.validate(value):
         raise ValidationError(
-            'CNPJ inválido. Verifique os dígitos verificadores.',
-            code='invalid_cnpj'
+            "CNPJ inválido. Verifique os dígitos verificadores.", code="invalid_cnpj"
         )

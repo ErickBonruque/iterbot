@@ -1,4 +1,3 @@
-import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
@@ -86,7 +85,7 @@ class DatabaseSettings:
     def __init__(self) -> None:
         # Try to read postgres password from secret
         postgres_password = _read_secret_file("postgres_password")
-        
+
         if postgres_password:
             # Build DATABASE_URL from environment variables and secret
             db_name = env("POSTGRES_DB", default="capyvagas")
@@ -127,13 +126,9 @@ class WahaSettings:
             if api_key is not None
             else _get_secret_or_env("waha_api_key", "WAHA_API_KEY", "dev-api-key")
         )
-        self.session_name = (
-            session_name if session_name is not None else env("WAHA_SESSION_NAME")
-        )
+        self.session_name = session_name if session_name is not None else env("WAHA_SESSION_NAME")
         self.timeout_seconds = (
-            timeout_seconds
-            if timeout_seconds is not None
-            else env("WAHA_TIMEOUT_SECONDS")
+            timeout_seconds if timeout_seconds is not None else env("WAHA_TIMEOUT_SECONDS")
         )
 
 
@@ -184,9 +179,7 @@ class AwsSettings:
     default_region: str
 
     def __init__(self) -> None:
-        self.access_key_id = _get_secret_or_env(
-            "aws_access_key_id", "AWS_ACCESS_KEY_ID", ""
-        )
+        self.access_key_id = _get_secret_or_env("aws_access_key_id", "AWS_ACCESS_KEY_ID", "")
         self.secret_access_key = _get_secret_or_env(
             "aws_secret_access_key", "AWS_SECRET_ACCESS_KEY", ""
         )

@@ -2,9 +2,7 @@
 
 Cobre STAB-01 (beat schedule), STAB-02 (reconexão), STAB-03 (alerta e-mail).
 """
-from unittest.mock import MagicMock, call, patch
-
-import pytest
+from unittest.mock import MagicMock, patch
 
 
 class TestBeatScheduleRegistration:
@@ -12,11 +10,14 @@ class TestBeatScheduleRegistration:
 
     def test_check_waha_health_in_beat_schedule(self):
         """STAB-01: 'check-waha-health' deve estar no CELERY_BEAT_SCHEDULE."""
-        import django
         import os
+
+        import django
+
         os.environ.setdefault("DJANGO_SETTINGS_MODULE", "waha_bot.settings")
         django.setup()
         from django.conf import settings
+
         assert "check-waha-health" in settings.CELERY_BEAT_SCHEDULE
         entry = settings.CELERY_BEAT_SCHEDULE["check-waha-health"]
         assert entry["task"] == "apps.bot.tasks.check_waha_health"
@@ -24,7 +25,7 @@ class TestBeatScheduleRegistration:
     def test_check_waha_health_schedule_is_5_minutes(self):
         """STAB-01: Schedule deve ser a cada 5 minutos."""
         from django.conf import settings
-        from celery.schedules import crontab
+
         entry = settings.CELERY_BEAT_SCHEDULE["check-waha-health"]
         schedule = entry["schedule"]
         # Verificar que a schedule é um crontab com minute="*/5"
@@ -34,6 +35,7 @@ class TestBeatScheduleRegistration:
     def test_clean_old_health_checks_in_beat_schedule(self):
         """Limpeza periódica deve estar no CELERY_BEAT_SCHEDULE."""
         from django.conf import settings
+
         assert "clean-old-health-checks" in settings.CELERY_BEAT_SCHEDULE
         entry = settings.CELERY_BEAT_SCHEDULE["clean-old-health-checks"]
         assert entry["task"] == "apps.bot.tasks.clean_old_health_checks"
@@ -59,6 +61,7 @@ class TestCheckWahaHealthTask:
         mock_monitor_cls.return_value = mock_monitor
 
         from apps.bot.tasks import check_waha_health
+
         # Chamar a task diretamente (sem Celery broker)
         result = check_waha_health()
 
@@ -67,14 +70,13 @@ class TestCheckWahaHealthTask:
     @patch("apps.bot.tasks._send_offline_alert")
     @patch("apps.bot.tasks._attempt_reconnect")
     @patch("apps.bot.tasks.cache")
-    def test_no_reconnect_when_prev_was_ok(
-        self, mock_cache, mock_reconnect, mock_alert
-    ):
+    def test_no_reconnect_when_prev_was_ok(self, mock_cache, mock_reconnect, mock_alert):
         """STAB-02: Não deve tentar reconexão quando check anterior estava ok."""
         mock_cache.get.return_value = {"status": "online"}
 
-        with patch("apps.bot.health.BotHealthMonitor") as mock_monitor_cls, \
-             patch("config.env.settings") as mock_settings:
+        with patch("apps.bot.health.BotHealthMonitor") as mock_monitor_cls, patch(
+            "config.env.settings"
+        ) as mock_settings:
             mock_settings.waha.session_name = "default"
             mock_monitor = MagicMock()
             mock_monitor.check_bot_status.return_value = {
@@ -86,6 +88,7 @@ class TestCheckWahaHealthTask:
             mock_monitor_cls.return_value = mock_monitor
 
             from apps.bot.tasks import check_waha_health
+
             check_waha_health()
 
         # Primeira falha: não aciona reconexão nem alerta
@@ -102,8 +105,9 @@ class TestCheckWahaHealthTask:
         # Simular que o check anterior também estava offline
         mock_cache.get.return_value = {"status": "offline"}
 
-        with patch("apps.bot.health.BotHealthMonitor") as mock_monitor_cls, \
-             patch("config.env.settings") as mock_settings:
+        with patch("apps.bot.health.BotHealthMonitor") as mock_monitor_cls, patch(
+            "config.env.settings"
+        ) as mock_settings:
             mock_settings.waha.session_name = "default"
             mock_monitor = MagicMock()
             mock_monitor.check_bot_status.return_value = {
@@ -115,6 +119,7 @@ class TestCheckWahaHealthTask:
             mock_monitor_cls.return_value = mock_monitor
 
             from apps.bot.tasks import check_waha_health
+
             check_waha_health()
 
         # Segunda falha consecutiva: deve acionar reconexão e alerta
@@ -124,15 +129,14 @@ class TestCheckWahaHealthTask:
     @patch("apps.bot.tasks._send_offline_alert")
     @patch("apps.bot.tasks._attempt_reconnect", return_value=False)
     @patch("apps.bot.tasks.cache")
-    def test_alert_only_sent_on_consecutive_failures(
-        self, mock_cache, mock_reconnect, mock_alert
-    ):
+    def test_alert_only_sent_on_consecutive_failures(self, mock_cache, mock_reconnect, mock_alert):
         """STAB-03: Alerta de e-mail deve ser enviado apenas na 2ª falha consecutiva."""
         # Simular check anterior offline → 2ª falha consecutiva
         mock_cache.get.return_value = {"status": "error"}
 
-        with patch("apps.bot.health.BotHealthMonitor") as mock_monitor_cls, \
-             patch("config.env.settings") as mock_settings:
+        with patch("apps.bot.health.BotHealthMonitor") as mock_monitor_cls, patch(
+            "config.env.settings"
+        ) as mock_settings:
             mock_settings.waha.session_name = "default"
             mock_monitor = MagicMock()
             mock_monitor.check_bot_status.return_value = {
@@ -144,6 +148,7 @@ class TestCheckWahaHealthTask:
             mock_monitor_cls.return_value = mock_monitor
 
             from apps.bot.tasks import check_waha_health
+
             check_waha_health()
 
         # Alerta deve ser enviado na 2ª falha consecutiva
@@ -157,19 +162,22 @@ class TestAttemptReconnect:
     def test_reconnect_backoff_values(self, mock_sleep):
         """STAB-02: Backoff deve ser 30s, 60s entre tentativas (não após a última)."""
         from apps.bot.tasks import RECONNECT_BACKOFF
+
         assert RECONNECT_BACKOFF == [30, 60, 120]
 
     @patch("apps.bot.tasks.time.sleep")
     def test_attempt_reconnect_returns_true_on_first_success(self, mock_sleep):
         """STAB-02: _attempt_reconnect retorna True quando start_session succeeds."""
-        with patch("infra.waha.client.WahaClient") as mock_client_cls, \
-             patch("apps.bot.models.BotConfiguration") as mock_config:
+        with patch("infra.waha.client.WahaClient") as mock_client_cls, patch(
+            "apps.bot.models.BotConfiguration"
+        ) as mock_config:
             mock_config.get_active.return_value = MagicMock()
             mock_client = MagicMock()
             mock_client.start_session.return_value = True
             mock_client_cls.return_value = mock_client
 
             from apps.bot.tasks import _attempt_reconnect
+
             result = _attempt_reconnect("test-session")
 
         assert result is True
@@ -179,14 +187,16 @@ class TestAttemptReconnect:
     @patch("apps.bot.tasks.time.sleep")
     def test_attempt_reconnect_returns_false_after_all_failures(self, mock_sleep):
         """STAB-02: _attempt_reconnect retorna False após 3 tentativas sem sucesso."""
-        with patch("infra.waha.client.WahaClient") as mock_client_cls, \
-             patch("apps.bot.models.BotConfiguration") as mock_config:
+        with patch("infra.waha.client.WahaClient") as mock_client_cls, patch(
+            "apps.bot.models.BotConfiguration"
+        ) as mock_config:
             mock_config.get_active.return_value = MagicMock()
             mock_client = MagicMock()
             mock_client.start_session.return_value = False
             mock_client_cls.return_value = mock_client
 
             from apps.bot.tasks import _attempt_reconnect
+
             result = _attempt_reconnect("test-session")
 
         assert result is False
@@ -195,14 +205,16 @@ class TestAttemptReconnect:
     @patch("apps.bot.tasks.time.sleep")
     def test_attempt_reconnect_sleeps_between_attempts(self, mock_sleep):
         """STAB-02: Deve dormir 30s e 60s entre as tentativas (não após a 3ª)."""
-        with patch("infra.waha.client.WahaClient") as mock_client_cls, \
-             patch("apps.bot.models.BotConfiguration") as mock_config:
+        with patch("infra.waha.client.WahaClient") as mock_client_cls, patch(
+            "apps.bot.models.BotConfiguration"
+        ) as mock_config:
             mock_config.get_active.return_value = MagicMock()
             mock_client = MagicMock()
             mock_client.start_session.return_value = False
             mock_client_cls.return_value = mock_client
 
             from apps.bot.tasks import _attempt_reconnect
+
             _attempt_reconnect("test-session")
 
         # Deve dormir entre tentativas 1→2 e 2→3, mas NÃO após a tentativa 3
@@ -217,7 +229,8 @@ class TestSendOfflineAlert:
     @patch("apps.bot.tasks.send_mail")
     def test_alert_sent_to_correct_recipient(self, mock_send_mail):
         """STAB-03: E-mail deve ser enviado para o destinatario configurado."""
-        from apps.bot.tasks import _send_offline_alert, ALERT_EMAIL
+        from apps.bot.tasks import ALERT_EMAIL, _send_offline_alert
+
         _send_offline_alert(
             session_name="default",
             current_status="offline",
@@ -231,7 +244,8 @@ class TestSendOfflineAlert:
     @patch("apps.bot.tasks.send_mail")
     def test_alert_subject_contains_expected_text(self, mock_send_mail):
         """STAB-03: Assunto do e-mail deve conter identificação correta."""
-        from apps.bot.tasks import _send_offline_alert, ALERT_SUBJECT
+        from apps.bot.tasks import _send_offline_alert
+
         _send_offline_alert(
             session_name="default",
             current_status="offline",
@@ -246,6 +260,7 @@ class TestSendOfflineAlert:
     def test_alert_uses_fail_silently(self, mock_send_mail):
         """STAB-03: E-mail deve usar fail_silently=True para não bloquear o worker."""
         from apps.bot.tasks import _send_offline_alert
+
         _send_offline_alert(
             session_name="default",
             current_status="error",
@@ -267,6 +282,7 @@ class TestCleanOldHealthChecks:
             mock_monitor_cls.return_value = mock_monitor
 
             from apps.bot.tasks import clean_old_health_checks
+
             result = clean_old_health_checks()
 
         mock_monitor.clean_old_health_checks.assert_called_once_with(days=7)

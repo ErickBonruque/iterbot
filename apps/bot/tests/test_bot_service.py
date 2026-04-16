@@ -22,7 +22,9 @@ class BotServiceMenuTests(TestCase):
         self.assertIn("1️⃣ Fazer Cadastro/Login", sent_text)
 
     def test_logout_clears_state(self):
-        user = UserProfile.objects.create(phone_number="5511999999999@c.us", is_authenticated_utfpr=True)
+        user = UserProfile.objects.create(
+            phone_number="5511999999999@c.us", is_authenticated_utfpr=True
+        )
         self.service.process_message(user.phone_number, "logout", from_me=False)
 
         user.refresh_from_db()

@@ -60,7 +60,7 @@ create_secret() {
     local filename=$1
     local generator=$2
     local filepath="$SECRETS_DIR/$filename"
-    
+
     if [ -f "$filepath" ]; then
         echo -e "${YELLOW}⏭️  $filename already exists, skipping...${NC}"
         # Verify it's not empty

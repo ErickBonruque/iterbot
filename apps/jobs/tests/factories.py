@@ -1,13 +1,13 @@
 import factory
 from factory.django import DjangoModelFactory
-from apps.jobs.models import Company, Job, JobApplication, CompanyStatus, JobStatus
-from apps.users.models import UserProfile
+
+from apps.jobs.models import Company, CompanyStatus, Job, JobApplication, JobStatus
 
 
 class CompanyFactory(DjangoModelFactory):
     class Meta:
         model = Company
-    
+
     cnpj = "11.222.333/0001-81"
     nome = factory.Sequence(lambda n: f"Empresa {n}")
     email = factory.Sequence(lambda n: f"contato{n}@empresa.com")
@@ -22,7 +22,7 @@ class CompanyFactory(DjangoModelFactory):
 class JobFactory(DjangoModelFactory):
     class Meta:
         model = Job
-    
+
     company = factory.SubFactory(CompanyFactory)
     titulo = factory.Sequence(lambda n: f"Vaga de Estágio {n}")
     descricao = "Descrição da vaga de estágio"
@@ -35,6 +35,6 @@ class JobFactory(DjangoModelFactory):
 class JobApplicationFactory(DjangoModelFactory):
     class Meta:
         model = JobApplication
-    
-    user = factory.SubFactory('apps.users.tests.factories.UserProfileFactory')
+
+    user = factory.SubFactory("apps.users.tests.factories.UserProfileFactory")
     job = factory.SubFactory(JobFactory)

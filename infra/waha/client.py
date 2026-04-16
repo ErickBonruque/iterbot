@@ -1,7 +1,7 @@
-import structlog
 from typing import Optional
 
 import requests
+import structlog
 
 from config.env import WahaSettings
 

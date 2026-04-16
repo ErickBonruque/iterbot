@@ -134,10 +134,7 @@ ACCOUNT_EMAIL_CONFIRMATION_ANONYMOUS_REDIRECT_URL = "/accounts/email-confirmed/"
 # Portal de Empresas (usado pelo bot para enviar links)
 PORTAL_BASE_URL = settings.django.portal_base_url
 
-if not DEBUG and (
-    not PORTAL_BASE_URL
-    or not PORTAL_BASE_URL.startswith(("http://", "https://"))
-):
+if not DEBUG and (not PORTAL_BASE_URL or not PORTAL_BASE_URL.startswith(("http://", "https://"))):
     raise ImproperlyConfigured(
         "PORTAL_BASE_URL must be set with http:// or https:// when DEBUG=False"
     )
@@ -167,10 +164,10 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
-STATIC_URL = '/static/'
-STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATIC_URL = "/static/"
+STATIC_ROOT = BASE_DIR / "staticfiles"
 STATICFILES_DIRS = [
-    BASE_DIR / 'static',
+    BASE_DIR / "static",
 ]
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 WHITENOISE_AUTOREFRESH = DEBUG
@@ -413,7 +410,7 @@ UNFOLD = {
 }
 
 # Custom Admin Site
-ADMIN_SITE = 'apps.core.admin.capyvagas_admin'
+ADMIN_SITE = "apps.core.admin.capyvagas_admin"
 
 LOGGING = {
     "version": 1,

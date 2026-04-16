@@ -49,14 +49,14 @@ Por padrão, contas SES ficam em **sandbox mode**, que permite enviar apenas par
 4. Preencha o formulário:
    - **Mail Type**: Transactional
    - **Website URL**: URL do sistema CapyVagas
-   - **Use case description**: 
+   - **Use case description**:
      ```
      Sistema acadêmico para divulgação de vagas de estágio da UTFPR.
      E-mails transacionais:
      - Confirmação de cadastro de alunos (@alunos.utfpr.edu.br)
      - Recuperação de senha
      - Notificações de vagas
-     
+
      Volume estimado: 500 e-mails/dia
      ```
    - **Process bounces**: Yes
@@ -191,5 +191,5 @@ Para um sistema com ~500 alunos cadastrando/mês, o custo será **$0**.
 
 ---
 
-**Última atualização:** 2026-04-12  
+**Última atualização:** 2026-04-12
 **Responsável:** Fase 2 - Autenticação de Alunos

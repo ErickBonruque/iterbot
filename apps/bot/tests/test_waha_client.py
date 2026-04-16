@@ -1,8 +1,6 @@
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
-import pytest
 import requests
-
 from django.test import TestCase
 
 from config.env import WahaSettings
@@ -26,7 +24,9 @@ def _make_settings(
 
 class WahaClientTests(TestCase):
     def test_send_message_success(self):
-        settings = _make_settings(base_url="http://localhost:3000", api_key="token", session_name="session")
+        settings = _make_settings(
+            base_url="http://localhost:3000", api_key="token", session_name="session"
+        )
         client = WahaClient(settings=settings)
 
         with patch("infra.waha.client.requests.post") as post_mock:
@@ -53,21 +53,24 @@ class TestWahaClientStructlog:
 
     def test_client_module_uses_structlog(self):
         """STAB-04: infra/waha/client.py deve importar structlog, não logging."""
-        import infra.waha.client as client_module
         import inspect
+
+        import infra.waha.client as client_module
+
         source = inspect.getsource(client_module)
         assert "structlog.get_logger" in source
         assert "logging.getLogger" not in source
 
     def test_api_key_not_in_log_events(self):
         """STAB-04 / Segurança: api_key nunca deve aparecer em eventos de log."""
-        import infra.waha.client as client_module
         import inspect
+
+        import infra.waha.client as client_module
+
         source = inspect.getsource(client_module)
         # api_key pode aparecer no cabeçalho HTTP mas não em chamadas de logger
         log_calls = [
-            line for line in source.splitlines()
-            if "logger." in line and "api_key" in line
+            line for line in source.splitlines() if "logger." in line and "api_key" in line
         ]
         assert log_calls == [], f"api_key encontrado em chamada de log: {log_calls}"
 

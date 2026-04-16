@@ -1,6 +1,6 @@
 # CapyVagas-UTFPR
 
-> **Assistente de WhatsApp para estudantes da UTFPR**  
+> **Assistente de WhatsApp para estudantes da UTFPR**
 > Projeto de Iniciação Científica - Campus Santa Helena
 
 Bot de WhatsApp integrado ao WAHA com dashboard administrativo em Django/DRF. Arquitetura refatorada para produção com foco em segurança, escalabilidade e observabilidade.

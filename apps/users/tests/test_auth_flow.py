@@ -53,9 +53,7 @@ class AuthFlowTestCase(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertFalse(User.objects.filter(email=self.invalid_email).exists())
-        self.assertContains(
-            response, "Apenas e-mails @alunos.utfpr.edu.br são aceitos"
-        )
+        self.assertContains(response, "Apenas e-mails @alunos.utfpr.edu.br são aceitos")
 
     def test_email_confirmation_sent(self):
         """
@@ -130,9 +128,7 @@ class AuthFlowTestCase(TestCase):
             username=self.valid_email, email=self.valid_email, password=self.password
         )
 
-        response = self.client.post(
-            reverse("account_reset_password"), {"email": self.valid_email}
-        )
+        response = self.client.post(reverse("account_reset_password"), {"email": self.valid_email})
 
         self.assertEqual(response.status_code, 302)
         self.assertEqual(len(mail.outbox), 1)

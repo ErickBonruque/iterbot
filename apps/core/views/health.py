@@ -1,5 +1,5 @@
 """Health check endpoint for monitoring."""
-from typing import Any, Dict
+from typing import Any
 
 import structlog
 from django.core.cache import cache
@@ -16,7 +16,7 @@ class HealthCheckView(View):
     def get(self, request: Any) -> JsonResponse:
         """
         Check the health of the application.
-        
+
         Returns:
             JsonResponse with status and component health information.
         """
@@ -24,7 +24,7 @@ class HealthCheckView(View):
             "status": "healthy",
             "components": {},
         }
-        
+
         # Check database
         try:
             with connection.cursor() as cursor:
@@ -34,7 +34,7 @@ class HealthCheckView(View):
             logger.error("database_health_check_failed", error=str(e))
             health_status["components"]["database"] = "unhealthy"
             health_status["status"] = "unhealthy"
-        
+
         # Check cache (Redis)
         try:
             cache.set("health_check", "ok", timeout=10)
@@ -46,6 +46,6 @@ class HealthCheckView(View):
             logger.error("cache_health_check_failed", error=str(e))
             health_status["components"]["cache"] = "unhealthy"
             health_status["status"] = "unhealthy"
-        
+
         status_code = 200 if health_status["status"] == "healthy" else 503
         return JsonResponse(health_status, status=status_code)

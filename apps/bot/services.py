@@ -15,7 +15,7 @@ logger = structlog.get_logger(__name__)
 class BotService:
     """
     Orchestrates bot conversation flow using specialized handlers.
-    
+
     This refactored service follows SOLID principles by delegating
     specific responsibilities to dedicated handler classes.
     """
@@ -28,7 +28,7 @@ class BotService:
     ) -> None:
         """
         Initialize bot service with dependencies.
-        
+
         Args:
             auth_service: Authentication service (optional, will create default)
             job_service: Job search service (optional, will create default)
@@ -48,7 +48,7 @@ class BotService:
     def process_message(self, chat_id: str, message: str, from_me: bool) -> None:
         """
         Process incoming WhatsApp message.
-        
+
         Args:
             chat_id: WhatsApp chat identifier
             message: Message text
@@ -112,10 +112,13 @@ class BotService:
             self.auth_handler.start_login_flow(user, chat_id)
             return
 
-        if (
-            not user.is_authenticated_utfpr
-            and text in {"2", "empresa", "sou empresa", "cadastrar vaga", "publicar vaga"}
-        ):
+        if not user.is_authenticated_utfpr and text in {
+            "2",
+            "empresa",
+            "sou empresa",
+            "cadastrar vaga",
+            "publicar vaga",
+        }:
             user.current_action = "company_onboarding_selection"
             user.flow_data = {}
             user.save(update_fields=["current_action", "flow_data", "last_activity"])
@@ -137,17 +140,15 @@ class BotService:
         # Unknown command
         self.menu_handler.send_unknown_command(user, chat_id)
 
-    def _handle_pending_action(
-        self, user: UserProfile, chat_id: str, text: str
-    ) -> bool:
+    def _handle_pending_action(self, user: UserProfile, chat_id: str, text: str) -> bool:
         """
         Delegate to appropriate handler based on current action.
-        
+
         Args:
             user: User profile
             chat_id: WhatsApp chat ID
             text: User message
-            
+
         Returns:
             True if action was handled
         """
@@ -190,7 +191,7 @@ class BotService:
     def _reset_state(self, user: UserProfile) -> None:
         """
         Reset user conversation state.
-        
+
         Args:
             user: User profile to reset
         """
@@ -201,7 +202,7 @@ class BotService:
     def _log_received(self, user: UserProfile, message: str) -> None:
         """
         Log received message to database.
-        
+
         Args:
             user: User profile
             message: Message text received

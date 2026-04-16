@@ -4,7 +4,7 @@ from django.core.exceptions import ValidationError
 def validate_utfpr_email(email: str) -> None:
     """
     Valida se o e-mail pertence ao domínio @alunos.utfpr.edu.br.
-    
+
     Raises:
         ValidationError: Se o e-mail não for do domínio institucional.
     """

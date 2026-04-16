@@ -17,7 +17,7 @@
 
                 <form method="post" action="{% url 'account_login' %}">
                     {% csrf_token %}
-                    
+
                     {% if form.non_field_errors %}
                     <div class="alert alert-danger">
                         {{ form.non_field_errors }}
@@ -26,10 +26,10 @@
 
                     <div class="mb-3">
                         <label for="id_login" class="form-label">E-mail</label>
-                        <input type="email" 
-                               name="login" 
-                               class="form-control {% if form.login.errors %}is-invalid{% endif %}" 
-                               id="id_login" 
+                        <input type="email"
+                               name="login"
+                               class="form-control {% if form.login.errors %}is-invalid{% endif %}"
+                               id="id_login"
                                placeholder="seu.nome@alunos.utfpr.edu.br"
                                value="{{ form.login.value|default:'' }}"
                                required>
@@ -42,9 +42,9 @@
 
                     <div class="mb-3">
                         <label for="id_password" class="form-label">Senha</label>
-                        <input type="password" 
-                               name="password" 
-                               class="form-control {% if form.password.errors %}is-invalid{% endif %}" 
+                        <input type="password"
+                               name="password"
+                               class="form-control {% if form.password.errors %}is-invalid{% endif %}"
                                id="id_password"
                                required>
                         {% if form.password.errors %}

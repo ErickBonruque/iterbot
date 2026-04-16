@@ -5,7 +5,7 @@ api:
 entryPoints:
   web:
     address: ":80"
-  
+
   websecure:
     address: ":443"
     http:
@@ -26,7 +26,7 @@ providers:
   docker:
     exposedByDefault: false
     network: web
-  
+
   file:
     directory: /etc/traefik/dynamic
     watch: true

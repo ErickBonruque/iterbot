@@ -11,7 +11,7 @@ http:
         stsPreload: true
         stsSeconds: 31536000
         customFrameOptionsValue: "SAMEORIGIN"
-    
+
     # Rate limiting
     rate-limit:
       rateLimit:

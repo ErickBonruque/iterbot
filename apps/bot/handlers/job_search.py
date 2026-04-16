@@ -1,7 +1,8 @@
-import structlog
 from typing import List
 
-from apps.courses.models import Course, SearchTerm
+import structlog
+
+from apps.courses.models import Course
 from apps.users.models import UserProfile
 from infra.jobspy.service import JobSearchService
 
@@ -112,9 +113,7 @@ class JobSearchHandler(BaseHandler):
 
         msg = (
             f"🔍 Curso: *{user.selected_course.name}*\n"
-            "Escolha o termo de busca:\n\n"
-            + "\n".join(lines)
-            + "\n\nDigite o número:"
+            "Escolha o termo de busca:\n\n" + "\n".join(lines) + "\n\nDigite o número:"
         )
 
         user.current_action = "term_selection"
@@ -200,11 +199,7 @@ class JobSearchHandler(BaseHandler):
             title = job.get("title", "Vaga")
             company = job.get("company", "Empresa")
             url = job.get("url", "#")
-            lines.append(
-                f"\n💼 *{title}*\n"
-                f"🏢 {company}\n"
-                f"🔗 {url}"
-            )
+            lines.append(f"\n💼 *{title}*\n" f"🏢 {company}\n" f"🔗 {url}")
 
         self.send_msg(user, chat_id, "\n".join(lines))
 

@@ -1,7 +1,6 @@
+from django.contrib.auth import get_user_model
 from django.test import TestCase
 from rest_framework.test import APIClient
-
-from django.contrib.auth import get_user_model
 
 from apps.bot.models import BotConfiguration
 from config.env import settings
@@ -24,7 +23,11 @@ class BotConfigurationApiTests(TestCase):
 
     def test_create_replaces_previous_configuration(self):
         BotConfiguration.objects.create(
-            waha_url="http://old", waha_api_key="old", waha_session="old", dashboard_username="old", dashboard_password="old"
+            waha_url="http://old",
+            waha_api_key="old",
+            waha_session="old",
+            dashboard_username="old",
+            dashboard_password="old",
         )
 
         response = self.client.post(

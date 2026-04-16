@@ -88,14 +88,14 @@ Resolver definitivamente o problema de autenticação do WAHA e refatorar comple
 1. **Acesso direto ao WAHA** (removido proxy Traefik)
    - WAHA agora acessível diretamente em `http://localhost:3000`
    - Elimina qualquer interferência de proxy
-   
+
 2. **Entrypoint robusto** (`docker/waha/entrypoint.sh`)
    - Lê secrets de `/run/secrets/*`
    - Remove caracteres invisíveis (espaços, quebras de linha)
    - Valida que valores não estão vazios
    - Exporta como variáveis de ambiente normais
    - Logs detalhados para debugging
-   
+
 3. **Validação de secrets**
    - Script de validação de ambiente
    - Verifica integridade dos arquivos
@@ -393,7 +393,7 @@ Antes de fazer merge para master:
    ```bash
    # Opção A: Usar secrets antigos
    cp secrets.backup/*.txt secrets/
-   
+
    # Opção B: Gerar novos
    make setup
    ```
@@ -457,6 +457,6 @@ Se encontrar problemas:
 
 ---
 
-**Data:** 2025-12-01  
-**Branch:** `fix/waha-auth-complete-refactor`  
+**Data:** 2025-12-01
+**Branch:** `fix/waha-auth-complete-refactor`
 **Status:** ✅ Pronto para merge

@@ -102,8 +102,8 @@ def _attempt_reconnect(session_name: str) -> bool:
     Realiza até 3 tentativas com espera de 30s, 60s e 120s entre elas.
     Retorna True se alguma tentativa tiver sucesso, False caso contrário.
     """
-    from infra.waha.client import WahaClient
     from apps.bot.models import BotConfiguration
+    from infra.waha.client import WahaClient
 
     waha_settings = BotConfiguration.get_active()
     client = WahaClient(settings=waha_settings)
@@ -177,14 +177,20 @@ def _send_offline_alert(
         body_lines.append(f"Mensagem de erro: {error_message}")
 
     if reconnect_attempted:
-        reconnect_result = "✅ Reconexão bem-sucedida" if reconnect_success else "❌ Reconexão falhou após 3 tentativas"
+        reconnect_result = (
+            "✅ Reconexão bem-sucedida"
+            if reconnect_success
+            else "❌ Reconexão falhou após 3 tentativas"
+        )
         body_lines.append(f"Tentativa de reconexão automática: {reconnect_result}")
 
-    body_lines.extend([
-        "",
-        "Verifique o painel administrativo para mais detalhes:",
-        f"{getattr(django_settings, 'PORTAL_BASE_URL', 'http://localhost:8000')}/admin/bot/bothealthcheck/",
-    ])
+    body_lines.extend(
+        [
+            "",
+            "Verifique o painel administrativo para mais detalhes:",
+            f"{getattr(django_settings, 'PORTAL_BASE_URL', 'http://localhost:8000')}/admin/bot/bothealthcheck/",
+        ]
+    )
 
     message_body = "\n".join(body_lines)
 
@@ -218,6 +224,7 @@ def clean_old_health_checks(self) -> dict:
     """
     try:
         from apps.bot.health import BotHealthMonitor
+
         monitor = BotHealthMonitor()
         deleted_count = monitor.clean_old_health_checks(days=7)
         logger.info(

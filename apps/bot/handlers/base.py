@@ -1,6 +1,5 @@
 """Base handler for bot conversation flows."""
 from abc import ABC, abstractmethod
-from typing import Optional
 
 import structlog
 
@@ -22,7 +21,7 @@ class BaseHandler(ABC):
     def __init__(self, waha_client: WahaClient) -> None:
         """
         Initialize handler with WAHA client.
-        
+
         Args:
             waha_client: Client for sending WhatsApp messages
         """
@@ -31,11 +30,11 @@ class BaseHandler(ABC):
     def get_text(self, key: str, default: str) -> str:
         """
         Fetch configured message or use default.
-        
+
         Args:
             key: Message key to lookup
             default: Default message if key not found
-            
+
         Returns:
             Configured or default message text
         """
@@ -50,7 +49,7 @@ class BaseHandler(ABC):
     def send_msg(self, user: UserProfile, chat_id: str, message: str) -> None:
         """
         Send message to user and log it.
-        
+
         Args:
             user: User profile to send message to
             chat_id: WhatsApp chat ID
@@ -71,7 +70,7 @@ class BaseHandler(ABC):
     def _log_sent(self, user: UserProfile, message: str) -> None:
         """
         Log sent message to database.
-        
+
         Args:
             user: User profile
             message: Message text that was sent
@@ -94,12 +93,12 @@ class BaseHandler(ABC):
     def handle(self, user: UserProfile, chat_id: str, text: str) -> bool:
         """
         Handle user message in this conversation flow.
-        
+
         Args:
             user: User profile
             chat_id: WhatsApp chat ID
             text: User message text
-            
+
         Returns:
             True if message was handled, False otherwise
         """
