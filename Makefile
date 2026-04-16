@@ -7,7 +7,7 @@
 # Example: make setup
 # ============================================================================
 
-.PHONY: help setup validate start stop restart logs logs-waha logs-backend status clean rebuild test migrate makemigrations createsuperuser shell pre-commit-install pre-commit-run pre-commit-update cz-commit changelog lint format
+.PHONY: help setup validate start stop restart logs logs-waha logs-backend status clean rebuild test migrate makemigrations createsuperuser shell pre-commit-install pre-commit-run pre-commit-update cz-commit changelog lint format dev-install dev-run dev-test ci-check
 
 # Default target
 .DEFAULT_GOAL := help
@@ -36,6 +36,19 @@ setup:
 ## validate: Validate environment configuration
 validate:
 	@bash ./deployment/scripts/validate_environment.sh
+
+## dev-install: Install Python dependencies with Poetry
+dev-install:
+	@echo "$(BLUE)📦 Installing dependencies with Poetry...$(NC)"
+	@poetry install --all-extras
+	@echo "$(GREEN)✅ Dependencies installed!$(NC)"
+
+## dev-run: Start services with Docker Compose (development mode)
+dev-run:
+	@echo "$(BLUE)🚀 Starting CapyVagas (dev mode)...$(NC)"
+	@docker compose up -d
+	@echo "$(GREEN)✅ Services started!$(NC)"
+	@make status
 
 ## start: Start all services
 start:
@@ -95,6 +108,12 @@ rebuild:
 	@docker compose build --no-cache
 	@docker compose up -d
 	@echo "$(GREEN)✅ Rebuilt and started!$(NC)"
+
+## dev-test: Run tests in Docker container
+dev-test:
+	@echo "$(BLUE)🧪 Running tests (containerized)...$(NC)"
+	@docker compose exec backend pytest
+	@echo "$(GREEN)✅ Tests completed!$(NC)"
 
 ## test: Run tests
 test:
@@ -160,6 +179,14 @@ backup:
 	@docker compose exec -T db pg_dump -U capyvagas_user capyvagas > backups/db_backup_$$(date +%Y%m%d_%H%M%S).sql
 	@tar -czf backups/secrets_backup_$$(date +%Y%m%d_%H%M%S).tar.gz secrets/
 	@echo "$(GREEN)✅ Backup created in backups/$(NC)"
+
+## ci-check: Run all CI quality checks (ruff + black + mypy)
+ci-check:
+	@echo "$(BLUE)🔍 Running CI checks...$(NC)"
+	@poetry run ruff check .
+	@poetry run black --check .
+	@poetry run mypy .
+	@echo "$(GREEN)✅ All CI checks passed!$(NC)"
 
 ## lint: Run code linters
 lint:
