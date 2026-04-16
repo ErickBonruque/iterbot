@@ -1,8 +1,8 @@
 from django.contrib import admin
-from django.shortcuts import redirect
-from django.urls import reverse
 from django.utils.html import format_html
 from unfold.admin import ModelAdmin
+from unfold.decorators import action
+from unfold.enums import ActionVariant
 
 from apps.jobs.models import Company, Job, JobApplication, JobSearchLog, CompanyStatus, JobStatus
 
@@ -51,6 +51,7 @@ class JobAdmin(ModelAdmin):
     search_fields = ('titulo', 'descricao', 'company__nome')
     readonly_fields = ('created_at', 'updated_at')
     ordering = ('-created_at',)
+    actions_submit_line = ['approve_job', 'reject_job']
 
     def status_badge(self, obj):
         colors = {
@@ -79,24 +80,33 @@ class JobAdmin(ModelAdmin):
             'classes': ('collapse',),
         }),
     )
-    
-    def response_change(self, request, obj):
-        """Handle custom approve/reject actions."""
-        if '_approve_job' in request.POST:
-            obj.status = JobStatus.APPROVED
-            obj.rejection_reason = ''
-            obj.save(update_fields=['status', 'rejection_reason'])
-            self.message_user(request, f'Vaga "{obj.titulo}" aprovada com sucesso.')
-            return redirect(reverse('admin:jobs_job_changelist'))
 
-        if '_reject_job' in request.POST:
-            obj.status = JobStatus.REJECTED
-            # Salva o motivo de rejeição se foi preenchido
-            obj.save(update_fields=['status', 'rejection_reason'])
-            self.message_user(request, f'Vaga "{obj.titulo}" foi rejeitada.')
-            return redirect(reverse('admin:jobs_job_changelist'))
+    @action(
+        description='Aprovar Vaga',
+        permissions=['approve_job'],
+        variant=ActionVariant.SUCCESS,
+    )
+    def approve_job(self, request, obj):
+        obj.status = JobStatus.APPROVED
+        obj.rejection_reason = ''
+        obj.save(update_fields=['status', 'rejection_reason'])
+        self.message_user(request, f'Vaga "{obj.titulo}" aprovada com sucesso.')
 
-        return super().response_change(request, obj)
+    def has_approve_job_permission(self, request, object_id=None):
+        return True
+
+    @action(
+        description='Rejeitar Vaga',
+        permissions=['reject_job'],
+        variant=ActionVariant.DANGER,
+    )
+    def reject_job(self, request, obj):
+        obj.status = JobStatus.REJECTED
+        obj.save(update_fields=['status', 'rejection_reason'])
+        self.message_user(request, f'Vaga "{obj.titulo}" foi rejeitada.')
+
+    def has_reject_job_permission(self, request, object_id=None):
+        return True
 
 
 @admin.register(JobApplication)
