@@ -103,11 +103,11 @@ docker-compose exec backend python manage.py createsuperuser
 
 ### Guias
 
-- **[Configuração Local](docs/guides/CONFIGURACAO_LOCAL.md)** - Configure o ambiente de desenvolvimento
-- **[Instalação Completa](docs/guides/COMO_RODAR_DOCKER.md)** - Guia detalhado de instalação
-- **[Credenciais](docs/guides/CREDENCIAIS.md)** - Credenciais de acesso aos serviços
-- **[Dashboard](docs/guides/DASHBOARD_DOCUMENTATION.md)** - Documentação do dashboard
-- **[AWS SES Setup](docs/guides/AWS_SES_SETUP.md)** - Configuração de e-mail em produção
+- **[Configuração Local](docs/getting-started/CONFIGURACAO_LOCAL.md)** - Configure o ambiente de desenvolvimento
+- **[Instalação Completa](docs/getting-started/COMO_RODAR_DOCKER.md)** - Guia detalhado de instalação
+- **[Credenciais](docs/development/CREDENCIAIS.md)** - Credenciais de acesso aos serviços
+- **[Dashboard](docs/development/DASHBOARD_DOCUMENTATION.md)** - Documentação do dashboard
+- **[AWS SES Setup](docs/development/AWS_SES_SETUP.md)** - Configuração de e-mail em produção
 
 ### Troubleshooting
 

@@ -1,0 +1,21 @@
+# Architecture Decision Records
+
+ADRs documentam decisoes arquiteturais significativas.
+
+## Indice
+
+| ID | Titulo | Data |
+|----|--------|------|
+| [adr-001-waha-sem-proxy.md](adr-001-waha-sem-proxy.md) | WAHA sem Proxy Traefik | 2026-04-16 |
+| [adr-002-campos-criptografados.md](adr-002-campos-criptografados.md) | Campos Criptografados | 2026-04-16 |
+| [adr-003-celery-tasks.md](adr-003-celery-tasks.md) | Celery para Tasks Assincronas | 2026-04-16 |
+
+## O que e um ADR?
+
+Um ADR captura:
+- O problema e constraints
+- As opcoes consideradas
+- A decisao tomada
+- As consequencias
+
+Ver: [MADR format](https://adr.github.io/)
