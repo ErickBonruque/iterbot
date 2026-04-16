@@ -19,11 +19,17 @@ RECONNECT_BACKOFF = [30, 60, 120]
 
 @shared_task(bind=True, max_retries=0)
 def check_waha_health(self) -> dict:
-    """Verifica saúde da sessão WAHA e aciona reconexão se necessário.
+    """Check WAHA session health and trigger reconnection if necessary.
 
-    Executa a cada 5 minutos via Celery beat (STAB-01).
-    Aciona reconexão após 2 checks consecutivos com falha (STAB-02).
-    Envia alerta por e-mail ao admin na transição online→offline (STAB-03).
+    Args:
+        None
+
+    Returns:
+        Dict with status, session_status, prev_was_ok, curr_is_ok fields.
+        Returns {"status": "error", "error": str(exc)} on exception.
+
+    Raises:
+        Exception: Caught and logged; never re-raised to avoid blocking Celery.
     """
     try:
         from apps.bot.health import BotHealthMonitor
@@ -97,10 +103,13 @@ def check_waha_health(self) -> dict:
 
 
 def _attempt_reconnect(session_name: str) -> bool:
-    """Tenta reconectar a sessão WAHA com backoff crescente.
+    """Attempt to reconnect WAHA session with exponential backoff.
 
-    Realiza até 3 tentativas com espera de 30s, 60s e 120s entre elas.
-    Retorna True se alguma tentativa tiver sucesso, False caso contrário.
+    Args:
+        session_name: WAHA session name to reconnect.
+
+    Returns:
+        True if any attempt succeeded, False otherwise.
     """
     from apps.bot.models import BotConfiguration
     from infra.waha.client import WahaClient
@@ -161,9 +170,17 @@ def _send_offline_alert(
     reconnect_attempted: bool = False,
     reconnect_success: bool = False,
 ) -> None:
-    """Envia e-mail de alerta ao admin quando bot fica offline.
+    """Send offline alert email to admin when bot goes offline.
 
-    Usa fail_silently=True para nunca bloquear o worker Celery (D-05).
+    Args:
+        session_name: WAHA session name.
+        current_status: Current bot status.
+        error_message: Optional error message from health check.
+        reconnect_attempted: Whether reconnection was attempted.
+        reconnect_success: Whether reconnection succeeded.
+
+    Returns:
+        None
     """
     from django.conf import settings as django_settings
 
@@ -218,9 +235,16 @@ def _send_offline_alert(
 
 @shared_task(bind=True, max_retries=0)
 def clean_old_health_checks(self) -> dict:
-    """Remove registros BotHealthCheck com mais de 7 dias.
+    """Remove BotHealthCheck records older than 7 days.
 
-    Executado semanalmente via Celery beat (todo domingo às 02:00).
+    Args:
+        None
+
+    Returns:
+        Dict with deleted_count or error field.
+
+    Raises:
+        Exception: Caught and logged; never re-raised.
     """
     try:
         from apps.bot.health import BotHealthMonitor
