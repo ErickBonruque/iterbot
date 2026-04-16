@@ -180,11 +180,11 @@ backup:
 	@tar -czf backups/secrets_backup_$$(date +%Y%m%d_%H%M%S).tar.gz secrets/
 	@echo "$(GREEN)✅ Backup created in backups/$(NC)"
 
-## ci-check: Run all CI quality checks (ruff + black + mypy)
+## ci-check: Run all CI quality checks (ruff + mypy)
 ci-check:
 	@echo "$(BLUE)🔍 Running CI checks...$(NC)"
 	@poetry run ruff check .
-	@poetry run black --check .
+	@poetry run ruff format --check .
 	@poetry run mypy .
 	@echo "$(GREEN)✅ All CI checks passed!$(NC)"
 
