@@ -1,9 +1,8 @@
 {% load i18n %}
 
 <a href="{% url 'admin:index' %}" class="cv-site-logo-link">
-    {% if site_logo.light and site_logo.dark %}
-        <img src="{{ site_logo.dark }}" alt="{% trans 'Home' %}" class="cv-site-logo hidden dark:block" />
-        <img src="{{ site_logo.light }}" alt="{% trans 'Home' %}" class="cv-site-logo block dark:hidden" />
+    {% if site_logo.light %}
+        <img src="{{ site_logo.light }}" alt="{% trans 'Home' %}" class="cv-site-logo" />
     {% else %}
         <img src="{{ site_logo }}" alt="{% trans 'Home' %}" class="cv-site-logo" />
     {% endif %}
