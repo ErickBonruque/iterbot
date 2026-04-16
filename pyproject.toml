@@ -78,6 +78,15 @@ plugins = ["mypy_django_plugin.main"]
 [tool.django-stubs]
 django_settings_module = "waha_bot.settings"
 
+[tool.commitizen]
+name = "cz_conventional_commits"
+version = "0.1.0"
+version_provider = "commitizen"
+version_scheme = "pep440"
+tag_format = "$version"
+update_changelog_on_bump = true
+changelog_file = "CHANGELOG.md"
+
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "waha_bot.settings"
 python_files = ["test_*.py", "*_test.py"]
