@@ -1,4 +1,6 @@
 from django.contrib import admin
+from unfold.admin import ModelAdmin
+
 from .models import Course, SearchTerm
 
 
@@ -9,12 +11,13 @@ class SearchTermInline(admin.TabularInline):
 
 
 @admin.register(Course)
-class CourseAdmin(admin.ModelAdmin):
+class CourseAdmin(ModelAdmin):
     """Admin para cursos da UTFPR."""
     list_display = ['name', 'code', 'level', 'modality', 'is_active', 'order']
     list_filter = ['is_active', 'level', 'modality', 'created_at']
     search_fields = ['name', 'code', 'description']
     readonly_fields = ['created_at', 'updated_at']
+    ordering = ['order']
     inlines = [SearchTermInline]
     
     fieldsets = (
@@ -33,12 +36,13 @@ class CourseAdmin(admin.ModelAdmin):
 
 
 @admin.register(SearchTerm)
-class SearchTermAdmin(admin.ModelAdmin):
+class SearchTermAdmin(ModelAdmin):
     """Admin para termos de busca associados aos cursos."""
     list_display = ['term', 'course', 'is_default', 'priority']
     list_filter = ['is_default', 'course', 'created_at']
     search_fields = ['term', 'course__name']
     readonly_fields = ['created_at', 'updated_at']
+    ordering = ['priority']
     
     fieldsets = (
         (None, {

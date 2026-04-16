@@ -1,19 +1,23 @@
 from django.contrib import admin
 from django.utils.html import format_html, mark_safe, escape
+from unfold.admin import ModelAdmin
+
 from .models import BotConfiguration, InteractionLog, BotHealthCheck, BotMetrics, BotMessage
 
 @admin.register(BotConfiguration)
-class BotConfigurationAdmin(admin.ModelAdmin):
+class BotConfigurationAdmin(ModelAdmin):
     list_display = ('waha_url', 'waha_session', 'updated_at')
     readonly_fields = ('created_at', 'updated_at')
+    ordering = ('-updated_at',)
 
 @admin.register(InteractionLog)
-class InteractionLogAdmin(admin.ModelAdmin):
+class InteractionLogAdmin(ModelAdmin):
     list_display = ('user', 'message_type_badge', 'message_preview', 'session_short', 'created_at')
     list_filter = ('message_type', 'created_at', 'session_id')
     search_fields = ('message_content', 'user__phone_number', 'session_id')
     readonly_fields = ('created_at', 'updated_at', 'conversation_timeline')
     date_hierarchy = 'created_at'
+    ordering = ('-created_at',)
     
     def session_short(self, obj):
         """Return shortened session ID for display"""
@@ -24,7 +28,7 @@ class InteractionLogAdmin(admin.ModelAdmin):
         color = '#17a2b8' if obj.message_type == 'SENT' else '#6c757d'
         label = 'Bot' if obj.message_type == 'SENT' else 'Usuario'
         return format_html(
-            '<span style="background:{}; color:white; padding:2px 8px; border-radius:3px;">{}</span>',
+            '<span style="background:{}; color:white; padding:4px 8px; border-radius:3px;">{}</span>',
             color, label
         )
     message_type_badge.short_description = 'Tipo'
@@ -81,31 +85,34 @@ class InteractionLogAdmin(admin.ModelAdmin):
     )
 
 @admin.register(BotHealthCheck)
-class BotHealthCheckAdmin(admin.ModelAdmin):
+class BotHealthCheckAdmin(ModelAdmin):
     list_display = ('status_badge', 'response_time', 'session_status', 'created_at')
     list_filter = ('status', 'created_at')
     readonly_fields = ('created_at', 'updated_at')
     date_hierarchy = 'created_at'
+    ordering = ('-created_at',)
 
     def status_badge(self, obj):
         colors = {'online': '#28a745', 'offline': '#dc3545', 'error': '#ffc107'}
         color = colors.get(obj.status, '#6c757d')
         return format_html(
-            '<span style="background:{}; color:white; padding:2px 8px; border-radius:3px;">{}</span>',
+            '<span style="background:{}; color:white; padding:4px 8px; border-radius:3px;">{}</span>',
             color, obj.get_status_display()
         )
     status_badge.short_description = 'Status'
 
 
 @admin.register(BotMetrics)
-class BotMetricsAdmin(admin.ModelAdmin):
+class BotMetricsAdmin(ModelAdmin):
     list_display = ('metric_name', 'value', 'created_at')
     list_filter = ('metric_name', 'created_at')
     readonly_fields = ('created_at', 'updated_at')
+    ordering = ('-created_at',)
 
 
 @admin.register(BotMessage)
-class BotMessageAdmin(admin.ModelAdmin):
+class BotMessageAdmin(ModelAdmin):
     list_display = ('key', 'description', 'updated_at')
     search_fields = ('key', 'text', 'description')
     readonly_fields = ('created_at', 'updated_at')
+    ordering = ('key',)

@@ -2,15 +2,18 @@ from django.contrib import admin
 from django.shortcuts import redirect
 from django.urls import reverse
 from django.utils.html import format_html
+from unfold.admin import ModelAdmin
+
 from apps.jobs.models import Company, Job, JobApplication, JobSearchLog, CompanyStatus, JobStatus
 
 
 @admin.register(Company)
-class CompanyAdmin(admin.ModelAdmin):
+class CompanyAdmin(ModelAdmin):
     list_display = ('nome', 'cnpj', 'email', 'telefone', 'status_badge', 'created_at')
     list_filter = ('status', 'created_at')
     search_fields = ('nome', 'cnpj', 'email', 'contato_nome')
     readonly_fields = ('created_at', 'updated_at')
+    ordering = ('-created_at',)
     fieldsets = (
         ('Dados da Empresa', {
             'fields': ('nome', 'cnpj', 'email', 'telefone', 'endereco', 'descricao')
@@ -35,18 +38,19 @@ class CompanyAdmin(admin.ModelAdmin):
         }
         color = colors.get(obj.status, '#6c757d')
         return format_html(
-            '<span style="background:{}; color:white; padding:3px 10px; border-radius:3px;">{}</span>',
+            '<span style="background:{}; color:white; padding:4px 8px; border-radius:3px;">{}</span>',
             color, obj.get_status_display()
         )
     status_badge.short_description = 'Status'
 
 
 @admin.register(Job)
-class JobAdmin(admin.ModelAdmin):
+class JobAdmin(ModelAdmin):
     list_display = ('titulo', 'company', 'tipo', 'status_badge', 'created_at')
     list_filter = ('status', 'tipo', 'company', 'created_at')
     search_fields = ('titulo', 'descricao', 'company__nome')
     readonly_fields = ('created_at', 'updated_at')
+    ordering = ('-created_at',)
 
     def status_badge(self, obj):
         colors = {
@@ -58,7 +62,7 @@ class JobAdmin(admin.ModelAdmin):
         }
         color = colors.get(obj.status, '#6c757d')
         return format_html(
-            '<span style="background:{}; color:white; padding:3px 10px; border-radius:3px;">{}</span>',
+            '<span style="background:{}; color:white; padding:4px 8px; border-radius:3px;">{}</span>',
             color, obj.get_status_display()
         )
     status_badge.short_description = 'Status'
@@ -96,16 +100,18 @@ class JobAdmin(admin.ModelAdmin):
 
 
 @admin.register(JobApplication)
-class JobApplicationAdmin(admin.ModelAdmin):
+class JobApplicationAdmin(ModelAdmin):
     list_display = ('user', 'job', 'created_at')
     list_filter = ('created_at', 'job__company')
     search_fields = ('user__phone_number', 'user__email', 'job__titulo')
     readonly_fields = ('created_at', 'updated_at')
+    ordering = ('-created_at',)
 
 
 @admin.register(JobSearchLog)
-class JobSearchLogAdmin(admin.ModelAdmin):
+class JobSearchLogAdmin(ModelAdmin):
     list_display = ('user', 'search_term', 'results_count', 'created_at')
     list_filter = ('created_at',)
     search_fields = ('user__phone_number', 'search_term')
     readonly_fields = ('created_at', 'updated_at', 'filters', 'results_preview')
+    ordering = ('-created_at',)
