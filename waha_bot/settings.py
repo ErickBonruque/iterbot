@@ -3,6 +3,7 @@ from pathlib import Path
 import dj_database_url
 import structlog
 from django.core.exceptions import ImproperlyConfigured
+from django.urls import reverse_lazy
 
 from config.env import settings
 
@@ -25,7 +26,7 @@ ALLOWED_HOSTS = settings.django.allowed_hosts
 # Application definition
 
 INSTALLED_APPS = [
-    "jazzmin",
+    "unfold",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -270,99 +271,127 @@ structlog.configure(
     cache_logger_on_first_use=True,
 )
 
-# django-jazzmin Configuration
-JAZZMIN_SETTINGS = {
-    "site_title": "CapyVagas Admin",
-    "site_header": "CapyVagas",
-    "site_brand": "CapyVagas UTFPR",
-    "welcome_sign": "Painel Administrativo CapyVagas UTFPR",
-    "copyright": "CapyVagas UTFPR",
-    "search_model": ["auth.User", "jobs.Company", "jobs.Job"],
-    "show_sidebar": True,
-    "navigation_expanded": True,
-    "order_with_respect_to": [
-        "auth",
-        "users",
-        "users.UserProfile",
-        "jobs",
-        "jobs.Company",
-        "jobs.Job",
-        "jobs.JobApplication",
-        "bot",
-        "bot.BotConfiguration",
-        "bot.BotMessage",
-        "bot.BotHealthCheck",
-        "bot.BotMetrics",
-        "bot.InteractionLog",
-        "courses",
-    ],
-    "hide_apps": ["sites"],
-    "hide_models": [],
-    "icons": {
-        "auth": "fas fa-users-cog",
-        "auth.user": "fas fa-user",
-        "auth.Group": "fas fa-users",
-        "users.UserProfile": "fas fa-user-graduate",
-        "jobs.Company": "fas fa-building",
-        "jobs.Job": "fas fa-briefcase",
-        "jobs.JobApplication": "fas fa-file-alt",
-        "jobs.JobSearchLog": "fas fa-search",
-        "bot.BotConfiguration": "fas fa-cog",
-        "bot.BotMessage": "fas fa-comment-dots",
-        "bot.BotHealthCheck": "fas fa-heartbeat",
-        "bot.BotMetrics": "fas fa-chart-bar",
-        "bot.InteractionLog": "fas fa-history",
-        "courses.Course": "fas fa-graduation-cap",
-        "courses.SearchTerm": "fas fa-search",
+UNFOLD = {
+    "SITE_TITLE": "CapyVagas Admin",
+    "SITE_HEADER": "CapyVagas UTFPR",
+    "SITE_URL": "/",
+    "SHOW_HISTORY": True,
+    "SHOW_VIEW_ON_SITE": True,
+    "THEME": "dark",
+    "SEARCH_MODELS": ["auth.User", "jobs.Company", "jobs.Job"],
+    "COLORS": {
+        "primary": {
+            "50": "255 252 224",
+            "100": "255 248 179",
+            "200": "255 240 102",
+            "300": "255 232 26",
+            "400": "255 220 0",
+            "500": "255 209 0",
+            "600": "230 188 0",
+            "700": "204 167 0",
+            "800": "179 146 0",
+            "900": "153 125 0",
+            "950": "102 83 0",
+        },
     },
-    "default_icon_parents": "fas fa-chevron-circle-right",
-    "default_icon_children": "fas fa-circle",
-    "related_modal_active": False,
-    "use_google_fonts_cdn": True,
-    "show_ui_builder": False,
-    "changeform_format": "horizontal_tabs",
-    "language_chooser": False,
-    "custom_css": "css/admin_custom.css",
-    "custom_links": {
-        "CapyVagas": [
+    "STYLES": [
+        lambda request: "css/admin_custom.css",
+    ],
+    "SIDEBAR": {
+        "show_search": True,
+        "show_all_applications": True,
+        "navigation": [
             {
-                "name": "GitHub",
-                "url": "https://github.com/ErickBonruque/CapyVagas-UTFPR",
-                "new_window": True,
-                "icon": "fab fa-github",
+                "title": "Usuarios",
+                "separator": False,
+                "items": [
+                    {
+                        "title": "Usuarios Django",
+                        "icon": "person",
+                        "link": reverse_lazy("admin:auth_user_changelist"),
+                    },
+                    {
+                        "title": "Perfis de Alunos",
+                        "icon": "school",
+                        "link": reverse_lazy("admin:users_userprofile_changelist"),
+                    },
+                ],
+            },
+            {
+                "title": "Empresas e Vagas",
+                "separator": False,
+                "items": [
+                    {
+                        "title": "Empresas",
+                        "icon": "business",
+                        "link": reverse_lazy("admin:jobs_company_changelist"),
+                    },
+                    {
+                        "title": "Vagas",
+                        "icon": "work",
+                        "link": reverse_lazy("admin:jobs_job_changelist"),
+                    },
+                    {
+                        "title": "Candidaturas",
+                        "icon": "article",
+                        "link": reverse_lazy("admin:jobs_jobapplication_changelist"),
+                    },
+                ],
+            },
+            {
+                "title": "Bot",
+                "separator": False,
+                "items": [
+                    {
+                        "title": "Configuracoes",
+                        "icon": "settings",
+                        "link": reverse_lazy("admin:bot_botconfiguration_changelist"),
+                    },
+                    {
+                        "title": "Saude do Bot",
+                        "icon": "monitor_heart",
+                        "link": reverse_lazy("admin:bot_bothealthcheck_changelist"),
+                    },
+                    {
+                        "title": "Metricas",
+                        "icon": "bar_chart",
+                        "link": reverse_lazy("admin:bot_botmetrics_changelist"),
+                    },
+                    {
+                        "title": "Interacoes",
+                        "icon": "chat",
+                        "link": reverse_lazy("admin:bot_interactionlog_changelist"),
+                    },
+                ],
+            },
+            {
+                "title": "Cursos",
+                "separator": False,
+                "items": [
+                    {
+                        "title": "Cursos",
+                        "icon": "menu_book",
+                        "link": reverse_lazy("admin:courses_course_changelist"),
+                    },
+                    {
+                        "title": "Termos de Busca",
+                        "icon": "manage_search",
+                        "link": reverse_lazy("admin:courses_searchterm_changelist"),
+                    },
+                ],
+            },
+            {
+                "title": "Links Rapidos",
+                "separator": False,
+                "items": [
+                    {
+                        "title": "GitHub",
+                        "icon": "open_in_new",
+                        "link": "https://github.com/ErickBonruque/CapyVagas-UTFPR",
+                    },
+                ],
             },
         ],
-    },
-}
-
-JAZZMIN_UI_TWEAKS = {
-    "navbar_small_text": False,
-    "footer_small_text": False,
-    "body_small_text": False,
-    "brand_small_text": False,
-    "brand_colour": "navbar-dark",
-    "accent": "accent-warning",
-    "navbar": "navbar-dark",
-    "no_navbar_border": False,
-    "navbar_fixed": True,
-    "layout_boxed": False,
-    "footer_fixed": False,
-    "sidebar_fixed": True,
-    "sidebar": "sidebar-dark-warning",
-    "sidebar_nav_small_text": False,
-    "sidebar_disable_expand": False,
-    "sidebar_nav_child_indent": False,
-    "sidebar_nav_compact_style": False,
-    "sidebar_nav_legacy_style": False,
-    "sidebar_nav_flat_style": False,
-    "theme": "default",
-    "button_classes": {
-        "primary": "btn-primary",
-        "secondary": "btn-secondary",
-        "info": "btn-info",
-        "warning": "btn-warning",
-        "danger": "btn-danger",
-        "success": "btn-success",
     },
 }
 
