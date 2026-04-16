@@ -45,6 +45,12 @@ class MenuHandler(BaseHandler):
         logger.info("menu_displayed", user_id=user.id, authenticated=user.is_authenticated_utfpr)
 
     def send_company_onboarding_menu(self, user: UserProfile, chat_id: str) -> None:
+        """Send company onboarding menu.
+
+        Args:
+            user: User profile.
+            chat_id: WhatsApp chat ID.
+        """
         menu_text = (
             f"{self.BRAND_HEADER}\n\n"
             "🏢 *Onboarding para Empresas*\n\n"
@@ -61,6 +67,17 @@ class MenuHandler(BaseHandler):
         option: str,
         portal_base_url: str,
     ) -> bool:
+        """Send company onboarding links based on user selection.
+
+        Args:
+            user: User profile.
+            chat_id: WhatsApp chat ID.
+            option: "1" for signup, "2" for login.
+            portal_base_url: Base URL of the company portal.
+
+        Returns:
+            True if links were sent successfully, False if URL construction failed.
+        """
         if option == "1":
             signup_url = build_portal_url(portal_base_url, "/empresas/signup/")
             if signup_url is None:
