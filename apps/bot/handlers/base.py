@@ -11,7 +11,12 @@ logger = structlog.get_logger(__name__)
 
 
 class BaseHandler(ABC):
-    """Abstract base class for conversation handlers following SRP."""
+    """Abstract base class for conversation handlers following SRP.
+
+    Attributes:
+        waha_client: WAHA client for sending WhatsApp messages.
+        BRAND_HEADER: Brand header text used in messages.
+    """
 
     BRAND_HEADER = (
         "🌟 *CapyVagas* | Assistente de Vagas da UTFPR\n"
