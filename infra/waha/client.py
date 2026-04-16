@@ -9,20 +9,43 @@ logger = structlog.get_logger(__name__)
 
 
 class WahaClient:
-    """Cliente para interagir com a API do WAHA."""
+    """Cliente para interagir com a API do WAHA.
 
-    def __init__(self, settings: Optional[WahaSettings] = None):
+    Attributes:
+        settings: WAHA configuration settings.
+    """
+
+    def __init__(self, settings: Optional[WahaSettings] = None) -> None:
+        """Initialize the WAHA client.
+
+        Args:
+            settings: WAHA configuration settings. Defaults to WahaSettings().
+        """
         self.settings = settings or WahaSettings()
 
     def _normalize_chat_id(self, chat_id: str) -> str:
-        """Adequa IDs enviados ao formato esperado pelo WAHA."""
+        """Normalize WhatsApp chat ID to WAHA format.
 
+        Args:
+            chat_id: Raw chat ID from WhatsApp message.
+
+        Returns:
+            Normalized chat ID with @c.us suffix if not present.
+        """
         if "@" in chat_id:
             return chat_id
-        # WAHA espera o sufixo do WhatsApp Web
         return f"{chat_id}@c.us"
 
     def send_message(self, chat_id: str, text: str) -> bool:
+        """Send a text message via WAHA.
+
+        Args:
+            chat_id: WhatsApp chat identifier.
+            text: Message text to send.
+
+        Returns:
+            True if message was sent successfully, False otherwise.
+        """
         url = f"{self.settings.base_url}/api/sendText"
         headers = {
             "X-Api-Key": self.settings.api_key,
@@ -55,10 +78,14 @@ class WahaClient:
         return True
 
     def start_session(self) -> bool:
-        """Inicia (ou reinicia) a sessão WAHA via API.
+        """Start (or restart) the WAHA session via API.
 
-        Retorna True se a sessão entrou em estado WORKING ou STARTING,
-        False em caso de erro HTTP, timeout ou falha de conexão.
+        Args:
+            None
+
+        Returns:
+            True if session entered WORKING or STARTING state, False on HTTP
+            error, timeout, or connection failure.
         """
         url = f"{self.settings.base_url}/api/sessions/{self.settings.session_name}/start"
         headers = {
