@@ -12,16 +12,32 @@ logger = structlog.get_logger(__name__)
 
 
 class JobSearchHandler(BaseHandler):
-    """Manipula o fluxo de busca de vagas (seleção de curso e termos)."""
+    """Handles job search flow (course and term selection).
+
+    Attributes:
+        job_service: JobSearchService instance for querying jobs.
+    """
 
     def __init__(self, waha_client, job_service: JobSearchService | None = None) -> None:
-        """Inicializa o handler de busca de vagas."""
+        """Initialize job search handler.
+
+        Args:
+            waha_client: WAHA client for messaging.
+            job_service: Optional job search service.
+        """
         super().__init__(waha_client)
         self.job_service = job_service or JobSearchService()
 
     def _format_course_line(self, index: int, course: Course) -> str:
-        """Monta uma linha amigável com informações do curso."""
+        """Build a friendly line with course information.
 
+        Args:
+            index: Course position in the list (0-indexed).
+            course: Course model instance.
+
+        Returns:
+            Formatted course line string.
+        """
         detalhes: List[str] = []
         if course.code:
             detalhes.append(course.code)
@@ -38,8 +54,12 @@ class JobSearchHandler(BaseHandler):
         return f"*{index + 1}*) {course.name}{detalhe_str}{descricao}"
 
     def start_course_selection(self, user: UserProfile, chat_id: str) -> None:
-        """Inicia o fluxo de seleção de curso."""
+        """Start the course selection flow.
 
+        Args:
+            user: User profile.
+            chat_id: WhatsApp chat ID.
+        """
         if not user.is_authenticated_utfpr:
             self.send_msg(
                 user,
@@ -66,11 +86,24 @@ class JobSearchHandler(BaseHandler):
         logger.info("course_selection_started", user_id=user.id, total_courses=len(courses))
 
     def _get_active_courses(self) -> list[Course]:
-        """Retorna a lista de cursos ativos ordenados."""
+        """Return the list of active courses ordered by order and name.
+
+        Args:
+            None
+
+        Returns:
+            List of active Course model instances.
+        """
         return list(Course.objects.filter(is_active=True).order_by("order", "name"))
 
     def handle_course_selection(self, user: UserProfile, chat_id: str, text: str) -> None:
-        """Processa a escolha de curso pelo usuário."""
+        """Process user course selection input.
+
+        Args:
+            user: User profile.
+            chat_id: WhatsApp chat ID.
+            text: User message text (course number).
+        """
 
         courses = self._get_active_courses()
         try:
@@ -89,7 +122,12 @@ class JobSearchHandler(BaseHandler):
         self.start_term_selection(user, chat_id)
 
     def start_term_selection(self, user: UserProfile, chat_id: str) -> None:
-        """Inicia a seleção de termos de busca para o curso escolhido."""
+        """Start term selection flow for the chosen course.
+
+        Args:
+            user: User profile.
+            chat_id: WhatsApp chat ID.
+        """
 
         if not user.selected_course:
             self.send_msg(user, chat_id, "❌ Curso não selecionado. Comece novamente pelo menu.")
@@ -127,7 +165,13 @@ class JobSearchHandler(BaseHandler):
         )
 
     def handle_term_selection(self, user: UserProfile, chat_id: str, text: str) -> None:
-        """Processa a escolha de termos (um ou todos) e dispara a busca de vagas."""
+        """Process term selection input and trigger job search.
+
+        Args:
+            user: User profile.
+            chat_id: WhatsApp chat ID.
+            text: User message text (term number or "all").
+        """
 
         if not user.selected_course:
             self.send_msg(user, chat_id, "❌ Curso não selecionado. Comece novamente pelo menu.")
@@ -165,7 +209,14 @@ class JobSearchHandler(BaseHandler):
     def perform_search(
         self, user: UserProfile, chat_id: str, terms: List[str], term_name: str
     ) -> None:
-        """Executa a busca de vagas e envia o resumo das oportunidades."""
+        """Execute job search and send results summary.
+
+        Args:
+            user: User profile.
+            chat_id: WhatsApp chat ID.
+            terms: List of search term strings.
+            term_name: Human-readable term name for the message header.
+        """
 
         self.send_msg(
             user,
@@ -204,7 +255,16 @@ class JobSearchHandler(BaseHandler):
         self.send_msg(user, chat_id, "\n".join(lines))
 
     def handle(self, user: UserProfile, chat_id: str, text: str) -> bool:
-        """Despacha mensagens de acordo com o estado atual do usuário."""
+        """Dispatch messages according to user's current action state.
+
+        Args:
+            user: User profile.
+            chat_id: WhatsApp chat ID.
+            text: User message text.
+
+        Returns:
+            True if message was handled, False otherwise.
+        """
 
         if user.current_action == "course_selection":
             self.handle_course_selection(user, chat_id, text)
