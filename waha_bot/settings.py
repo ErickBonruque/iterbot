@@ -3,6 +3,7 @@ from pathlib import Path
 import dj_database_url
 import structlog
 from django.core.exceptions import ImproperlyConfigured
+from django.templatetags.static import static
 from django.urls import reverse_lazy
 
 from config.env import settings
@@ -285,12 +286,12 @@ UNFOLD = {
     "SITE_HEADER": "CapyVagas UTFPR",
     "SITE_URL": "/",
     "SITE_LOGO": {
-        "light": lambda request: "img/admin/capyvagas-logo-light.svg",
-        "dark": lambda request: "img/admin/capyvagas-logo-dark.svg",
+        "light": lambda request: static("img/admin/capyvagas-logo-light.svg"),
+        "dark": lambda request: static("img/admin/capyvagas-logo-dark.svg"),
     },
     "SITE_ICON": {
-        "light": lambda request: "img/admin/capyvagas-icon-light.svg",
-        "dark": lambda request: "img/admin/capyvagas-icon-dark.svg",
+        "light": lambda request: static("img/admin/capyvagas-icon-light.svg"),
+        "dark": lambda request: static("img/admin/capyvagas-icon-dark.svg"),
     },
     "SHOW_HISTORY": True,
     "SHOW_VIEW_ON_SITE": True,
@@ -311,7 +312,7 @@ UNFOLD = {
         },
     },
     "STYLES": [
-        lambda request: "css/admin_custom.css",
+        lambda request: static("css/admin_custom.css"),
     ],
     "SIDEBAR": {
         "show_search": True,
