@@ -7,7 +7,11 @@ logger = structlog.get_logger(__name__)
 
 
 class JobSearchService:
-    """Busca vagas em LinkedIn, Indeed e Glassdoor via python-jobspy."""
+    """Busca vagas em LinkedIn, Indeed e Glassdoor via python-jobspy.
+
+    Attributes:
+        None: This class is stateless; all config is passed to search().
+    """
 
     def search(
         self,
@@ -16,17 +20,19 @@ class JobSearchService:
         limit: int = 10,
         hours_old: int = 72,
     ) -> list[dict[str, Any]]:
-        """
-        Busca vagas para os termos fornecidos em multiplas plataformas.
+        """Busca vagas para os termos fornecidos em multiplas plataformas.
 
         Args:
-            terms: Lista de termos de busca (ex: ["estagio python", "desenvolvedor junior"])
-            location: Localizacao geografica da busca
-            limit: Numero maximo de resultados por term
-            hours_old: Vagas publicadas nas ultimas N horas
+            terms: Lista de termos de busca (ex: ["estagio python", "desenvolvedor junior"]).
+            location: Localizacao geografica da busca.
+            limit: Numero maximo de resultados por term.
+            hours_old: Vagas publicadas nas ultimas N horas.
 
         Returns:
-            Lista de dicts com campos: title, company, location, job_type, job_url, date_posted
+            Lista de dicts com campos: title, company, location, job_type, job_url, date_posted.
+
+        Raises:
+            Exception: Logged and swallowed; search continues to next term.
         """
         results = []
         for term in terms:
@@ -48,5 +54,4 @@ class JobSearchService:
                     location=location,
                     error=str(exc),
                 )
-                # Nao re-raise - continua para o proximo term
         return results
