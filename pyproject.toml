@@ -33,6 +33,7 @@ django-unfold = "^0.90.0"
 pytest = "^7.4.3"
 pytest-django = "^4.7.0"
 pytest-mock = "^3.12.0"
+pytest-cov = "^4.1.0"
 black = "^23.12.0"
 ruff = "^0.1.8"
 mypy = "^1.7.1"
@@ -92,5 +93,29 @@ changelog_file = "CHANGELOG.md"
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "waha_bot.settings"
 python_files = ["test_*.py", "*_test.py"]
-addopts = "-v --tb=short --strict-markers"
+addopts = "-v --tb=short --strict-markers --cov=waha_bot --cov-report=term-missing --cov-report=html --cov-report=xml"
 testpaths = ["apps"]
+
+[tool.coverage.run]
+source = ["apps", "config", "infra", "waha_bot"]
+branch = true
+omit = [
+    "*/migrations/*",
+    "*/tests/*",
+    "*/__pycache__/*",
+    "*/conftest.py",
+]
+
+[tool.coverage.report]
+fail_under = 70
+show_missing = true
+skip_covered = false
+show_contexts = true
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise NotImplementedError",
+    "if TYPE_CHECKING:",
+    "if __name__ == .__main__.:",
+    "@abstractmethod",
+]

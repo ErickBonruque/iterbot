@@ -78,13 +78,38 @@ jobs:
           DATABASE_URL: postgresql://capyvagas_user:test_password@localhost:5432/capyvagas_test
           REDIS_URL: redis://localhost:6379/0
         run: |
-          poetry run pytest --cov --cov-fail-under=70 -v
+          poetry run pytest --cov -v
+
+      - name: Upload coverage HTML
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-html
+          path: htmlcov/
+          retention-days: 7
+
+      - name: Upload coverage XML
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-xml
+          path: coverage.xml
+          retention-days: 7
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
         with:
           files: ./coverage.xml
           fail_ci_if_error: false
+        continue-on-error: true
+
+      - name: Add Coverage Comment to PR
+        uses: romeovs/lcov-reporter-action@v0.3.1
+        if: github.event_name == 'pull_request'
+        with:
+          lcov-file: ./coverage.lcov
+          delete-old-comments: true
+          github-token: ${{ secrets.GITHUB_TOKEN }}
         continue-on-error: true
 
   security:
