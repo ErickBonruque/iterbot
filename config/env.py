@@ -33,6 +33,10 @@ env = environ.Env(
     AWS_ACCESS_KEY_ID=(str, ""),
     AWS_SECRET_ACCESS_KEY=(str, ""),
     AWS_DEFAULT_REGION=(str, "us-east-1"),
+    WAHA_DASHBOARD_USERNAME=(str, "admin"),
+    WAHA_DASHBOARD_PASSWORD=(str, "password"),
+    WHATSAPP_SWAGGER_USERNAME=(str, "swagger"),
+    WHATSAPP_SWAGGER_PASSWORD=(str, "password"),
 )
 
 # Read .env file if it exists
@@ -143,6 +147,26 @@ class BotDashboardCredentials:
 
 
 @dataclass
+class WahaDashboardCredentials:
+    username: str
+    password: str
+
+    def __init__(self) -> None:
+        self.username = env("WAHA_DASHBOARD_USERNAME")
+        self.password = env("WAHA_DASHBOARD_PASSWORD")
+
+
+@dataclass
+class WahaSwaggerCredentials:
+    username: str
+    password: str
+
+    def __init__(self) -> None:
+        self.username = env("WHATSAPP_SWAGGER_USERNAME")
+        self.password = env("WHATSAPP_SWAGGER_PASSWORD")
+
+
+@dataclass
 class DjangoAdminCredentials:
     username: str
     password: str
@@ -194,6 +218,8 @@ class AppConfig:
     waha: WahaSettings
     dashboard_credentials: BotDashboardCredentials
     admin_credentials: DjangoAdminCredentials
+    waha_dashboard_credentials: WahaDashboardCredentials
+    waha_swagger_credentials: WahaSwaggerCredentials
     email: EmailSettings
     aws: AwsSettings
 
@@ -204,6 +230,8 @@ class AppConfig:
         self.waha = WahaSettings()
         self.dashboard_credentials = BotDashboardCredentials()
         self.admin_credentials = DjangoAdminCredentials()
+        self.waha_dashboard_credentials = WahaDashboardCredentials()
+        self.waha_swagger_credentials = WahaSwaggerCredentials()
         self.email = EmailSettings()
         self.aws = AwsSettings()
 
