@@ -17,7 +17,14 @@ logger = structlog.get_logger(__name__)
 
 
 def _get_local_jobs_for_course(course) -> list[dict[str, Any]]:
-    """Retorna vagas locais aprovadas e relevantes ao curso."""
+    """Return approved local jobs relevant to the given course.
+
+    Args:
+        course: Course model instance with search_terms.
+
+    Returns:
+        List of dicts with title, company, location, job_type, job_url, source.
+    """
     terms = list(
         course.search_terms.filter(is_default=True)
         .order_by("-priority")
@@ -66,7 +73,15 @@ def _get_local_jobs_for_course(course) -> list[dict[str, Any]]:
 
 
 def _get_online_jobs_for_course(course, job_service: JobSearchService) -> list[dict[str, Any]]:
-    """Busca vagas online via JobSpy usando termos padrao do curso."""
+    """Search online jobs via JobSpy using the course's default search terms.
+
+    Args:
+        course: Course model instance with search_terms.
+        job_service: JobSearchService instance for making API calls.
+
+    Returns:
+        List of dicts with job data from LinkedIn/Indeed/Glassdoor.
+    """
     terms = list(
         course.search_terms.filter(is_default=True)
         .order_by("-priority")
@@ -83,7 +98,14 @@ def _get_online_jobs_for_course(course, job_service: JobSearchService) -> list[d
 
 
 def _deduplicate(jobs: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """Deduplicacao por (titulo normalizado, empresa normalizada)."""
+    """Remove duplicate jobs by (normalized title, normalized company).
+
+    Args:
+        jobs: List of job dictionaries.
+
+    Returns:
+        Deduplicated list of job dictionaries.
+    """
     seen: set[tuple[str, str]] = set()
     unique: list[dict[str, Any]] = []
     for job in jobs:
@@ -97,7 +119,15 @@ def _deduplicate(jobs: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
 
 def _build_review_for_user(course, job_service: JobSearchService) -> list[dict[str, Any]]:
-    """Combina vagas locais + online e retorna no maximo 5 apos deduplicacao."""
+    """Combine local and online jobs, deduplicate, and return up to 5.
+
+    Args:
+        course: Course model instance.
+        job_service: JobSearchService instance.
+
+    Returns:
+        List of up to 5 unique job dictionaries.
+    """
     local_jobs = _get_local_jobs_for_course(course)
     online_jobs = _get_online_jobs_for_course(course, job_service)
     combined = _deduplicate(local_jobs + online_jobs)
@@ -105,7 +135,15 @@ def _build_review_for_user(course, job_service: JobSearchService) -> list[dict[s
 
 
 def _format_review_message(course_name: str, jobs: list[dict[str, Any]]) -> str:
-    """Formata mensagem de review para WhatsApp (D-06)."""
+    """Format a job review message for WhatsApp delivery.
+
+    Args:
+        course_name: Name of the course for the header.
+        jobs: List of job dictionaries to format.
+
+    Returns:
+        Formatted WhatsApp message string.
+    """
     lines = [
         f"🎓 *Review de Vagas — {course_name}*",
         "",
@@ -136,7 +174,17 @@ def _format_review_message(course_name: str, jobs: list[dict[str, Any]]) -> str:
 
 @shared_task(bind=True, max_retries=0)
 def send_weekly_job_review(self) -> dict[str, int]:
-    """Envia review semanal para cada aluno com selected_course definido."""
+    """Send weekly job review to each authenticated student with a selected course.
+
+    Args:
+        None
+
+    Returns:
+        Dict with sent, no_jobs, and errors counts.
+
+    Raises:
+        Exception: Caught and logged per-user; never re-raised.
+    """
     from apps.bot.models import BotConfiguration
     from infra.waha.client import WahaClient
 
