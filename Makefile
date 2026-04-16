@@ -7,7 +7,7 @@
 # Example: make setup
 # ============================================================================
 
-.PHONY: help setup validate start stop restart logs logs-waha logs-backend status clean rebuild test migrate makemigrations createsuperuser shell
+.PHONY: help setup validate start stop restart logs logs-waha logs-backend status clean rebuild test migrate makemigrations createsuperuser shell pre-commit-install pre-commit-run pre-commit-update cz-commit changelog lint format
 
 # Default target
 .DEFAULT_GOAL := help
@@ -173,3 +173,33 @@ format:
 	@echo "$(BLUE)✨ Formatting code...$(NC)"
 	@black .
 	@echo "$(GREEN)✅ Code formatted!$(NC)"
+
+## pre-commit-install: Install pre-commit hooks
+pre-commit-install:
+	@echo "$(BLUE)🪝 Installing pre-commit hooks...$(NC)"
+	@poetry run pre-commit install
+	@poetry run pre-commit install --hook-type commit-msg
+	@echo "$(GREEN)✅ Pre-commit hooks installed!$(NC)"
+
+## pre-commit-run: Run pre-commit on all files
+pre-commit-run:
+	@echo "$(BLUE)🪝 Running pre-commit hooks...$(NC)"
+	@poetry run pre-commit run --all-files
+	@echo "$(GREEN)✅ Pre-commit hooks passed!$(NC)"
+
+## pre-commit-update: Update pre-commit hook versions
+pre-commit-update:
+	@echo "$(BLUE)🪝 Updating pre-commit hooks...$(NC)"
+	@poetry run pre-commit autoupdate
+	@echo "$(GREEN)✅ Pre-commit hooks updated!$(NC)"
+
+## cz-commit: Create a commit with commitizen (conventional commits)
+cz-commit:
+	@echo "$(BLUE)📝 Creating conventional commit...$(NC)"
+	@poetry run cz commit
+
+## changelog: Generate/update CHANGELOG.md
+changelog:
+	@echo "$(BLUE)📝 Generating changelog...$(NC)"
+	@poetry run cz changelog
+	@echo "$(GREEN)✅ Changelog generated!$(NC)"
