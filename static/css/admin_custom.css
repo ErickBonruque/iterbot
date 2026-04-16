@@ -1,115 +1,211 @@
 :root {
-    --utfpr-yellow: #FFD100;
-    --utfpr-black: #000000;
-    --utfpr-white: #FFFFFF;
-    --utfpr-surface: #F8F9FA;
-    --utfpr-border: #DEE2E6;
+    --cv-yellow-500: #ffd100;
+    --cv-yellow-600: #e6bc00;
+    --cv-surface: #ffffff;
+    --cv-surface-2: #f8fafc;
+    --cv-border: #d7dee8;
+    --cv-text: #0f172a;
+    --cv-muted: #475569;
+    --cv-shadow: 0 14px 34px rgba(15, 23, 42, 0.08);
 }
 
-.phase12-dashboard {
+.dark {
+    --cv-surface: #111827;
+    --cv-surface-2: #1e293b;
+    --cv-border: #334155;
+    --cv-text: #f8fafc;
+    --cv-muted: #cbd5e1;
+    --cv-shadow: 0 18px 36px rgba(2, 6, 23, 0.35);
+}
+
+.cv-site-logo-link {
+    align-items: center;
+    display: inline-flex;
+}
+
+.cv-site-logo {
+    display: block;
+    height: 34px;
+    width: auto;
+}
+
+.cv-admin-dashboard {
     display: grid;
-    gap: 24px;
+    gap: 18px;
     margin-bottom: 24px;
 }
 
-.phase12-metrics-grid {
+.cv-admin-hero {
+    background:
+        radial-gradient(circle at top right, rgba(255, 209, 0, 0.35), transparent 55%),
+        linear-gradient(140deg, #0f172a, #1e293b 62%, #334155);
+    border: 1px solid #1f2937;
+    border-radius: 16px;
+    box-shadow: var(--cv-shadow);
+    color: #f8fafc;
     display: grid;
     gap: 16px;
+    grid-template-columns: 1fr;
+    padding: 22px;
+}
+
+@media (min-width: 920px) {
+    .cv-admin-hero {
+        align-items: center;
+        grid-template-columns: 1fr auto;
+    }
+}
+
+.cv-admin-hero-eyebrow {
+    color: #cbd5e1;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    margin: 0;
+    text-transform: uppercase;
+}
+
+.cv-admin-hero-title {
+    font-size: clamp(24px, 2.6vw, 36px);
+    font-weight: 800;
+    line-height: 1.15;
+    margin: 4px 0 8px;
+}
+
+.cv-admin-hero-subtitle {
+    color: #e2e8f0;
+    margin: 0;
+    max-width: 70ch;
+}
+
+.cv-admin-quick-actions {
+    display: grid;
+    gap: 10px;
+}
+
+.cv-admin-action {
+    background: rgba(248, 250, 252, 0.12);
+    border: 1px solid rgba(248, 250, 252, 0.22);
+    border-radius: 999px;
+    color: #f8fafc;
+    display: inline-flex;
+    font-size: 13px;
+    font-weight: 600;
+    justify-content: center;
+    min-width: 170px;
+    padding: 9px 16px;
+    text-decoration: none;
+    transition: all 0.2s ease;
+}
+
+.cv-admin-action:hover {
+    background: var(--cv-yellow-500);
+    border-color: var(--cv-yellow-500);
+    color: #111827;
+    transform: translateY(-1px);
+}
+
+.cv-admin-metrics-grid {
+    display: grid;
+    gap: 14px;
     grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
 }
 
-.phase12-metric-card {
-    background: var(--utfpr-white);
-    border: 1px solid var(--utfpr-border);
-    border-radius: 12px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+.cv-admin-metric-card,
+.cv-admin-panel {
+    background: var(--cv-surface);
+    border: 1px solid var(--cv-border);
+    border-radius: 14px;
+    box-shadow: var(--cv-shadow);
     padding: 16px;
 }
 
-.phase12-metric-card--accent {
-    background: var(--utfpr-yellow);
-    border-color: #E6BC00;
+.cv-admin-metric-card--accent {
+    background: linear-gradient(150deg, #ffe989, var(--cv-yellow-500));
+    border-color: var(--cv-yellow-600);
 }
 
-.phase12-metric-label {
-    color: #4B5563;
-    font-size: 12px;
-    font-weight: 600;
-    letter-spacing: 0.02em;
+.dark .cv-admin-metric-card--accent {
+    background: linear-gradient(150deg, #ffe07a, var(--cv-yellow-500));
+}
+
+.cv-admin-metric-label {
+    color: var(--cv-muted);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
     margin: 0 0 8px;
     text-transform: uppercase;
 }
 
-.phase12-metric-value {
-    color: #111827;
-    font-size: 28px;
-    font-weight: 700;
-    line-height: 1.2;
+.cv-admin-metric-value {
+    color: var(--cv-text);
+    font-size: clamp(26px, 2vw, 34px);
+    font-weight: 800;
+    line-height: 1.1;
     margin: 0;
 }
 
-.phase12-panels-grid {
+.cv-admin-panels-grid {
     display: grid;
-    gap: 16px;
+    gap: 14px;
     grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
 }
 
-.phase12-panel {
-    background: var(--utfpr-white);
-    border: 1px solid var(--utfpr-border);
-    border-radius: 12px;
-    padding: 16px;
+.cv-admin-panel-title {
+    color: var(--cv-text);
+    font-size: 17px;
+    font-weight: 700;
+    margin: 0 0 10px;
 }
 
-.phase12-panel-title {
-    color: #111827;
-    font-size: 18px;
-    font-weight: 600;
-    margin: 0 0 12px;
-}
-
-.phase12-table {
+.cv-admin-table {
     border-collapse: collapse;
     width: 100%;
 }
 
-.phase12-table th,
-.phase12-table td {
-    border-bottom: 1px solid var(--utfpr-border);
+.cv-admin-table th,
+.cv-admin-table td {
+    border-bottom: 1px solid var(--cv-border);
+    color: var(--cv-text);
     padding: 10px 0;
     text-align: left;
 }
 
-.phase12-table th {
-    color: #374151;
-    font-weight: 600;
-    width: 40%;
-}
-
-.phase12-status-badge {
-    border-radius: 3px;
-    color: var(--utfpr-white);
-    display: inline-block;
+.cv-admin-table th {
+    color: var(--cv-muted);
     font-size: 12px;
-    font-weight: 600;
-    padding: 4px 8px;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    width: 42%;
 }
 
-.phase12-status-badge--success {
-    background: #28A745;
+.cv-admin-status-badge {
+    border-radius: 999px;
+    color: #f8fafc;
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    padding: 5px 10px;
+    text-transform: uppercase;
 }
 
-.phase12-status-badge--danger {
-    background: #DC3545;
+.cv-admin-status-badge--success {
+    background: #16a34a;
 }
 
-.phase12-status-badge--warning {
-    background: #FFC107;
-    color: #1F2937;
+.cv-admin-status-badge--danger {
+    background: #dc2626;
 }
 
-.phase12-status-badge--neutral {
-    background: #6C757D;
+.cv-admin-status-badge--warning {
+    background: #d97706;
+}
+
+.cv-admin-status-badge--neutral {
+    background: #475569;
 }
 
 .submit-row .button,
@@ -118,5 +214,5 @@
 }
 
 .conversation-timeline {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-family: "Segoe UI", Roboto, sans-serif;
 }

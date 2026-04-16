@@ -284,9 +284,16 @@ UNFOLD = {
     "SITE_TITLE": "CapyVagas Admin",
     "SITE_HEADER": "CapyVagas UTFPR",
     "SITE_URL": "/",
+    "SITE_LOGO": {
+        "light": lambda request: "img/admin/capyvagas-logo-light.svg",
+        "dark": lambda request: "img/admin/capyvagas-logo-dark.svg",
+    },
+    "SITE_ICON": {
+        "light": lambda request: "img/admin/capyvagas-icon-light.svg",
+        "dark": lambda request: "img/admin/capyvagas-icon-dark.svg",
+    },
     "SHOW_HISTORY": True,
     "SHOW_VIEW_ON_SITE": True,
-    "THEME": "dark",
     "SEARCH_MODELS": ["auth.User", "jobs.Company", "jobs.Job"],
     "COLORS": {
         "primary": {

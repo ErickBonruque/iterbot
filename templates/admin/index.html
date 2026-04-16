@@ -2,41 +2,55 @@
 {% load i18n %}
 
 {% block content %}
-<section class="phase12-dashboard">
-    <div class="phase12-metrics-grid">
-        <article class="phase12-metric-card">
-            <p class="phase12-metric-label">Alunos Cadastrados</p>
-            <p class="phase12-metric-value">{{ total_alunos|default:"0" }}</p>
+<section class="cv-admin-dashboard">
+    <header class="cv-admin-hero">
+        <div>
+            <p class="cv-admin-hero-eyebrow">Painel Administrativo</p>
+            <h1 class="cv-admin-hero-title">Operacao CapyVagas UTFPR</h1>
+            <p class="cv-admin-hero-subtitle">Acompanhe saude do bot, operacao das vagas e aprovacoes em um so lugar.</p>
+        </div>
+
+        <div class="cv-admin-quick-actions">
+            <a href="{% url 'admin:jobs_job_changelist' %}" class="cv-admin-action">Gerenciar vagas</a>
+            <a href="{% url 'admin:jobs_company_changelist' %}" class="cv-admin-action">Empresas</a>
+            <a href="{% url 'admin:bot_bothealthcheck_changelist' %}" class="cv-admin-action">Saude do bot</a>
+        </div>
+    </header>
+
+    <div class="cv-admin-metrics-grid">
+        <article class="cv-admin-metric-card">
+            <p class="cv-admin-metric-label">Alunos cadastrados</p>
+            <p class="cv-admin-metric-value">{{ total_alunos|default:"0" }}</p>
         </article>
-        <article class="phase12-metric-card">
-            <p class="phase12-metric-label">Empresas Ativas</p>
-            <p class="phase12-metric-value">{{ empresas_ativas|default:"0" }}</p>
+        <article class="cv-admin-metric-card">
+            <p class="cv-admin-metric-label">Empresas ativas</p>
+            <p class="cv-admin-metric-value">{{ empresas_ativas|default:"0" }}</p>
         </article>
-        <article class="phase12-metric-card phase12-metric-card--accent">
-            <p class="phase12-metric-label">Vagas Pendentes</p>
-            <p class="phase12-metric-value">{{ vagas_pendentes|default:"0" }}</p>
+        <article class="cv-admin-metric-card cv-admin-metric-card--accent">
+            <p class="cv-admin-metric-label">Vagas pendentes</p>
+            <p class="cv-admin-metric-value">{{ vagas_pendentes|default:"0" }}</p>
         </article>
-        <article class="phase12-metric-card">
-            <p class="phase12-metric-label">Vagas Aprovadas</p>
-            <p class="phase12-metric-value">{{ vagas_aprovadas|default:"0" }}</p>
+        <article class="cv-admin-metric-card">
+            <p class="cv-admin-metric-label">Vagas aprovadas</p>
+            <p class="cv-admin-metric-value">{{ vagas_aprovadas|default:"0" }}</p>
         </article>
     </div>
 
-    <div class="phase12-panels-grid">
-        <article class="phase12-panel">
-            <h2 class="phase12-panel-title">Status do Bot WhatsApp</h2>
-            <table class="phase12-table">
+    <div class="cv-admin-panels-grid">
+        <article class="cv-admin-panel">
+            <h2 class="cv-admin-panel-title">Status do Bot WhatsApp</h2>
+            <table class="cv-admin-table">
                 <tr>
                     <th>Status</th>
                     <td>
                         {% if bot_status == 'online' %}
-                            <span class="phase12-status-badge phase12-status-badge--success">Online</span>
+                            <span class="cv-admin-status-badge cv-admin-status-badge--success">Online</span>
                         {% elif bot_status == 'offline' %}
-                            <span class="phase12-status-badge phase12-status-badge--danger">Offline</span>
+                            <span class="cv-admin-status-badge cv-admin-status-badge--danger">Offline</span>
                         {% elif bot_status == 'error' %}
-                            <span class="phase12-status-badge phase12-status-badge--warning">Erro</span>
+                            <span class="cv-admin-status-badge cv-admin-status-badge--warning">Erro</span>
                         {% else %}
-                            <span class="phase12-status-badge phase12-status-badge--neutral">Desconhecido</span>
+                            <span class="cv-admin-status-badge cv-admin-status-badge--neutral">Desconhecido</span>
                         {% endif %}
                     </td>
                 </tr>
@@ -61,9 +75,9 @@
             </table>
         </article>
 
-        <article class="phase12-panel">
-            <h2 class="phase12-panel-title">Resumo Geral</h2>
-            <table class="phase12-table">
+        <article class="cv-admin-panel">
+            <h2 class="cv-admin-panel-title">Resumo Geral</h2>
+            <table class="cv-admin-table">
                 <tr>
                     <th>Total de Vagas</th>
                     <td>{{ vagas_total|default:"0" }}</td>
@@ -81,6 +95,5 @@
     </div>
 </section>
 
-<!-- App list padrão do Django Admin -->
 {{ block.super }}
 {% endblock %}
