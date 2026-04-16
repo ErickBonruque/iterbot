@@ -1,3 +1,5 @@
+@import url("https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Sora:wght@600;700;800&display=swap");
+
 :root {
     --cv-yellow-500: #ffd100;
     --cv-yellow-600: #e6bc00;
@@ -7,6 +9,12 @@
     --cv-text: #0f172a;
     --cv-muted: #475569;
     --cv-shadow: 0 14px 34px rgba(15, 23, 42, 0.08);
+    --cv-font-ui: "Manrope", "Segoe UI", sans-serif;
+    --cv-font-display: "Sora", "Manrope", "Segoe UI", sans-serif;
+    --cv-fast: 0.18s;
+    --cv-mid: 0.28s;
+    --cv-ease: cubic-bezier(0.22, 1, 0.36, 1);
+    --cv-focus-ring: 0 0 0 3px rgba(255, 209, 0, 0.36);
 }
 
 .dark {
@@ -21,6 +29,134 @@
 .cv-site-logo-link {
     align-items: center;
     display: inline-flex;
+}
+
+html,
+body {
+    font-family: var(--cv-font-ui);
+    letter-spacing: 0.01em;
+}
+
+h1,
+h2,
+h3,
+h4,
+.font-bold,
+.font-semibold,
+.cv-admin-hero-title,
+.cv-admin-panel-title {
+    font-family: var(--cv-font-display);
+    letter-spacing: -0.015em;
+}
+
+a,
+button,
+input[type="submit"],
+input[type="button"],
+.button,
+.submit-row a,
+.submit-row input,
+select,
+textarea,
+input[type="text"],
+input[type="number"],
+input[type="email"],
+input[type="url"],
+input[type="search"],
+input[type="password"] {
+    transition:
+        background-color var(--cv-fast) var(--cv-ease),
+        border-color var(--cv-fast) var(--cv-ease),
+        color var(--cv-fast) var(--cv-ease),
+        box-shadow var(--cv-fast) var(--cv-ease),
+        transform var(--cv-fast) var(--cv-ease);
+}
+
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+    box-shadow: var(--cv-focus-ring);
+    outline: none;
+}
+
+.module,
+.card,
+.cv-admin-panel,
+.cv-admin-metric-card {
+    transition:
+        transform var(--cv-mid) var(--cv-ease),
+        box-shadow var(--cv-mid) var(--cv-ease),
+        border-color var(--cv-fast) var(--cv-ease);
+}
+
+@media (hover: hover) {
+    .module:hover,
+    .card:hover,
+    .cv-admin-panel:hover,
+    .cv-admin-metric-card:hover {
+        border-color: color-mix(in srgb, var(--cv-border) 62%, var(--cv-yellow-500));
+        box-shadow: 0 18px 36px rgba(15, 23, 42, 0.12);
+        transform: translateY(-2px);
+    }
+
+    .button:hover,
+    .submit-row input[type="submit"]:hover,
+    .submit-row .button:hover,
+    input[type="submit"]:hover,
+    input[type="button"]:hover {
+        transform: translateY(-1px);
+    }
+}
+
+table tbody tr {
+    transition: background-color var(--cv-fast) var(--cv-ease);
+}
+
+table tbody tr:hover {
+    background: color-mix(in srgb, var(--cv-surface-2) 82%, var(--cv-yellow-500));
+}
+
+.dark table tbody tr:hover {
+    background: color-mix(in srgb, var(--cv-surface-2) 88%, #0f172a);
+}
+
+@media (max-width: 860px) {
+    html,
+    body {
+        font-size: 15px;
+    }
+
+    .cv-admin-dashboard {
+        gap: 14px;
+    }
+
+    .cv-admin-hero {
+        border-radius: 14px;
+        padding: 18px;
+    }
+
+    .cv-admin-action {
+        min-width: 100%;
+    }
+
+    .cv-admin-panel,
+    .cv-admin-metric-card {
+        border-radius: 12px;
+        padding: 14px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        scroll-behavior: auto !important;
+        transition-duration: 0.01ms !important;
+    }
 }
 
 .cv-site-logo {
@@ -214,5 +350,5 @@
 }
 
 .conversation-timeline {
-    font-family: "Segoe UI", Roboto, sans-serif;
+    font-family: var(--cv-font-ui);
 }
