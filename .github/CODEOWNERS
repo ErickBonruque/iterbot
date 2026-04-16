@@ -1,0 +1,15 @@
+# CapyVagas CODEOWNERS
+
+* @bonruque
+apps/bot/ @bonruque
+apps/jobs/ @bonruque
+apps/companies/ @bonruque
+apps/dashboard/ @bonruque
+apps/users/ @bonruque
+apps/courses/ @bonruque
+apps/core/ @bonruque
+infra/ @bonruque
+docs/ @bonruque
+*.md @bonruque
+Makefile @bonruque
+pyproject.toml @bonruque
