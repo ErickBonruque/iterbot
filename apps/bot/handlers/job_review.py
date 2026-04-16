@@ -11,13 +11,29 @@ logger = structlog.get_logger(__name__)
 
 
 class JobReviewHandler(BaseHandler):
-    """Envia review de vagas sob demanda para o aluno."""
+    """Sends on-demand job review to the student.
+
+    Attributes:
+        job_service: JobSearchService instance for querying jobs.
+    """
 
     def __init__(self, waha_client, job_service: JobSearchService | None = None) -> None:
+        """Initialize job review handler.
+
+        Args:
+            waha_client: WAHA client for messaging.
+            job_service: Optional job search service.
+        """
         super().__init__(waha_client)
         self.job_service = job_service or JobSearchService()
 
     def send_review(self, user: UserProfile, chat_id: str) -> None:
+        """Send job review to user on demand.
+
+        Args:
+            user: User profile.
+            chat_id: WhatsApp chat ID.
+        """
         # Importacao lazy para evitar circular import com apps.jobs.tasks.
         from apps.jobs.tasks import _build_review_for_user, _format_review_message
 
@@ -74,4 +90,13 @@ class JobReviewHandler(BaseHandler):
         )
 
     def handle(self, user: UserProfile, chat_id: str, text: str) -> bool:
-        return False
+        """Handle review-related messages.
+
+        Args:
+            user: User profile.
+            chat_id: WhatsApp chat ID.
+            text: User message text.
+
+        Returns:
+            False (this handler does not process conversation flow messages).
+        """
