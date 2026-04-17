@@ -45,6 +45,10 @@ class AuthenticationHandler(BaseHandler):
             )
             return
 
+        if user.current_action == "login_step_waiting_confirmation":
+            self.handle_login_waiting_confirmation(user, chat_id, "")
+            return
+
         user.current_action = "login_step_ra"
         user.flow_data = {}
         user.save(update_fields=["current_action", "flow_data", "last_activity"])

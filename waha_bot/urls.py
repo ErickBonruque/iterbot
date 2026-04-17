@@ -4,6 +4,7 @@ from django.views.generic import RedirectView
 from apps.bot.views import webhook
 from apps.core.admin import capyvagas_admin
 from apps.core.views import HealthCheckView
+from apps.users.views import ConfirmEmailView
 
 urlpatterns = [
     path("", RedirectView.as_view(url="/admin/", permanent=False)),
@@ -14,4 +15,5 @@ urlpatterns = [
     path("empresas/", include("apps.companies.urls")),
     path("accounts/", include("allauth.urls")),
     path("accounts/", include("apps.users.urls")),
+    path("confirmar-email/<str:token>/", ConfirmEmailView.as_view(), name="confirm_email"),
 ]
