@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block title %}Confirmação de E-mail - CapyVagas UTFPR{% endblock %}
+
+{% block content %}
+<div style="max-width: 500px; margin: 50px auto; text-align: center; font-family: Arial, sans-serif;">
+    {% if success %}
+    <h1 style="color: #28a745;">E-mail Confirmado!</h1>
+    <p>Olá, <strong>{{ ra }}</strong>!</p>
+    <p>Seu e-mail foi confirmado com sucesso.</p>
+    <p>Agora você pode voltar ao WhatsApp e usar o CapyVagas!</p>
+    {% else %}
+    <h1 style="color: #dc3545;">Erro na Confirmação</h1>
+    <p>{{ error }}</p>
+    <p>Se o problema persistir, inicie o fluxo de login novamente no bot.</p>
+    {% endif %}
+</div>
+{% endblock %}
