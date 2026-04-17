@@ -1,7 +1,7 @@
 version: '3.8'
 
 # ============================================================================
-# CapyVagas-UTFPR - Docker Compose Configuration
+# IterBot-UTFPR - Docker Compose Configuration
 # ============================================================================
 #
 # ⚠️ IMPORTANTE: Configuração de Credenciais
@@ -28,7 +28,7 @@ services:
   # ==========================================================================
   traefik:
     image: traefik:v3.6
-    container_name: capyvagas_traefik
+    container_name: iterbot_traefik
     restart: unless-stopped
     environment:
       - DOCKER_API_VERSION=1.54
@@ -56,18 +56,18 @@ services:
   # ==========================================================================
   db:
     image: postgres:15-alpine
-    container_name: capyvagas_db
+    container_name: iterbot_db
     restart: unless-stopped
     volumes:
       - postgres_data:/var/lib/postgresql/data/
     environment:
-      - POSTGRES_DB=${POSTGRES_DB:-capyvagas}
-      - POSTGRES_USER=${POSTGRES_USER:-capyvagas_user}
+      - POSTGRES_DB=${POSTGRES_DB:-iterbot}
+      - POSTGRES_USER=${POSTGRES_USER:-iterbot_user}
       - POSTGRES_PASSWORD_FILE=/run/secrets/postgres_password
     secrets:
       - postgres_password
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-capyvagas_user} -d ${POSTGRES_DB:-capyvagas}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-iterbot_user} -d ${POSTGRES_DB:-iterbot}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -82,7 +82,7 @@ services:
   # ==========================================================================
   redis:
     image: redis:7-alpine
-    container_name: capyvagas_redis
+    container_name: iterbot_redis
     restart: unless-stopped
     volumes:
       - redis_data:/data
@@ -105,7 +105,7 @@ services:
     build:
       context: .
       dockerfile: docker/django/Dockerfile
-    container_name: capyvagas_backend
+    container_name: iterbot_backend
     restart: unless-stopped
     command: /start.sh
     ports:
@@ -153,7 +153,7 @@ services:
   # ==========================================================================
   waha:
     image: devlikeapro/waha
-    container_name: capyvagas_waha
+    container_name: iterbot_waha
     restart: unless-stopped
     # Usando entrypoint padrão do WAHA
     environment:

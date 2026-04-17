@@ -1,7 +1,7 @@
 version: '3.8'
 
 # ============================================================================
-# CapyVagas - Docker Compose Production Override
+# IterBot - Docker Compose Production Override
 # ============================================================================
 # Uso: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 # ============================================================================
@@ -51,7 +51,7 @@ services:
     build:
       context: .
       dockerfile: docker/django/Dockerfile
-    container_name: capyvagas_celery_worker
+    container_name: iterbot_celery_worker
     restart: unless-stopped
     command: celery -A waha_bot worker -l info --concurrency=1 --without-gossip --without-mingle
     env_file:
@@ -77,7 +77,7 @@ services:
     build:
       context: .
       dockerfile: docker/django/Dockerfile
-    container_name: capyvagas_celery_beat
+    container_name: iterbot_celery_beat
     restart: unless-stopped
     command: celery -A waha_bot beat -l info --schedule=/app/celerybeat-schedule
     env_file:

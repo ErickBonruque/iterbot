@@ -15,7 +15,7 @@ entryPoints:
 certificatesResolvers:
   letsencrypt:
     acme:
-      email: admin@capyvagas.example.com  # CHANGE THIS IN PRODUCTION
+      email: admin@iterbot.example.com  # CHANGE THIS IN PRODUCTION
       storage: /letsencrypt/acme.json
       # Use staging server for testing
       # caServer: https://acme-staging-v02.api.letsencrypt.org/directory

@@ -1,5 +1,5 @@
 # ============================================================================
-# CapyVagas-UTFPR Makefile
+# IterBot-UTFPR Makefile
 # ============================================================================
 # Simplified commands for common operations
 #
@@ -21,7 +21,7 @@ NC := \033[0m
 ## help: Show this help message
 help:
 	@echo "$(BLUE)============================================$(NC)"
-	@echo "$(BLUE)CapyVagas-UTFPR - Available Commands$(NC)"
+	@echo "$(BLUE)IterBot-UTFPR - Available Commands$(NC)"
 	@echo "$(BLUE)============================================$(NC)"
 	@echo ""
 	@grep -E '^## ' $(MAKEFILE_LIST) | sed 's/## /  $(GREEN)/' | sed 's/:/$(NC):/'
@@ -29,7 +29,7 @@ help:
 
 ## setup: Initial setup (secrets + validation)
 setup:
-	@echo "$(BLUE)🔧 Setting up CapyVagas...$(NC)"
+	@echo "$(BLUE)🔧 Setting up IterBot...$(NC)"
 	@bash ./deployment/scripts/setup_secrets.sh
 	@bash ./deployment/scripts/validate_environment.sh
 
@@ -45,14 +45,14 @@ dev-install:
 
 ## dev-run: Start services with Docker Compose (development mode)
 dev-run:
-	@echo "$(BLUE)🚀 Starting CapyVagas (dev mode)...$(NC)"
+	@echo "$(BLUE)🚀 Starting IterBot (dev mode)...$(NC)"
 	@docker compose up -d
 	@echo "$(GREEN)✅ Services started!$(NC)"
 	@make status
 
 ## start: Start all services
 start:
-	@echo "$(BLUE)🚀 Starting CapyVagas...$(NC)"
+	@echo "$(BLUE)🚀 Starting IterBot...$(NC)"
 	@docker compose up -d
 	@echo "$(GREEN)✅ Services started!$(NC)"
 	@echo ""
@@ -60,13 +60,13 @@ start:
 
 ## stop: Stop all services
 stop:
-	@echo "$(BLUE)🛑 Stopping CapyVagas...$(NC)"
+	@echo "$(BLUE)🛑 Stopping IterBot...$(NC)"
 	@docker compose stop
 	@echo "$(GREEN)✅ Services stopped!$(NC)"
 
 ## restart: Restart all services
 restart:
-	@echo "$(BLUE)🔄 Restarting CapyVagas...$(NC)"
+	@echo "$(BLUE)🔄 Restarting IterBot...$(NC)"
 	@docker compose restart
 	@echo "$(GREEN)✅ Services restarted!$(NC)"
 
@@ -103,7 +103,7 @@ clean:
 
 ## rebuild: Rebuild and restart all services
 rebuild:
-	@echo "$(BLUE)🔨 Rebuilding CapyVagas...$(NC)"
+	@echo "$(BLUE)🔨 Rebuilding IterBot...$(NC)"
 	@docker compose down
 	@docker compose build --no-cache
 	@docker compose up -d
@@ -176,7 +176,7 @@ health:
 backup:
 	@echo "$(BLUE)💾 Creating backup...$(NC)"
 	@mkdir -p backups
-	@docker compose exec -T db pg_dump -U capyvagas_user capyvagas > backups/db_backup_$$(date +%Y%m%d_%H%M%S).sql
+	@docker compose exec -T db pg_dump -U iterbot_user iterbot > backups/db_backup_$$(date +%Y%m%d_%H%M%S).sql
 	@tar -czf backups/secrets_backup_$$(date +%Y%m%d_%H%M%S).tar.gz secrets/
 	@echo "$(GREEN)✅ Backup created in backups/$(NC)"
 
