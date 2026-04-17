@@ -263,3 +263,81 @@ def clean_old_health_checks(self) -> dict:
             exc_info=True,
         )
         return {"error": str(exc)}
+
+
+@shared_task(bind=True, max_retries=3, default_retry_delay=60)
+def send_confirmation_email(self, user_id: int) -> dict:
+    """Send email confirmation email with unique token link via SES.
+
+    Args:
+        user_id: UserProfile ID to send confirmation to.
+
+    Returns:
+        Dict with status, sent, user_id fields.
+    """
+    from django.conf import settings as django_settings
+    from apps.users.models import UserProfile
+
+    try:
+        user = UserProfile.objects.get(id=user_id)
+
+        if user.email_verified:
+            logger.info("email_already_verified_skipping", user_id=user_id)
+            return {"status": "skipped", "reason": "already_verified", "user_id": user_id}
+
+        if not user.email_confirmation_token:
+            logger.warning("no_confirmation_token", user_id=user_id)
+            return {"status": "error", "reason": "no_token", "user_id": user_id}
+
+        base_url = getattr(django_settings, "PORTAL_BASE_URL", "https://3-86-57-105.sslip.io")
+        confirm_url = f"{base_url}/confirmar-email/{user.email_confirmation_token}"
+
+        subject = "[CapyVagas] Confirme seu e-mail institucional"
+        body_lines = [
+            f"Olá, {user.ra or 'aluno'}!",
+            "",
+            "Você solicitou acesso ao CapyVagas, o assistente de vagas da UTFPR.",
+            "",
+            f"Seu RA: {user.ra}",
+            "",
+            "Para confirmar seu e-mail e ativar o acesso, clique no link abaixo:",
+            "",
+            confirm_url,
+            "",
+            "Este link expira em 24 horas.",
+            "",
+            "Se você não solicitou este acesso, ignore este e-mail.",
+            "",
+            "Atenciosamente,",
+            "Equipe CapyVagas UTFPR",
+        ]
+        message_body = "\n".join(body_lines)
+
+        send_mail(
+            subject=subject,
+            message=message_body,
+            from_email=django_settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[user.email],
+            fail_silently=False,
+        )
+
+        logger.info(
+            "confirmation_email_sent",
+            user_id=user_id,
+            email=user.email,
+            ra=user.ra,
+        )
+
+        return {"status": "sent", "user_id": user_id, "email": user.email}
+
+    except UserProfile.DoesNotExist:
+        logger.error("user_not_found_for_confirmation", user_id=user_id)
+        return {"status": "error", "reason": "user_not_found", "user_id": user_id}
+    except Exception as exc:
+        logger.error(
+            "confirmation_email_failed",
+            user_id=user_id,
+            error=str(exc),
+            exc_info=True,
+        )
+        raise self.retry(exc=exc)
