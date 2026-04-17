@@ -49,7 +49,7 @@ class JobSearchHandler(BaseHandler):
             detalhes.append(f"{course.duration} períodos")
 
         detalhe_str = f" ({' · '.join(detalhes)})" if detalhes else ""
-        descricao = f" – {course.description}" if getattr(course, "description", None) else ""
+        descricao = f" - {course.description}" if getattr(course, "description", None) else ""
 
         return f"*{index + 1}*) {course.name}{detalhe_str}{descricao}"
 

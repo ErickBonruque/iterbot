@@ -163,7 +163,7 @@ class TestAttemptReconnect:
         """STAB-02: Backoff deve ser 30s, 60s entre tentativas (não após a última)."""
         from apps.bot.tasks import RECONNECT_BACKOFF
 
-        assert RECONNECT_BACKOFF == [30, 60, 120]
+        assert [30, 60, 120] == RECONNECT_BACKOFF
 
     @patch("apps.bot.tasks.time.sleep")
     def test_attempt_reconnect_returns_true_on_first_success(self, mock_sleep):

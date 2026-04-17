@@ -23,7 +23,6 @@ def save_user_profile(sender, instance, **kwargs):
     """
     Sincroniza e-mail entre User e UserProfile se profile existir.
     """
-    if hasattr(instance, "profile"):
-        if instance.profile.email != instance.email:
-            instance.profile.email = instance.email
-            instance.profile.save()
+    if hasattr(instance, "profile") and instance.profile.email != instance.email:
+        instance.profile.email = instance.email
+        instance.profile.save()

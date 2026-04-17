@@ -341,4 +341,4 @@ def send_confirmation_email(self, user_id: int) -> dict:
             error=str(exc),
             exc_info=True,
         )
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc) from exc

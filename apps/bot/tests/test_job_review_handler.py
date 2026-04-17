@@ -3,7 +3,7 @@ from unittest.mock import MagicMock, patch
 from django.test import TestCase
 
 from apps.bot.services import BotService
-from apps.courses.models import Course, SearchTerm
+from apps.courses.models import Course
 from apps.users.models import UserProfile
 
 

@@ -110,9 +110,8 @@ class BotService:
             return
 
         # --- STATE MACHINE ---
-        if user.current_action:
-            if self._handle_pending_action(user, chat_id, text):
-                return
+        if user.current_action and self._handle_pending_action(user, chat_id, text):
+            return
 
         # --- MAIN MENU COMMANDS ---
         self._handle_main_menu_command(user, chat_id, text)

@@ -1,4 +1,4 @@
-from waha_bot.settings import *
+from waha_bot.settings import *  # noqa: F403 - arquivo de configurações de teste herda todas as settings
 
 CACHES = {
     "default": {

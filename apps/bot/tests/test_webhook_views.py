@@ -17,8 +17,8 @@ class WebhookViewTests(TestCase):
         }
 
     @patch("apps.bot.views.BotService")
-    def test_post_valid_message_returns_200(self, MockBotService):
-        MockBotService.return_value.process_message.return_value = None
+    def test_post_valid_message_returns_200(self, mock_bot_service):  # - mock convention
+        mock_bot_service.return_value.process_message.return_value = None
         response = self.client.post(
             "/webhook/",
             data=json.dumps(self.valid_payload),
@@ -27,16 +27,16 @@ class WebhookViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
 
     @patch("apps.bot.views.BotService")
-    def test_post_from_me_true_does_not_call_process_message(self, MockBotService):
+    def test_post_from_me_true_does_not_call_process_message(self, mock_bot_service):
         payload = dict(self.valid_payload)
         payload["payload"] = dict(payload["payload"])
         payload["payload"]["fromMe"] = True
-        response = self.client.post(
+        self.client.post(
             "/webhook/",
             data=json.dumps(payload),
             content_type="application/json",
         )
-        MockBotService.return_value.process_message.assert_not_called()
+        mock_bot_service.return_value.process_message.assert_not_called()
 
     def test_get_request_returns_405(self):
         response = self.client.get("/webhook/")
@@ -50,7 +50,7 @@ class WebhookViewEventFilterTests(TestCase):
         self.client = Client()
 
     @patch("apps.bot.views.BotService")
-    def test_post_non_message_event_does_not_call_process_message(self, MockBotService):
+    def test_post_non_message_event_does_not_call_process_message(self, mock_bot_service):
         """Evento que não contém 'message' não deve chamar BotService.process_message."""
         payload = {
             "event": "session.status",
@@ -66,7 +66,7 @@ class WebhookViewEventFilterTests(TestCase):
             content_type="application/json",
         )
         self.assertEqual(response.status_code, 200)
-        MockBotService.return_value.process_message.assert_not_called()
+        mock_bot_service.return_value.process_message.assert_not_called()
 
     def test_post_invalid_json_returns_error(self):
         """Requisição com body inválido (não-JSON) deve retornar status de erro."""
@@ -78,7 +78,7 @@ class WebhookViewEventFilterTests(TestCase):
         self.assertNotEqual(response.status_code, 200)
 
     @patch("apps.bot.views.BotService")
-    def test_post_empty_body_does_not_call_process_message(self, MockBotService):
+    def test_post_empty_body_does_not_call_process_message(self, mock_bot_service):
         """Mensagem com body vazio não deve chamar BotService.process_message."""
         payload = {
             "event": "message.any",
@@ -94,4 +94,4 @@ class WebhookViewEventFilterTests(TestCase):
             content_type="application/json",
         )
         self.assertEqual(response.status_code, 200)
-        MockBotService.return_value.process_message.assert_not_called()
+        mock_bot_service.return_value.process_message.assert_not_called()

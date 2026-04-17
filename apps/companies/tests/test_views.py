@@ -350,7 +350,7 @@ class TestJobDeleteView(TestCase):
 
     def test_get_confirmation_page_no_company(self):
         """Usuario sem company recebe 403."""
-        user_no_company = User.objects.create_user(
+        User.objects.create_user(
             username="semempresa", email="semempresa@test.com", password="senha123"
         )
         self.client.login(username="semempresa", password="senha123")
@@ -383,7 +383,7 @@ class TestJobDeleteView(TestCase):
 
     def test_post_delete_no_company(self):
         """Usuario sem company recebe 403 no POST."""
-        user_no_company = User.objects.create_user(
+        User.objects.create_user(
             username="semempresa2", email="semempresa2@test.com", password="senha123"
         )
         self.client.login(username="semempresa2", password="senha123")
