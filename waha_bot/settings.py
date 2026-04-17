@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     "django_filters",
     "allauth",
     "allauth.account",
+    "django_ses",
     # Local Apps
     "apps.core",
     "apps.users",
@@ -139,13 +140,22 @@ if not DEBUG and (not PORTAL_BASE_URL or not PORTAL_BASE_URL.startswith(("http:/
         "PORTAL_BASE_URL must be set with http:// or https:// when DEBUG=False"
     )
 
-# Email Configuration (dev usa console, prod usa variáveis de ambiente)
-EMAIL_BACKEND = settings.email.backend
-EMAIL_HOST = settings.email.host
-EMAIL_PORT = settings.email.port
-EMAIL_USE_TLS = settings.email.use_tls
-EMAIL_HOST_USER = settings.email.user
-EMAIL_HOST_PASSWORD = settings.email.password
+# Email Configuration (dev usa console, prod usa SES via AWS)
+if settings.aws.access_key_id and settings.aws.secret_access_key:
+    # Use AWS SES when AWS credentials are available
+    EMAIL_BACKEND = "django_ses.SESBackend"
+    AWS_SES_REGION_NAME = settings.aws.default_region
+    AWS_ACCESS_KEY_ID = settings.aws.access_key_id
+    AWS_SECRET_ACCESS_KEY = settings.aws.secret_access_key
+else:
+    # Fallback to console (dev) or SMTP (prod with SMTP credentials)
+    EMAIL_BACKEND = settings.email.backend
+    EMAIL_HOST = settings.email.host
+    EMAIL_PORT = settings.email.port
+    EMAIL_USE_TLS = settings.email.use_tls
+    EMAIL_HOST_USER = settings.email.user
+    EMAIL_HOST_PASSWORD = settings.email.password
+
 DEFAULT_FROM_EMAIL = settings.email.from_email
 
 

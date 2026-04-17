@@ -28,6 +28,7 @@ cryptography = "^41.0.7"
 python-statemachine = "^2.1.2"
 validate-docbr = "^1.10.0"
 django-unfold = "^0.90.0"
+django-ses = "^4.0.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.4.3"
