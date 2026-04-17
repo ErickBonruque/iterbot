@@ -32,15 +32,17 @@ mkdir -p "$USERS_DIR"
 
 generate_hash() {
     local password="$1"
+    local username="$2"
     if command -v htpasswd &>/dev/null; then
-        htpasswd -nbB "$2" "$password"
+        htpasswd -nbB "$username" "$password"
     elif command -v python3 &>/dev/null; then
-        python3 -c "
-import bcrypt
-password = b'$password'
+        python3 -c '
+import bcrypt, sys
+password = sys.argv[1].encode()
+username = sys.argv[2]
 hashed = bcrypt.hashpw(password, bcrypt.gensalt(rounds=12))
-print('$2' + hashed.decode()[4:])
-"
+print(f"{username}:{hashed.decode()}")
+' "$password" "$username"
     else
         echo "ERROR: Neither htpasswd nor python3 with bcrypt available" >&2
         exit 1

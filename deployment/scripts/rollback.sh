@@ -11,8 +11,8 @@
 set -euo pipefail
 
 PROJECT_DIR="${PROJECT_DIR:-/home/ubuntu/iterbot}"
-ROLLBACK_COMMIT="${2:-HEAD^}"
 DOMAIN="${DOMAIN:-localhost}"
+ROLLBACK_COMMIT=""
 
 # Parse options
 while [[ $# -gt 0 ]]; do
@@ -29,8 +29,8 @@ while [[ $# -gt 0 ]]; do
 done
 
 # Default to HEAD^ if no commit specified
-if [ "$ROLLBACK_COMMIT" = "HEAD^" ]; then
-    ROLLBACK_COMMIT=$(git -C "$PROJECT_DIR" rev-parse HEAD^ 2>/dev/null || echo "HEAD^")
+if [ -z "$ROLLBACK_COMMIT" ]; then
+    ROLLBACK_COMMIT="HEAD^"
 fi
 
 echo "============================================"
@@ -57,9 +57,10 @@ echo "Recent commits:"
 git log --oneline -5
 echo ""
 
-# Checkout rollback commit
-echo "Checking out ${TARGET_COMMIT}..."
-git checkout "$ROLLBACK_COMMIT"
+# Checkout rollback commit (create temp branch to avoid detached HEAD)
+ROLLBACK_BRANCH="rollback-$(date +%Y%m%d-%H%M%S)"
+echo "Checking out ${TARGET_COMMIT} as branch ${ROLLBACK_BRANCH}..."
+git checkout -b "$ROLLBACK_BRANCH" "$ROLLBACK_COMMIT"
 
 # Rebuild containers
 echo ""

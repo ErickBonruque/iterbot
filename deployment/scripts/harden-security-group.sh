@@ -25,9 +25,10 @@ echo -e "${BLUE}  IterBot - Harden Security Group${NC}"
 echo -e "${BLUE}============================================${NC}"
 echo ""
 
-# Auto-detect EC2 instance ID from metadata endpoint
+# Auto-detect EC2 instance ID from IMDSv2 metadata endpoint
 echo -e "${BLUE}Detecting EC2 instance ID...${NC}"
-INSTANCE_ID=$(curl -s --connect-timeout 5 http://169.254.169.254/latest/meta-data/instance-id 2>/dev/null || true)
+IMDS_TOKEN=$(curl -s -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 30" 2>/dev/null || true)
+INSTANCE_ID=$(curl -s -H "X-aws-ec2-metadata-token: $IMDS_TOKEN" http://169.254.169.254/latest/meta-data/instance-id 2>/dev/null || true)
 
 if [ -z "$INSTANCE_ID" ]; then
     echo -e "${RED}ERROR: Could not detect instance ID from metadata endpoint.${NC}"

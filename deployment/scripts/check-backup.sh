@@ -32,7 +32,7 @@ HOSTNAME_STR=$(hostname 2>/dev/null || echo "unknown")
 echo "[$(date -Iseconds)] Checking backup for ${TODAY}..."
 
 # Check for today's backup in S3
-BACKUP_LIST=$(${AWS_BIN} s3 ls "s3://${S3_BUCKET}/${S3_PREFIX}/${TODAY}" 2>/dev/null || echo "")
+BACKUP_LIST=$(${AWS_BIN} s3 ls "s3://${S3_BUCKET}/${S3_PREFIX}/" 2>/dev/null | grep "${TODAY}" || echo "")
 
 if [ -z "$BACKUP_LIST" ]; then
     echo "[ALERT] No backup found for today (${TODAY}) in s3://${S3_BUCKET}/${S3_PREFIX}/"

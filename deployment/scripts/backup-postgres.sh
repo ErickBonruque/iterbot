@@ -21,7 +21,15 @@ AWS_BIN=$(command -v aws || echo "/usr/local/bin/aws")
 
 # Carregar variaveis do .env se disponivel
 if [ -f "${PROJECT_DIR}/.env" ]; then
-    export $(grep -v '^#' "${PROJECT_DIR}/.env" | grep -E '^(POSTGRES_USER|POSTGRES_DB|S3_BACKUP_BUCKET|S3_BACKUP_PREFIX)=' | xargs)
+    set -a
+    while IFS='=' read -r key value; do
+        case "$key" in
+            POSTGRES_USER|POSTGRES_DB|S3_BACKUP_BUCKET|S3_BACKUP_PREFIX)
+                export "$key=$value"
+                ;;
+        esac
+    done < <(grep -v '^#' "${PROJECT_DIR}/.env" | grep -E '^(POSTGRES_USER|POSTGRES_DB|S3_BACKUP_BUCKET|S3_BACKUP_PREFIX)=')
+    set +a
 fi
 
 POSTGRES_USER="${POSTGRES_USER:-iterbot_user}"

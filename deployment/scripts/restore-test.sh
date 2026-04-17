@@ -92,7 +92,7 @@ ${DOCKER_BIN} run -d --name "$CONTAINER_NAME" \
     -e POSTGRES_DB="${DB_NAME}" \
     -e POSTGRES_USER="${DB_USER}" \
     -e POSTGRES_PASSWORD="${DB_PASSWORD}" \
-    -p "${DB_PORT}:5432" \
+    -p "127.0.0.1:${DB_PORT}:5432" \
     postgres:15-alpine
 
 # Wait for PostgreSQL to be ready
