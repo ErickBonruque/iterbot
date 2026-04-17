@@ -1,4 +1,4 @@
-# Security Groups - CapyVagas EC2
+# Security Groups - IterBot EC2
 
 ## Regras Inbound (Ingress)
 

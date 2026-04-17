@@ -2,7 +2,7 @@
   "Version": "2012-10-17",
   "Statement": [
     {
-      "Sid": "CapyVagasBackupS3",
+      "Sid": "IterbotBackupS3",
       "Effect": "Allow",
       "Action": [
         "s3:PutObject",
@@ -10,8 +10,8 @@
         "s3:ListBucket"
       ],
       "Resource": [
-        "arn:aws:s3:::capyvagas-backups",
-        "arn:aws:s3:::capyvagas-backups/*"
+        "arn:aws:s3:::iterbot-backups",
+        "arn:aws:s3:::iterbot-backups/*"
       ]
     }
   ]

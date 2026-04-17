@@ -12,7 +12,7 @@ Este guia descreve como configurar o Amazon Simple Email Service (SES) para envi
 
 1. Acesse o **IAM Console** da AWS
 2. Vá em **Users** → **Add user**
-3. Nome: `capyvagas-ses-smtp`
+3. Nome: `iterbot-ses-smtp`
 4. Marque **Programmatic access**
 5. Em **Permissions**, selecione **Attach existing policies directly**
 6. Anexe a policy: `AmazonSESFullAccess`
@@ -33,7 +33,7 @@ Este guia descreve como configurar o Amazon Simple Email Service (SES) para envi
 
 1. Acesse o **Amazon SES Console**
 2. Vá em **Domains** → **Verify a New Domain**
-3. Digite: `capyvagas.utfpr.edu.br`
+3. Digite: `iterbot.utfpr.edu.br`
 4. Marque **Generate DKIM Settings**
 5. Copie os registros DNS fornecidos
 6. Adicione os registros TXT e CNAME no gerenciador de DNS do domínio
@@ -48,7 +48,7 @@ Por padrão, contas SES ficam em **sandbox mode**, que permite enviar apenas par
 3. Clique em **Request Production Access**
 4. Preencha o formulário:
    - **Mail Type**: Transactional
-   - **Website URL**: URL do sistema CapyVagas
+   - **Website URL**: URL do sistema IterBot
    - **Use case description**:
      ```
      Sistema acadêmico para divulgação de vagas de estágio da UTFPR.
@@ -123,7 +123,7 @@ docker-compose exec web python manage.py shell
 from django.core.mail import send_mail
 
 send_mail(
-    'Teste CapyVagas',
+    'Teste IterBot',
     'E-mail de teste do sistema.',
     'bonrqueruck@gmail.com',
     ['seu.email@alunos.utfpr.edu.br'],

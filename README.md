@@ -1,4 +1,4 @@
-# CapyVagas-UTFPR
+# IterBot-UTFPR
 
 > **Assistente de WhatsApp para estudantes da UTFPR**
 > Projeto de Iniciação Científica - Campus Santa Helena
@@ -18,7 +18,7 @@ Bot de WhatsApp integrado ao WAHA com dashboard administrativo em Django/DRF. Ar
 ## 📁 Estrutura do Projeto
 
 ```
-CapyVagas-UTFPR/
+IterBot-UTFPR/
 ├── apps/                       # Aplicações Django por domínio
 │   ├── bot/                    # Lógica do bot e handlers
 │   ├── courses/                # Gerenciamento de cursos
@@ -56,8 +56,8 @@ CapyVagas-UTFPR/
 ### 1. Clone o repositório
 
 ```bash
-git clone https://github.com/ErickBonruque/CapyVagas-UTFPR.git
-cd CapyVagas-UTFPR
+git clone https://github.com/ErickBonruque/IterBot-UTFPR.git
+cd IterBot-UTFPR
 ```
 
 ### 2. Configure as credenciais locais
@@ -133,7 +133,7 @@ poetry install
 poetry shell
 
 # Configurar variáveis
-export DATABASE_URL="postgresql://user:pass@localhost:5432/capyvagas"
+export DATABASE_URL="postgresql://user:pass@localhost:5432/iterbot"
 export REDIS_URL="redis://localhost:6379/0"
 
 # Executar migrações

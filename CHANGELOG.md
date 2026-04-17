@@ -114,7 +114,7 @@ Resolver definitivamente o problema de autenticação do WAHA e refatorar comple
 ### Nova Estrutura
 
 ```
-CapyVagas-UTFPR/
+IterBot-UTFPR/
 ├── deployment/              # ✨ NOVO
 │   ├── scripts/            # Scripts de automação
 │   │   ├── setup_secrets.sh

@@ -1,4 +1,4 @@
-# 🚀 CapyVagas - Guia de Início Rápido
+# 🚀 IterBot - Guia de Início Rápido
 
 ## Configuração em 3 Passos
 
@@ -6,8 +6,8 @@
 
 ```bash
 # Clone o repositório
-git clone https://github.com/ErickBonruque/CapyVagas-UTFPR.git
-cd CapyVagas-UTFPR
+git clone https://github.com/ErickBonruque/IterBot-UTFPR.git
+cd IterBot-UTFPR
 
 # Configure secrets e valide ambiente
 make setup
@@ -54,7 +54,7 @@ make stop
 1. Acesse: http://localhost:3000/dashboard/
 2. Faça login com as credenciais do `.env`
 3. Escaneie o QR Code com o WhatsApp
-4. Pronto! O WhatsApp estará conectado ao CapyVagas
+4. Pronto! O WhatsApp estará conectado ao IterBot
 
 ## 📊 Monitoramento
 

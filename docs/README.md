@@ -1,6 +1,6 @@
-# Documentacao - CapyVagas UTFPR
+# Documentacao - IterBot UTFPR
 
-Bem-vindo a documentacao do projeto CapyVagas UTFPR.
+Bem-vindo a documentacao do projeto IterBot UTFPR.
 
 ## Estrutura
 

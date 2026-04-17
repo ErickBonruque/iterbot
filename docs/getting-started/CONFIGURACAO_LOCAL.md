@@ -1,6 +1,6 @@
-# 🚀 Configuração Local - CapyVagas
+# 🚀 Configuração Local - IterBot
 
-Este guia explica como configurar o CapyVagas em ambiente de desenvolvimento local com credenciais seguras.
+Este guia explica como configurar o IterBot em ambiente de desenvolvimento local com credenciais seguras.
 
 ## ⚡ Configuração Rápida
 
@@ -93,7 +93,7 @@ openssl rand -base64 12
 ## 📁 Estrutura de Arquivos
 
 ```
-CapyVagas-UTFPR/
+IterBot-UTFPR/
 ├── .env                 # 🔐 Credenciais locais (não commitar)
 ├── .env.example         # 📝 Template de configuração
 ├── .gitignore           # 🚫 Arquivos ignorados pelo Git

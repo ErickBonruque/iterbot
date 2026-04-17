@@ -1,4 +1,4 @@
-# Backup PostgreSQL para S3 - CapyVagas
+# Backup PostgreSQL para S3 - IterBot
 
 ## Pre-requisitos
 
@@ -9,7 +9,7 @@
 ## 1. Criar Bucket S3
 
 ```bash
-aws s3 mb s3://capyvagas-backups
+aws s3 mb s3://iterbot-backups
 ```
 
 ## 2. Configurar Lifecycle Policy
@@ -18,7 +18,7 @@ A lifecycle policy expira backups apos 28 dias no prefixo `weekly/`:
 
 ```bash
 aws s3api put-bucket-lifecycle-configuration \
-  --bucket capyvagas-backups \
+  --bucket iterbot-backups \
   --lifecycle-configuration file://docs/deploy/s3-lifecycle.json
 ```
 
@@ -32,7 +32,7 @@ Arquivo `s3-lifecycle.json` incluso neste diretorio.
 
 ```bash
 aws iam create-policy \
-  --policy-name CapyVagasBackupS3 \
+  --policy-name IterBotBackupS3 \
   --policy-document file://docs/deploy/iam-backup-policy.json
 ```
 
@@ -41,7 +41,7 @@ aws iam create-policy \
 ```bash
 aws ec2 associate-iam-instance-profile \
   --instance-id i-XXXXXXXX \
-  --iam-instance-profile Name=CapyVagasBackupRole
+  --iam-instance-profile Name=IterBotBackupRole
 ```
 
 Arquivo `iam-backup-policy.json` incluso neste diretorio com permissoes minimas:
@@ -54,7 +54,7 @@ Arquivo `iam-backup-policy.json` incluso neste diretorio com permissoes minimas:
 O script `setup-ec2.sh` ja configura automaticamente o crontab:
 
 ```
-0 2 * * 0 /bin/bash /home/ubuntu/waha_capyvaga/deployment/scripts/backup-postgres.sh >> /var/log/capyvagas-backup.log 2>&1
+0 2 * * 0 /bin/bash /home/ubuntu/waha_capyvaga/deployment/scripts/backup-postgres.sh >> /var/log/iterbot-backup.log 2>&1
 ```
 
 Para configurar manualmente:
@@ -77,7 +77,7 @@ crontab -e
 ./deployment/scripts/restore-postgres.sh
 
 # Restaurar backup especifico
-./deployment/scripts/restore-postgres.sh s3://capyvagas-backups/weekly/capyvagas_backup_20260413_020000.sql.gz
+./deployment/scripts/restore-postgres.sh s3://iterbot-backups/weekly/iterbot_backup_20260413_020000.sql.gz
 ```
 
 O script de restauracao pede confirmacao antes de sobrescrever o banco.
@@ -86,18 +86,18 @@ O script de restauracao pede confirmacao antes de sobrescrever o banco.
 
 ```bash
 # Verificar ultimo backup no S3
-aws s3 ls s3://capyvagas-backups/weekly/ --human-readable
+aws s3 ls s3://iterbot-backups/weekly/ --human-readable
 
 # Verificar log do crontab
-tail -20 /var/log/capyvagas-backup.log
+tail -20 /var/log/iterbot-backup.log
 ```
 
 ## Variaveis de Ambiente
 
 | Variavel | Padrao | Descricao |
 |----------|--------|-----------|
-| `S3_BACKUP_BUCKET` | `capyvagas-backups` | Nome do bucket S3 |
+| `S3_BACKUP_BUCKET` | `iterbot-backups` | Nome do bucket S3 |
 | `S3_BACKUP_PREFIX` | `weekly` | Prefixo dentro do bucket |
 | `PROJECT_DIR` | `/home/ubuntu/waha_capyvaga` | Diretorio do projeto na EC2 |
-| `POSTGRES_USER` | `capyvagas_user` | Usuario do PostgreSQL |
-| `POSTGRES_DB` | `capyvagas` | Nome do banco de dados |
+| `POSTGRES_USER` | `iterbot_user` | Usuario do PostgreSQL |
+| `POSTGRES_DB` | `iterbot` | Nome do banco de dados |

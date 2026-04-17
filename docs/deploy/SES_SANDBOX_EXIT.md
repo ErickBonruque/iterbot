@@ -49,7 +49,7 @@ Checklist bloqueante antes do submit:
 
 1. Console AWS -> SES -> SMTP settings
 2. Clicar "Create SMTP credentials"
-3. Nome do usuario IAM: `capyvagas-ses-smtp`
+3. Nome do usuario IAM: `iterbot-ses-smtp`
 4. Anotar o SMTP username e password gerados
 5. Atualizar na EC2:
    - `secrets/email_password.txt` com o SMTP password
@@ -62,7 +62,7 @@ Na EC2, com a aplicacao rodando:
 ```bash
 docker compose exec backend python manage.py shell -c "
 from django.core.mail import send_mail
-send_mail('Teste SES', 'Email de teste CapyVagas', None, ['seu-email@gmail.com'])
+send_mail('Teste SES', 'Email de teste IterBot', None, ['seu-email@gmail.com'])
 print('Email enviado!')
 "
 ```

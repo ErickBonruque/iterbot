@@ -679,7 +679,7 @@ class Command(BaseCommand):
 
 ## 👨‍💻 Desenvolvido por
 
-Sistema de Dashboard profissional para o projeto WAHA Capyvaga - Bot de vagas integrado com UTFPR.
+Sistema de Dashboard profissional para o projeto WAHA IterBot - Bot de vagas integrado com UTFPR.
 
 **Data:** Novembro 2025
 **Versão:** 1.0.0

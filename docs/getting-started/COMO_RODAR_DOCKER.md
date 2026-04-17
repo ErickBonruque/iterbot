@@ -1,6 +1,6 @@
-# 🐳 Como Rodar o CapyVagas com Docker
+# 🐳 Como Rodar o IterBot com Docker
 
-Guia completo para executar o projeto CapyVagas-UTFPR usando Docker e Docker Compose.
+Guia completo para executar o projeto IterBot-UTFPR usando Docker e Docker Compose.
 
 ## 📋 Pré-requisitos
 
@@ -23,8 +23,8 @@ docker-compose --version
 ### 1. Clone o Repositório
 
 ```bash
-git clone https://github.com/ErickBonruque/CapyVagas-UTFPR.git
-cd CapyVagas-UTFPR
+git clone https://github.com/ErickBonruque/IterBot-UTFPR.git
+cd IterBot-UTFPR
 ```
 
 ### 2. Configure as Variáveis de Ambiente
@@ -124,11 +124,11 @@ Você deve ver algo assim:
 
 ```
 NAME                          STATUS
-capyvagas-utfpr-backend-1     Up (healthy)
-capyvagas-utfpr-db-1          Up (healthy)
-capyvagas-utfpr-redis-1       Up (healthy)
-capyvagas-utfpr-waha-1        Up
-capyvagas-utfpr-traefik-1     Up
+iterbot-utfpr-backend-1     Up (healthy)
+iterbot-utfpr-db-1          Up (healthy)
+iterbot-utfpr-redis-1       Up (healthy)
+iterbot-utfpr-waha-1        Up
+iterbot-utfpr-traefik-1     Up
 ```
 
 ### 7. Execute as Migrações do Banco de Dados
@@ -312,10 +312,10 @@ docker image prune -a
 
 ```bash
 # Criar backup
-docker-compose exec db pg_dump -U capyvagas_user capyvagas > backup.sql
+docker-compose exec db pg_dump -U iterbot_user iterbot > backup.sql
 
 # Restaurar backup
-docker-compose exec -T db psql -U capyvagas_user capyvagas < backup.sql
+docker-compose exec -T db psql -U iterbot_user iterbot < backup.sql
 ```
 
 ---
@@ -439,10 +439,10 @@ BACKUP_DIR="/backups"
 DATE=$(date +%Y%m%d_%H%M%S)
 
 # Backup do banco
-docker-compose exec -T db pg_dump -U capyvagas_user capyvagas > "$BACKUP_DIR/db_$DATE.sql"
+docker-compose exec -T db pg_dump -U iterbot_user iterbot > "$BACKUP_DIR/db_$DATE.sql"
 
 # Backup dos volumes
-docker run --rm -v capyvagas-utfpr_postgres_data:/data -v $BACKUP_DIR:/backup alpine tar czf /backup/postgres_data_$DATE.tar.gz /data
+docker run --rm -v iterbot-utfpr_postgres_data:/data -v $BACKUP_DIR:/backup alpine tar czf /backup/postgres_data_$DATE.tar.gz /data
 
 # Manter apenas últimos 7 dias
 find $BACKUP_DIR -name "*.sql" -mtime +7 -delete
@@ -467,7 +467,7 @@ Configure no cron:
 docker stats
 
 # Apenas backend
-docker stats capyvagas-utfpr-backend-1
+docker stats iterbot-utfpr-backend-1
 ```
 
 ### Logs Estruturados

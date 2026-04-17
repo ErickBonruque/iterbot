@@ -1,6 +1,6 @@
-# CapyVagas - Guia Completo de Deploy na AWS EC2
+# IterBot - Guia Completo de Deploy na AWS EC2
 
-Este guia reune todos os passos para colocar o CapyVagas em producao na AWS.
+Este guia reune todos os passos para colocar o IterBot em producao na AWS.
 
 ## 1. Pre-requisitos AWS
 
@@ -8,7 +8,7 @@ Este guia reune todos os passos para colocar o CapyVagas em producao na AWS.
 - Instancia EC2 **t3.small** (Ubuntu 22.04 LTS) com chave SSH (.pem)
 - Security group configurado (ver [SECURITY_GROUPS.md](./SECURITY_GROUPS.md))
 - IAM Role com policy de S3 para backups (ver [BACKUP_S3.md](./BACKUP_S3.md))
-- Bucket S3 criado para backups: `aws s3 mb s3://capyvagas-backups`
+- Bucket S3 criado para backups: `aws s3 mb s3://iterbot-backups`
 
 ## 2. Provisionamento EC2
 
@@ -17,7 +17,7 @@ Este guia reune todos os passos para colocar o CapyVagas em producao na AWS.
 ssh -i sua-chave.pem ubuntu@SEU-IP-EC2
 
 # Clonar repositorio (ou o setup-ec2.sh faz isso)
-git clone https://github.com/ErickBonruque/CapyVagas-UTFPR.git /home/ubuntu/waha_capyvaga
+git clone https://github.com/ErickBonruque/IterBot-UTFPR.git /home/ubuntu/waha_capyvaga
 cd /home/ubuntu/waha_capyvaga
 
 # Executar script de provisionamento
@@ -111,7 +111,7 @@ Siga o guia completo em [SES_SANDBOX_EXIT.md](./SES_SANDBOX_EXIT.md):
 ./deployment/scripts/backup-postgres.sh
 
 # Verificar no S3
-aws s3 ls s3://capyvagas-backups/weekly/ --human-readable
+aws s3 ls s3://iterbot-backups/weekly/ --human-readable
 ```
 
 O crontab ja esta configurado para backup semanal (domingo 02:00).
@@ -123,9 +123,9 @@ Detalhes completos em [BACKUP_S3.md](./BACKUP_S3.md).
 - [ ] HTTPS funcional (`curl https://DOMAIN`)
 - [ ] HTTP redireciona para HTTPS (`curl -I http://DOMAIN`)
 - [ ] GitHub Actions deploy funcional (push em main)
-- [ ] Backup S3 testado (`aws s3 ls s3://capyvagas-backups/weekly/`)
+- [ ] Backup S3 testado (`aws s3 ls s3://iterbot-backups/weekly/`)
 - [ ] SES fora do sandbox (ou em processo de aprovacao)
-- [ ] Log rotation configurado (`docker inspect capyvagas_backend | grep max-size`)
+- [ ] Log rotation configurado (`docker inspect iterbot_backend | grep max-size`)
 - [ ] Security groups corretos (portas 22, 80, 443 apenas)
 
 ## Documentacao Relacionada

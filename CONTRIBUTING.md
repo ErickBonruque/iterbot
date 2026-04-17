@@ -1,6 +1,6 @@
-# Contributing to CapyVagas UTFPR
+# Contributing to IterBot UTFPR
 
-Welcome! This guide covers how to contribute to the CapyVagas project.
+Welcome! This guide covers how to contribute to the IterBot project.
 
 ## Branch Conventions
 

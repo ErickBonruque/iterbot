@@ -1,8 +1,8 @@
-# Arquitetura do CapyVagas
+# Arquitetura do IterBot
 
 ## Visão Geral
 
-O CapyVagas é uma aplicação de microserviços construída com Django, PostgreSQL, Redis, WAHA e Traefik. A arquitetura foi projetada para ser escalável, segura e fácil de manter.
+O IterBot é uma aplicação de microserviços construída com Django, PostgreSQL, Redis, WAHA e Traefik. A arquitetura foi projetada para ser escalável, segura e fácil de manter.
 
 ## Componentes
 
