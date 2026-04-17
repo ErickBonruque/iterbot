@@ -1,257 +1,108 @@
+<!-- generated-by: gsd-doc-writer -->
+
 # IterBot-UTFPR
 
-> **Assistente de WhatsApp para estudantes da UTFPR**
-> Projeto de Iniciação Científica - Campus Santa Helena
+Assistente de WhatsApp para conectar estudantes da UTFPR com oportunidades de estágio e emprego — combina vagas online (via python-jobspy) com vagas locais cadastradas por empresas da região.
 
-Bot de WhatsApp integrado ao WAHA com dashboard administrativo em Django/DRF. Arquitetura refatorada para produção com foco em segurança, escalabilidade e observabilidade.
+## Instalação
 
-## 🌟 Características
-
-- ✅ **Seguro**: Criptografia de dados sensíveis, HTTPS com Let's Encrypt, Docker Secrets
-- ✅ **Escalável**: PostgreSQL, Redis, cache distribuído, arquitetura de microserviços
-- ✅ **Observável**: Logs estruturados, health checks, métricas em tempo real
-- ✅ **Robusto**: Restart policies, connection pooling, tratamento de erros
-- ✅ **Manutenível**: SOLID principles, type hints, documentação completa
-- ✅ **Testável**: Framework de testes, cobertura de código
-- ✅ **Autenticação Institucional**: Sistema de registro e login para alunos UTFPR via e-mail @alunos.utfpr.edu.br
-
-## 📁 Estrutura do Projeto
-
-```
-IterBot-UTFPR/
-├── apps/                       # Aplicações Django por domínio
-│   ├── bot/                    # Lógica do bot e handlers
-│   ├── courses/                # Gerenciamento de cursos
-│   ├── users/                  # Perfis de usuários
-│   ├── jobs/                   # Buscas e logs de vagas
-│   ├── dashboard/              # Interface administrativa
-│   └── core/                   # Funcionalidades compartilhadas
-├── config/                     # Configurações Django
-├── infra/                      # Infraestrutura e integrações
-│   ├── jobspy/                 # Integração JobSpy
-│   ├── waha/                   # Cliente WAHA
-│   ├── security/               # Criptografia e segurança
-│   └── traefik/                # Configuração Traefik
-├── docker/                     # Dockerfiles e scripts
-│   ├── django/                 # Backend Django
-│   └── waha/                   # Configuração WAHA
-├── deployment/                 # Scripts e configs de deploy
-│   ├── scripts/                # Scripts de automação
-│   └── configs/                # Configurações de produção
-├── docs/                       # Documentação
-│   ├── guides/                 # Guias de uso
-│   ├── architecture/           # Documentação de arquitetura
-│   └── troubleshooting/        # Solução de problemas
-├── secrets/                    # Docker secrets (não commitados)
-└── waha_bot/                   # Configuração Django
-```
-
-## 🚀 Início Rápido
-
-### Pré-requisitos
-
-- Docker e Docker Compose
-- Git
-
-### 1. Clone o repositório
+**Pré-requisitos:** Docker, Docker Compose e Git.
 
 ```bash
-git clone https://github.com/ErickBonruque/IterBot-UTFPR.git
-cd IterBot-UTFPR
+git clone git@github.com:ErickBonruque/CapyVagas-UTFPR.git
+cd CapyVagas-UTFPR
 ```
 
-### 2. Configure as credenciais locais
+## Início Rápido
+
+1. **Configurar credenciais locais:**
+
+   ```bash
+   ./scripts/setup-local.sh
+   ```
+   O script copia `.env.example` para `.env` e gera senhas aleatórias para os serviços.
+
+2. **Subir os serviços:**
+
+   ```bash
+   docker compose up -d
+   ```
+
+3. **Executar migrações e criar superusuário:**
+
+   ```bash
+   docker compose exec backend python manage.py migrate
+   docker compose exec backend python manage.py createsuperuser
+   ```
+
+4. **Acessar os serviços:**
+
+| Serviço | URL |
+    |---------|-----|
+    | Django Admin | http://localhost:8000/admin/ |
+    | WAHA Dashboard | http://localhost:3000/dashboard/ |
+    | Traefik | http://localhost:8080 |
+
+## Exemplos de Uso
+
+### Comandos Make mais usados
 
 ```bash
-# Opção 1: Script automático (recomendado)
-./scripts/setup-local.sh
-
-# Opção 2: Manual
-cp .env.example .env
-# Edite .env com suas credenciais
+make dev-install      # Instalar dependências com Poetry
+make start            # Subir todos os serviços
+make stop             # Parar serviços
+make health           # Verificar saúde dos serviços
+make logs             # Ver logs (todos os serviços)
+make logs-backend     # Ver logs do backend
+make test             # Rodar testes no container
+make lint             # Verificar lint com ruff
+make format           # Formatar código com ruff
+make ci-check         # Lint + format check + mypy
+make backup           # Backup do banco e secrets
 ```
 
-### 3. Inicie os serviços
+### Verificação de saúde dos serviços
 
 ```bash
-docker-compose up -d
+make health
 ```
+Verifica conectividade do Backend, WAHA, PostgreSQL e Redis.
 
-### 4. Execute as migrações
-
-```bash
-docker-compose exec backend python manage.py migrate
-docker-compose exec backend python manage.py createsuperuser
-```
-
-### 5. Acesse os serviços
-
-| Serviço | URL | Credenciais |
-|---------|-----|-------------|
-| **WAHA Dashboard** | http://localhost:3000/dashboard/ | Ver `.env` local |
-| **Backend Dashboard** | http://localhost:8000/dashboard/ | Ver `.env` local |
-| **Django Admin** | http://localhost:8000/admin/ | Ver `.env` local |
-| **Cadastro de Alunos** | http://localhost:8000/accounts/signup/ | E-mail @alunos.utfpr.edu.br |
-| **Login de Alunos** | http://localhost:8000/accounts/login/ | Após cadastro |
-| **API Docs** | http://localhost:8000/api/docs/ | - |
-| **WAHA Swagger** | http://localhost:3000/swagger | Ver `.env` local |
-| **Traefik Dashboard** | http://localhost:8080 | - |
-
-> ⚠️ **Importante**: As credenciais são configuradas no arquivo `.env` local. Execute `./scripts/setup-local.sh` para gerar credenciais seguras.
-
-## 📚 Documentação
-
-### Guias
-
-- **[Configuração Local](docs/getting-started/CONFIGURACAO_LOCAL.md)** - Configure o ambiente de desenvolvimento
-- **[Instalação Completa](docs/getting-started/COMO_RODAR_DOCKER.md)** - Guia detalhado de instalação
-- **[Credenciais](docs/development/CREDENCIAIS.md)** - Credenciais de acesso aos serviços
-- **[Dashboard](docs/development/DASHBOARD_DOCUMENTATION.md)** - Documentação do dashboard
-- **[AWS SES Setup](docs/development/AWS_SES_SETUP.md)** - Configuração de e-mail em produção
-
-### Troubleshooting
-
-- **[WAHA](docs/troubleshooting/WAHA_FIX_DOCUMENTATION.md)** - Solução de problemas do WAHA
-
-### Outros
-
-- **[Secrets](secrets/README.md)** - Como configurar Docker secrets
-- **[WAHA Docker](docker/waha/README.md)** - Configuração customizada do WAHA
-
-## 🔧 Desenvolvimento
-
-### Ambiente Local
+### Desenvolvimento local (sem Docker)
 
 ```bash
-# Instalar Poetry
-curl -sSL https://install.python-poetry.org | python3 -
-
-# Instalar dependências
-poetry install
-
-# Ativar ambiente virtual
+poetry install --all-extras
 poetry shell
-
-# Configurar variáveis
-export DATABASE_URL="postgresql://user:pass@localhost:5432/iterbot"
+export DATABASE_URL="postgresql://iterbot_user:senha@localhost:5432/iterbot"
 export REDIS_URL="redis://localhost:6379/0"
-
-# Executar migrações
 python manage.py migrate
-
-# Iniciar servidor
 python manage.py runserver
 ```
 
-### Testes
+## Estrutura do Projeto
 
-```bash
-# Executar todos os testes
-docker-compose exec backend pytest
-
-# Com cobertura
-docker-compose exec backend pytest --cov=apps --cov-report=html
-
-# Testes específicos
-docker-compose exec backend pytest apps/bot/tests/
+```
+apps/
+  bot/          # Bot WhatsApp: handlers, services, views, tasks
+  jobs/         # Vagas: models, tasks, validators
+  companies/    # Portal de empresas
+  dashboard/    # Dashboard admin + DRF API
+  users/        # Autenticação e perfis
+  courses/      # Cursos e termos de busca
+  core/         # TimeStampedModel, health checks
+infra/
+  waha/         # Cliente WAHA HTTP
+  jobspy/       # Serviço de busca de vagas
+  security/     # Criptografia + EncryptedCharField
+  traefik/      # Proxy reverso com TLS
+deployment/
+  scripts/      # setup-ec2, backup, smoke-check, rollback, etc.
 ```
 
-### Logs
+## Contribuindo
 
-```bash
-# Ver logs de todos os serviços
-docker-compose logs -f
+Veja o guia completo em [CONTRIBUTING.md](CONTRIBUTING.md) — inclui convenções de branches, commits (Conventional Commits via `cz commit`) e fluxo de PR.
 
-# Ver logs de um serviço específico
-docker-compose logs -f waha
-docker-compose logs -f backend
-```
+## Licença
 
-## 🔐 Segurança
-
-- **Docker Secrets**: Todas as credenciais sensíveis são armazenadas em Docker Secrets
-- **HTTPS**: Traefik com Let's Encrypt para certificados automáticos
-- **Criptografia**: Dados sensíveis criptografados no banco de dados
-- **Autenticação**: Sistema robusto com sessões seguras
-
-## 📊 Monitoramento
-
-### Health Checks
-
-```bash
-# Backend
-curl http://localhost:8000/health/
-
-# WAHA
-curl http://localhost:3000/health
-
-# Banco de dados
-docker-compose exec db pg_isready
-
-# Redis
-docker-compose exec redis redis-cli ping
-```
-
-## 🛠️ Troubleshooting
-
-### WAHA não inicia ou senha não funciona
-
-1. Verifique os logs:
-```bash
-docker-compose logs waha
-```
-
-2. Verifique se os secrets existem:
-```bash
-ls -la secrets/waha_*.txt
-cat secrets/waha_dashboard_password.txt
-```
-
-3. Recrie os secrets:
-```bash
-./deployment/scripts/setup_secrets.sh
-```
-
-4. Recrie o container:
-```bash
-docker-compose stop waha
-docker-compose rm -f waha
-docker-compose up -d waha
-```
-
-### Erro de conexão com banco de dados
-
-```bash
-# Verificar se o PostgreSQL está rodando
-docker-compose ps db
-
-# Ver logs
-docker-compose logs db
-
-# Recriar o banco
-docker-compose down
-docker-compose up -d db
-```
-
-## 🤝 Contribuindo
-
-1. Fork o projeto
-2. Crie uma branch para sua feature (`git checkout -b feature/AmazingFeature`)
-3. Commit suas mudanças (`git commit -m 'Add some AmazingFeature'`)
-4. Push para a branch (`git push origin feature/AmazingFeature`)
-5. Abra um Pull Request
-
-## 📝 Licença
-
-Este projeto é parte de uma Iniciação Científica da UTFPR Campus Santa Helena.
-
-## 👥 Autores
-
-- **Erick Bonruque** - Desenvolvedor Principal
-- **Orientação**: UTFPR Campus Santa Helena
-
-## 🙏 Agradecimentos
-
-- UTFPR Campus Santa Helena
-- Comunidade WAHA
-- Comunidade Django
+Projeto de Iniciação Científica da UTFPR Campus Santa Helena. Sem arquivo de licença definido no repositório.
