@@ -105,3 +105,8 @@ DURATION=$((END_TIME - START_TIME))
 
 echo "[$(date -Iseconds)] Backup concluido: s3://${S3_BUCKET}/${S3_PATH}"
 echo "  Tamanho: ${FILESIZE} bytes | Duracao: ${DURATION}s"
+
+# S3 lifecycle policy (apply once):
+# aws s3api put-bucket-lifecycle-configuration \
+#   --bucket "${S3_BUCKET}" \
+#   --lifecycle-configuration file://deployment/config/s3-lifecycle.json
