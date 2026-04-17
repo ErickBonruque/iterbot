@@ -105,6 +105,10 @@ class BotService:
             self.menu_handler.send_menu(user, chat_id)
             return
 
+        if user.current_action == "login_step_waiting_confirmation":
+            self.auth_handler.handle_login_waiting_confirmation(user, chat_id, text)
+            return
+
         # --- STATE MACHINE ---
         if user.current_action:
             if self._handle_pending_action(user, chat_id, text):

@@ -132,7 +132,7 @@ class AuthenticationHandler(BaseHandler):
 
     def handle_login_email(self, user: UserProfile, chat_id: str, text: str) -> bool:
         """
-        Handle email input and complete authentication.
+        Handle email input and initiate email confirmation flow.
 
         Args:
             user: User profile
@@ -171,18 +171,71 @@ class AuthenticationHandler(BaseHandler):
             self.reset_state(user)
             return False
 
-        self.auth_service.link_user(chat_id, ra, password, email)
-        self.reset_state(user)
+        linked_user = self.auth_service.link_user(chat_id, ra, password, email)
 
-        msg = self.get_text(
-            "login_success",
-            "✅ **Cadastro Confirmado!**\n\n"
-            "Agora você pode buscar vagas personalizadas para seu curso.\n\n"
-            "Escolha a opção 3 no menu.",
+        if linked_user:
+            user.current_action = "login_step_waiting_confirmation"
+            user.save(update_fields=["current_action", "last_activity"])
+
+            from apps.bot.tasks import send_confirmation_email
+
+            send_confirmation_email.delay(linked_user.id)
+
+            msg = self.get_text(
+                "login_waiting_confirmation",
+                "📧 *Confirmação de E-mail*\n\n"
+                "Enviamos um link de confirmação para:\n"
+                f"`{email}`\n\n"
+                "Clique no link para confirmar seu e-mail.\n"
+                "O link expira em 24 horas.\n\n"
+                "Após confirmar, você terá acesso ao bot.\n\n"
+                "Digite 'reenviar' se não recebeu o email.",
+            )
+            self.send_msg(user, chat_id, msg)
+            return True
+        else:
+            self.send_msg(user, chat_id, "❌ Erro ao processar. Por favor, comece novamente.")
+            self.reset_state(user)
+            return False
+
+    def handle_login_waiting_confirmation(self, user: UserProfile, chat_id: str, text: str) -> bool:
+        """
+        Handle waiting for email confirmation state.
+
+        Args:
+            user: User profile.
+            chat_id: WhatsApp chat ID.
+            text: User input (can be 'reenviar' to resend email).
+
+        Returns:
+            True if handled.
+        """
+        text_lower = text.strip().lower()
+
+        if text_lower == "reenviar":
+            if self.auth_service.resend_confirmation(chat_id):
+                self.send_msg(
+                    user,
+                    chat_id,
+                    "📧 E-mail de confirmação reenviado!\n\n"
+                    "Verifique sua caixa de entrada (e spam também).\n\n"
+                    "Digite 'menu' para voltar ao início.",
+                )
+            else:
+                self.send_msg(
+                    user,
+                    chat_id,
+                    "❌ Erro ao reenviar. Tente novamente ou digite 'menu' para voltar.",
+                )
+            return True
+
+        self.send_msg(
+            user,
+            chat_id,
+            "⏳ Aguardando confirmação de e-mail...\n\n"
+            "Clique no link enviado para seu email ou digite 'reenviar' para receber novamente.\n\n"
+            "Digite 'menu' para voltar ao início.",
         )
-        self.send_msg(user, chat_id, msg)
-
-        logger.info("user_authenticated", user_id=user.id, ra=ra, email=email)
         return True
 
     def handle_logout(self, user: UserProfile, chat_id: str) -> None:
@@ -243,6 +296,9 @@ class AuthenticationHandler(BaseHandler):
             return True
         elif action == "login_step_email":
             self.handle_login_email(user, chat_id, text)
+            return True
+        elif action == "login_step_waiting_confirmation":
+            self.handle_login_waiting_confirmation(user, chat_id, text)
             return True
 
         return False
