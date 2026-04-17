@@ -26,6 +26,19 @@ class UserProfile(TimeStampedModel):
     email = models.EmailField(
         unique=True, blank=True, null=True, help_text="E-mail do aluno (@alunos.utfpr.edu.br)"
     )
+    email_verified = models.BooleanField(
+        default=False, help_text="Indica se o email institucional foi confirmado via token"
+    )
+    email_confirmation_token = models.CharField(
+        max_length=64,
+        null=True,
+        blank=True,
+        unique=True,
+        help_text="Token UUID para confirmação de email",
+    )
+    email_confirmation_sent_at = models.DateTimeField(
+        null=True, blank=True, help_text="Data/hora do último envio de email de confirmação"
+    )
     password = models.CharField(
         max_length=128,
         blank=True,
