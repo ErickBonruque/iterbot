@@ -1,9 +1,7 @@
+import structlog
 from django.contrib.auth.decorators import login_required
-from django.http import HttpResponse
 from django.shortcuts import render
 from django.views import View
-
-import structlog
 
 from apps.users.services import UTFPRAuthService
 
@@ -42,5 +40,8 @@ class ConfirmEmailView(View):
             return render(
                 request,
                 "account/email_confirmed.html",
-                {"success": False, "error": "Link expirado ou inválido. Solicite um novo código no bot."},
+                {
+                    "success": False,
+                    "error": "Link expirado ou inválido. Solicite um novo código no bot.",
+                },
             )
