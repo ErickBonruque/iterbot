@@ -50,3 +50,4 @@ Thumbs.db
 htmlcov/
 coverage.xml
 coverage.lcov
+.claude/worktrees/
