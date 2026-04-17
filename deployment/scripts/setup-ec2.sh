@@ -8,6 +8,8 @@
 # ============================================================================
 set -euo pipefail
 
+TOTAL_STEPS=13
+
 # Cores
 GREEN='\033[0;32m'
 BLUE='\033[0;34m'
@@ -90,12 +92,13 @@ fi
 echo -e "${GREEN}[9/${TOTAL_STEPS}] Hardening Security Group...${NC}"
 bash "${PROJECT_DIR}/deployment/scripts/harden-security-group.sh" || echo -e "${YELLOW}  WARNING: Security Group hardening failed (may need manual review)${NC}"
 
-# 10. Configurar crontab para backup diário (02:00), restore test mensal e chamar setup-htpasswd.sh
-TOTAL_STEPS=12
-echo -e "${GREEN}[10/${TOTAL_STEPS}] Configurando crontab para backup diário, restore test e htpasswd...${NC}"
+# 10. Configurar crontabs: backup diário, backup check, disk check, restore test mensal
+echo -e "${GREEN}[10/${TOTAL_STEPS}] Configurando crontabs e htpasswd...${NC}"
 CRON_BACKUP="0 2 * * * /bin/bash ${PROJECT_DIR}/deployment/scripts/backup-postgres.sh >> /var/log/iterbot-backup.log 2>&1"
+CRON_BACKUP_CHECK="0 3 * * * /bin/bash ${PROJECT_DIR}/deployment/scripts/check-backup.sh >> /var/log/iterbot-backup-check.log 2>&1"
+CRON_DISK_CHECK="0 */6 * * * /bin/bash ${PROJECT_DIR}/deployment/scripts/check-disk-space.sh >> /var/log/iterbot-disk-check.log 2>&1"
 CRON_RESTORE="0 4 1 * * /bin/bash ${PROJECT_DIR}/deployment/scripts/restore-test.sh >> /var/log/iterbot-restore-test.log 2>&1"
-(crontab -u ubuntu -l 2>/dev/null | grep -v "backup-postgres\|restore-test" || true; echo "${CRON_BACKUP}"; echo "${CRON_RESTORE}") | crontab -u ubuntu -
+(crontab -u ubuntu -l 2>/dev/null | grep -v "backup-postgres\|check-backup\|check-disk-space\|restore-test" || true; echo "${CRON_BACKUP}"; echo "${CRON_BACKUP_CHECK}"; echo "${CRON_DISK_CHECK}"; echo "${CRON_RESTORE}") | crontab -u ubuntu -
 
 echo -e "${GREEN}[11/${TOTAL_STEPS}] Configurando BasicAuth htpasswd...${NC}"
 bash "${PROJECT_DIR}/deployment/scripts/setup-htpasswd.sh"
