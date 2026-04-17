@@ -39,8 +39,8 @@ jobs:
       postgres:
         image: postgres:15-alpine
         env:
-          POSTGRES_DB: capyvagas_test
-          POSTGRES_USER: capyvagas_user
+          POSTGRES_DB: iterbot_test
+          POSTGRES_USER: iterbot_user
           POSTGRES_PASSWORD: test_password
         ports:
           - 5432:5432
@@ -75,7 +75,7 @@ jobs:
 
       - name: Run pytest with coverage
         env:
-          DATABASE_URL: postgresql://capyvagas_user:test_password@localhost:5432/capyvagas_test
+          DATABASE_URL: postgresql://iterbot_user:test_password@localhost:5432/iterbot_test
           REDIS_URL: redis://localhost:6379/0
         run: |
           poetry run pytest --cov -v

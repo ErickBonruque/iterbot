@@ -7,7 +7,7 @@ set -e
 # This script loads Docker Secrets and exports them as environment variables
 # because WAHA doesn't natively support *_FILE suffix variables.
 #
-# Author: CapyVagas Team
+# Author: IterBot Team
 # Last Updated: 2025-12-01
 # ============================================================================
 

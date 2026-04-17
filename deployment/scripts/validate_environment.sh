@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # ============================================================================
-# CapyVagas - Environment Validation Script
+# IterBot - Environment Validation Script
 # ============================================================================
 # This script validates that the environment is correctly configured before
 # starting the application.
@@ -36,7 +36,7 @@ if [[ "${1:-}" == "--ec2" ]]; then
 fi
 
 echo -e "${BLUE}============================================${NC}"
-echo -e "${BLUE}🔍 CapyVagas Environment Validation${NC}"
+echo -e "${BLUE}🔍 IterBot Environment Validation${NC}"
 echo -e "${BLUE}============================================${NC}"
 echo ""
 

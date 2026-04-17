@@ -1,8 +1,8 @@
 #!/bin/bash
 # ============================================================================
-# CapyVagas - Provisionamento EC2 (Ubuntu 22.04 LTS)
+# IterBot - Provisionamento EC2 (Ubuntu 22.04 LTS)
 # ============================================================================
-# Executa a configuracao inicial de uma instancia EC2 para rodar o CapyVagas.
+# Executa a configuracao inicial de uma instancia EC2 para rodar o IterBot.
 #
 # Uso: sudo ./deployment/scripts/setup-ec2.sh
 # ============================================================================
@@ -13,17 +13,17 @@ GREEN='\033[0;32m'
 BLUE='\033[0;34m'
 NC='\033[0m'
 
-REPO_URL="${REPO_URL:-https://github.com/ErickBonruque/CapyVagas-UTFPR.git}"
-PROJECT_DIR="/home/ubuntu/waha_capyvaga"
+REPO_URL="${REPO_URL:-https://github.com/ErickBonruque/IterBot-UTFPR.git}"
+PROJECT_DIR="/home/ubuntu/iterbot"
 # Naming AWS padronizado (para identificacao em contas com multiplos projetos)
-# EC2 Instance:   capyvagas-utfpr-prod
-# Security Group: capyvagas-utfpr-sg
-# Key Pair:       capyvagas-utfpr-key
-# S3 Bucket:      capyvagas-utfpr-backups
-# IAM Role (EC2): capyvagas-utfpr-ec2-role
+# EC2 Instance:   iterbot-utfpr-prod
+# Security Group: iterbot-utfpr-sg
+# Key Pair:       iterbot-utfpr-key
+# S3 Bucket:      iterbot-utfpr-backups
+# IAM Role (EC2): iterbot-utfpr-ec2-role
 
 echo -e "${BLUE}============================================${NC}"
-echo -e "${BLUE}  CapyVagas - Provisionamento EC2${NC}"
+echo -e "${BLUE}  IterBot - Provisionamento EC2${NC}"
 echo -e "${BLUE}============================================${NC}"
 echo ""
 
@@ -88,7 +88,7 @@ fi
 
 # 9. Configurar crontab para backup semanal (domingo 02:00)
 echo -e "${GREEN}[9/9] Configurando crontab para backup semanal...${NC}"
-CRON_CMD="0 2 * * 0 /bin/bash ${PROJECT_DIR}/deployment/scripts/backup-postgres.sh >> /var/log/capyvagas-backup.log 2>&1"
+CRON_CMD="0 2 * * 0 /bin/bash ${PROJECT_DIR}/deployment/scripts/backup-postgres.sh >> /var/log/iterbot-backup.log 2>&1"
 (crontab -u ubuntu -l 2>/dev/null | grep -v "backup-postgres.sh" || true; echo "${CRON_CMD}") | crontab -u ubuntu -
 
 echo ""

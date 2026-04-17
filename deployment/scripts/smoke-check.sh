@@ -1,6 +1,6 @@
 #!/bin/bash
 # ============================================================================
-# CapyVagas - Smoke Check Pos-Deploy
+# IterBot - Smoke Check Pos-Deploy
 # ============================================================================
 # Executa verificacoes rapidas para confirmar que o deploy esta funcional.
 # Uso: ./deployment/scripts/smoke-check.sh [DOMAIN]
@@ -37,7 +37,7 @@ check_service() {
         return 0
     fi
 
-    if ${DOCKER_BIN} ps --filter "name=capyvagas_${service}" --format '{{.Status}}' 2>/dev/null | grep -qi up; then
+    if ${DOCKER_BIN} ps --filter "name=iterbot_${service}" --format '{{.Status}}' 2>/dev/null | grep -qi up; then
         echo "[OK]"
         pass
         return 0
@@ -99,7 +99,7 @@ check_log_config() {
     local name="$1"
 
     printf "  %-50s " "$name"
-    if ${DOCKER_BIN} inspect capyvagas_backend 2>/dev/null | grep -q max-size; then
+    if ${DOCKER_BIN} inspect iterbot_backend 2>/dev/null | grep -q max-size; then
         echo "[OK]"
         pass
     else
@@ -117,7 +117,7 @@ check_skip() {
 }
 
 echo "============================================"
-echo "  CapyVagas - Smoke Check"
+echo "  IterBot - Smoke Check"
 echo "  Domain: ${DOMAIN}"
 echo "============================================"
 echo ""

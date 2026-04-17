@@ -1,4 +1,4 @@
-name: Deploy CapyVagas to EC2
+name: Deploy IterBot to EC2
 
 on:
   push:
@@ -21,7 +21,7 @@ jobs:
           COMMAND_ID=$(aws ssm send-command \
             --instance-ids ***REMOVED*** \
             --document-name "AWS-RunShellScript" \
-            --parameters 'commands=["sudo -u ubuntu bash -euo pipefail -c \"cd /home/ubuntu/waha_capyvaga && git fetch origin master && git reset --hard origin/master && docker compose -f docker-compose.yml -f docker-compose.prod.yml up --build -d && docker image prune -f && set -a && . ./.env && set +a && bash ./deployment/scripts/smoke-check.sh && echo Deploy concluido em $(date -Iseconds)\""]' \
+            --parameters 'commands=["sudo -u ubuntu bash -euo pipefail -c \"cd /home/ubuntu/iterbot && git fetch origin master && git reset --hard origin/master && docker compose -f docker-compose.yml -f docker-compose.prod.yml up --build -d && docker image prune -f && set -a && . ./.env && set +a && bash ./deployment/scripts/smoke-check.sh && echo Deploy concluido em $(date -Iseconds)\""]' \
             --comment "Deploy from GitHub Actions run ${{ github.run_id }}" \
             --query 'Command.CommandId' \
             --output text)

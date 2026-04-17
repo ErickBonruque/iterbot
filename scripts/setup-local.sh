@@ -1,9 +1,9 @@
 #!/bin/bash
 
-# Script de configuração inicial do CapyVagas
+# Script de configuração inicial do IterBot
 # Este script ajuda a configurar as credenciais localmente
 
-echo "🚀 Configurando CapyVagas para desenvolvimento local"
+echo "🚀 Configurando IterBot para desenvolvimento local"
 echo "=================================================="
 
 # Verificar se .env já existe
@@ -34,9 +34,9 @@ sed -i "s/seu_usuario_aqui/admin/g" .env
 
 # Configurar para desenvolvimento
 sed -i "s/DEBUG=False/DEBUG=True/" .env
-sed -i "s/ALLOWED_HOSTS=localhost,127.0.0.1,capyvagas.example.com/ALLOWED_HOSTS=localhost,127.0.0.1,backend/" .env
-sed -i "s/DOMAIN=capyvagas.example.com/DOMAIN=localhost/" .env
-sed -i "s/WAHA_SESSION_NAME=capyvagas_session/WAHA_SESSION_NAME=default/" .env
+sed -i "s/ALLOWED_HOSTS=localhost,127.0.0.1,iterbot.example.com/ALLOWED_HOSTS=localhost,127.0.0.1,backend/" .env
+sed -i "s/DOMAIN=iterbot.example.com/DOMAIN=localhost/" .env
+sed -i "s/WAHA_SESSION_NAME=iterbot_session/WAHA_SESSION_NAME=default/" .env
 
 echo ""
 echo "📝 Credenciais geradas:"

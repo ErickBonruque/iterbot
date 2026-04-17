@@ -54,7 +54,7 @@ Arquivo `iam-backup-policy.json` incluso neste diretorio com permissoes minimas:
 O script `setup-ec2.sh` ja configura automaticamente o crontab:
 
 ```
-0 2 * * 0 /bin/bash /home/ubuntu/waha_capyvaga/deployment/scripts/backup-postgres.sh >> /var/log/iterbot-backup.log 2>&1
+0 2 * * 0 /bin/bash /home/ubuntu/iterbot/deployment/scripts/backup-postgres.sh >> /var/log/iterbot-backup.log 2>&1
 ```
 
 Para configurar manualmente:
@@ -98,6 +98,6 @@ tail -20 /var/log/iterbot-backup.log
 |----------|--------|-----------|
 | `S3_BACKUP_BUCKET` | `iterbot-backups` | Nome do bucket S3 |
 | `S3_BACKUP_PREFIX` | `weekly` | Prefixo dentro do bucket |
-| `PROJECT_DIR` | `/home/ubuntu/waha_capyvaga` | Diretorio do projeto na EC2 |
+| `PROJECT_DIR` | `/home/ubuntu/iterbot` | Diretorio do projeto na EC2 |
 | `POSTGRES_USER` | `iterbot_user` | Usuario do PostgreSQL |
 | `POSTGRES_DB` | `iterbot` | Nome do banco de dados |

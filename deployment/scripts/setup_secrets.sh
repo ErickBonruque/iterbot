@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # ============================================================================
-# CapyVagas - Secrets Setup Script
+# IterBot - Secrets Setup Script
 # ============================================================================
 # This script generates secure random secrets for the application.
 # It creates all necessary secret files with proper permissions.
@@ -24,7 +24,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 echo -e "${BLUE}============================================${NC}"
-echo -e "${BLUE}🔐 CapyVagas Secrets Setup${NC}"
+echo -e "${BLUE}🔐 IterBot Secrets Setup${NC}"
 echo -e "${BLUE}============================================${NC}"
 echo ""
 

@@ -17,8 +17,8 @@ Este guia reune todos os passos para colocar o IterBot em producao na AWS.
 ssh -i sua-chave.pem ubuntu@SEU-IP-EC2
 
 # Clonar repositorio (ou o setup-ec2.sh faz isso)
-git clone https://github.com/ErickBonruque/IterBot-UTFPR.git /home/ubuntu/waha_capyvaga
-cd /home/ubuntu/waha_capyvaga
+git clone https://github.com/ErickBonruque/IterBot-UTFPR.git /home/ubuntu/iterbot
+cd /home/ubuntu/iterbot
 
 # Executar script de provisionamento
 sudo bash ./deployment/scripts/setup-ec2.sh
@@ -33,7 +33,7 @@ O `setup-ec2.sh` instala: Docker + Compose Plugin, AWS CLI v2, configura log rot
 ## 3. Configurar Ambiente
 
 ```bash
-cd /home/ubuntu/waha_capyvaga
+cd /home/ubuntu/iterbot
 
 # Copiar template de producao
 cp .env.production.example .env
