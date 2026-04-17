@@ -86,10 +86,13 @@ else
     echo "  Repositorio ja existe em ${PROJECT_DIR}, pulando..."
 fi
 
-# 9. Configurar crontab para backup semanal (domingo 02:00)
-echo -e "${GREEN}[9/9] Configurando crontab para backup semanal...${NC}"
-CRON_CMD="0 2 * * 0 /bin/bash ${PROJECT_DIR}/deployment/scripts/backup-postgres.sh >> /var/log/iterbot-backup.log 2>&1"
+# 9. Configurar crontab para backup diário (02:00) e chamar setup-htpasswd.sh
+echo -e "${GREEN}[9/10] Configurando crontab para backup diário e htpasswd...${NC}"
+CRON_CMD="0 2 * * * /bin/bash ${PROJECT_DIR}/deployment/scripts/backup-postgres.sh >> /var/log/iterbot-backup.log 2>&1"
 (crontab -u ubuntu -l 2>/dev/null | grep -v "backup-postgres.sh" || true; echo "${CRON_CMD}") | crontab -u ubuntu -
+
+echo -e "${GREEN}[10/10] Configurando BasicAuth htpasswd...${NC}"
+bash "${PROJECT_DIR}/deployment/scripts/setup-htpasswd.sh"
 
 echo ""
 echo -e "${BLUE}============================================${NC}"

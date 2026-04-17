@@ -26,6 +26,7 @@ db.sqlite3-journal
 
 # Credenciais locais (nunca commitar)
 docs/CREDENTIALS.local.md
+secrets/users/
 
 # Sessões do WhatsApp (dados sensíveis)
 waha-sessions/
