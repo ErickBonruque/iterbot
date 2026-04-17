@@ -173,6 +173,102 @@ else
 fi
 echo ""
 
+echo "[SEC-01] Security Group - Blocked Ports"
+if [ "$DOMAIN" != "localhost" ]; then
+    for BLOCKED_PORT in 3000 8000 8080; do
+        printf "  %-50s " "Port ${BLOCKED_PORT} NOT publicly accessible"
+        if nc -z -w2 "$DOMAIN" "$BLOCKED_PORT" 2>/dev/null; then
+            echo "[FAIL] (port is OPEN - security risk!)"
+            fail
+        else
+            echo "[OK]"
+            pass
+        fi
+    done
+else
+    for BLOCKED_PORT in 3000 8000 8080; do
+        check_skip "Port ${BLOCKED_PORT} NOT publicly accessible" "localhost - verified on EC2"
+    done
+fi
+echo ""
+
+echo "[SEC-02] BasicAuth"
+if [ "$DOMAIN" != "localhost" ]; then
+    WAHA_STATUS=$(curl -k -sS -o /dev/null -w '%{http_code}' "https://waha.${DOMAIN}/dashboard" 2>/dev/null || echo "000")
+    printf "  %-50s " "WAHA Dashboard requires auth (expect 401)"
+    if [ "$WAHA_STATUS" = "401" ] || [ "$WAHA_STATUS" = "403" ]; then
+        echo "[OK] (${WAHA_STATUS})"
+        pass
+    else
+        echo "[FAIL] (got ${WAHA_STATUS})"
+        fail
+    fi
+
+    ADMIN_STATUS=$(curl -k -sS -o /dev/null -w '%{http_code}' "https://${DOMAIN}/admin/" 2>/dev/null || echo "000")
+    printf "  %-50s " "Django Admin requires auth (expect 401)"
+    if [ "$ADMIN_STATUS" = "401" ] || [ "$ADMIN_STATUS" = "403" ]; then
+        echo "[OK] (${ADMIN_STATUS})"
+        pass
+    else
+        echo "[FAIL] (got ${ADMIN_STATUS})"
+        fail
+    fi
+
+    WAHA_WRONG=$(curl -k -sS -o /dev/null -w '%{http_code}' -u "admin:wrongpassword" "https://waha.${DOMAIN}/dashboard" 2>/dev/null || echo "000")
+    printf "  %-50s " "WAHA Dashboard rejects wrong password (expect 401)"
+    if [ "$WAHA_WRONG" = "401" ] || [ "$WAHA_WRONG" = "403" ]; then
+        echo "[OK] (${WAHA_WRONG})"
+        pass
+    else
+        echo "[FAIL] (got ${WAHA_WRONG})"
+        fail
+    fi
+else
+    check_skip "WAHA Dashboard requires auth" "localhost"
+    check_skip "Django Admin requires auth" "localhost"
+    check_skip "WAHA rejects wrong password" "localhost"
+fi
+echo ""
+
+echo "[SEC-03] HTTPS"
+if [ "$DOMAIN" != "localhost" ]; then
+    REDIRECT_URL="http://${DOMAIN}"
+    REDIRECT_STATUS=$(curl -k -sS -o /dev/null -w '%{http_code}' -L --max-redirs 0 "$REDIRECT_URL" 2>/dev/null || echo "000")
+    printf "  %-50s " "HTTP redirects to HTTPS"
+    if [ "$REDIRECT_STATUS" = "301" ] || [ "$REDIRECT_STATUS" = "308" ] || [ "$REDIRECT_STATUS" = "302" ]; then
+        echo "[OK] (${REDIRECT_STATUS})"
+        pass
+    else
+        echo "[FAIL] (got ${REDIRECT_STATUS})"
+        fail
+    fi
+
+    HTTPS_STATUS=$(curl -k -sS -o /dev/null -w '%{http_code}' "https://${DOMAIN}/health/" 2>/dev/null || echo "000")
+    printf "  %-50s " "HTTPS /health/ responds (200)"
+    if [ "$HTTPS_STATUS" = "200" ]; then
+        echo "[OK]"
+        pass
+    else
+        echo "[FAIL] (got ${HTTPS_STATUS})"
+        fail
+    fi
+
+    CERT_VALID=$(echo | openssl s_client -connect "${DOMAIN}:443" -servername "$DOMAIN" 2>/dev/null | openssl x509 -noout -dates 2>/dev/null || echo "")
+    printf "  %-50s " "TLS certificate is valid"
+    if [ -n "$CERT_VALID" ]; then
+        echo "[OK]"
+        pass
+    else
+        echo "[FAIL]"
+        fail
+    fi
+else
+    check_skip "HTTP redirects to HTTPS" "localhost"
+    check_skip "HTTPS /health/ responds" "localhost"
+    check_skip "TLS certificate valid" "localhost"
+fi
+echo ""
+
 echo "============================================"
 echo "  Resultado: ${PASS} OK / ${FAIL} FAIL / ${SKIP} SKIP"
 echo "============================================"
