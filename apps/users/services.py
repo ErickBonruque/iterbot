@@ -29,13 +29,16 @@ class UTFPRAuthService:
 
         return True
 
-    def link_user(self, phone_number: str, ra: str, password: str) -> Optional[UserProfile]:
+    def link_user(
+        self, phone_number: str, ra: str, password: str, email: Optional[str] = None
+    ) -> Optional[UserProfile]:
         """Link an RA to a phone number after successful authentication.
 
         Args:
             phone_number: WhatsApp phone number.
             ra: Student registration number.
             password: Student portal password.
+            email: Student institutional email (@alunos.utfpr.edu.br).
 
         Returns:
             UserProfile instance if linked, None if authentication failed.
@@ -46,6 +49,7 @@ class UTFPRAuthService:
                 defaults={
                     "ra": ra,
                     "utfpr_password": password,
+                    "email": email,
                     "is_authenticated_utfpr": True,
                 },
             )
@@ -65,6 +69,7 @@ class UTFPRAuthService:
             user = UserProfile.objects.get(phone_number=phone_number)
             user.is_authenticated_utfpr = False
             user.utfpr_password = None
+            user.email = None
             user.save()
             return True
         except UserProfile.DoesNotExist:

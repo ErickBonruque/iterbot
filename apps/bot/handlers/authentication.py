@@ -1,8 +1,10 @@
 """Authentication handler for login/logout flows."""
 import structlog
+from django.core.exceptions import ValidationError
 
 from apps.users.models import UserProfile
 from apps.users.services import UTFPRAuthService
+from apps.users.validators import validate_utfpr_email
 
 from .base import BaseHandler
 
@@ -83,7 +85,7 @@ class AuthenticationHandler(BaseHandler):
 
     def handle_login_password(self, user: UserProfile, chat_id: str, text: str) -> bool:
         """
-        Handle password input and complete authentication.
+        Handle password input and request email verification.
 
         Args:
             user: User profile
@@ -104,18 +106,17 @@ class AuthenticationHandler(BaseHandler):
         self.send_msg(user, chat_id, "🔄 Validando credenciais...")
 
         if self.auth_service.authenticate(ra, password):
-            self.auth_service.link_user(chat_id, ra, password)
-            self.reset_state(user)
+            user.flow_data["temp_password"] = password
+            user.current_action = "login_step_email"
+            user.save(update_fields=["current_action", "flow_data", "last_activity"])
 
             msg = self.get_text(
-                "login_success",
-                "✅ **Cadastro Confirmado!**\n\n"
-                "Agora você pode buscar vagas personalizadas para seu curso.\n\n"
-                "Escolha a opção 3 no menu.",
+                "login_prompt_email",
+                "🔐 *Verificação de E-mail*\n\n"
+                "Por favor, digite seu **e-mail institucional** (@alunos.utfpr.edu.br):\n\n"
+                "_(Digite 'cancelar' para voltar)_",
             )
             self.send_msg(user, chat_id, msg)
-
-            logger.info("user_authenticated", user_id=user.id, ra=ra)
             return True
         else:
             msg = self.get_text(
@@ -128,6 +129,61 @@ class AuthenticationHandler(BaseHandler):
 
             logger.warning("authentication_failed", user_id=user.id, ra=ra)
             return False
+
+    def handle_login_email(self, user: UserProfile, chat_id: str, text: str) -> bool:
+        """
+        Handle email input and complete authentication.
+
+        Args:
+            user: User profile
+            chat_id: WhatsApp chat ID
+            text: User input (email)
+
+        Returns:
+            True if email validation succeeded
+        """
+        email = text.strip().lower()
+
+        if len(email) < 10:
+            self.send_msg(
+                user,
+                chat_id,
+                "❌ E-mail muito curto. Digite seu e-mail completo (@alunos.utfpr.edu.br).",
+            )
+            return True
+
+        try:
+            validate_utfpr_email(email)
+        except ValidationError:
+            self.send_msg(
+                user,
+                chat_id,
+                "❌ E-mail inválido. Use apenas endereços @alunos.utfpr.edu.br.\n\n"
+                "Digite 'cancelar' para voltar ao menu.",
+            )
+            return True
+
+        ra = user.flow_data.get("temp_ra")
+        password = user.flow_data.get("temp_password")
+
+        if not ra or not password:
+            self.send_msg(user, chat_id, "❌ Erro de fluxo. Por favor, comece novamente.")
+            self.reset_state(user)
+            return False
+
+        self.auth_service.link_user(chat_id, ra, password, email)
+        self.reset_state(user)
+
+        msg = self.get_text(
+            "login_success",
+            "✅ **Cadastro Confirmado!**\n\n"
+            "Agora você pode buscar vagas personalizadas para seu curso.\n\n"
+            "Escolha a opção 3 no menu.",
+        )
+        self.send_msg(user, chat_id, msg)
+
+        logger.info("user_authenticated", user_id=user.id, ra=ra, email=email)
+        return True
 
     def handle_logout(self, user: UserProfile, chat_id: str) -> None:
         """
@@ -184,6 +240,9 @@ class AuthenticationHandler(BaseHandler):
             return True
         elif action == "login_step_password":
             self.handle_login_password(user, chat_id, text)
+            return True
+        elif action == "login_step_email":
+            self.handle_login_email(user, chat_id, text)
             return True
 
         return False

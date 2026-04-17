@@ -144,6 +144,9 @@ class BotMessage(TimeStampedModel):
     KEY_CHOICES = (
         ("welcome", "Boas-vindas / Menu"),
         ("login_prompt", "Solicitar Login"),
+        ("login_prompt_ra", "Solicitar RA"),
+        ("login_prompt_password", "Solicitar Senha"),
+        ("login_prompt_email", "Solicitar Email"),
         ("login_success", "Login com Sucesso"),
         ("login_error", "Erro no Login"),
         ("logout_success", "Logout com Sucesso"),
