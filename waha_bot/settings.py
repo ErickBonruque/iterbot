@@ -207,8 +207,8 @@ if DEBUG:
     CACHES = {
         "default": {
             "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
-            "LOCATION": "capyvagas-dev-cache",
-            "KEY_PREFIX": "capyvagas",
+            "LOCATION": "iterbot-dev-cache",
+            "KEY_PREFIX": "iterbot",
         }
     }
 else:
@@ -216,7 +216,7 @@ else:
         "default": {
             "BACKEND": "django.core.cache.backends.redis.RedisCache",
             "LOCATION": settings.redis.url,
-            "KEY_PREFIX": "capyvagas",
+            "KEY_PREFIX": "iterbot",
         }
     }
 
@@ -289,16 +289,16 @@ structlog.configure(
 )
 
 UNFOLD = {
-    "SITE_TITLE": "CapyVagas Admin",
-    "SITE_HEADER": "CapyVagas UTFPR",
+    "SITE_TITLE": "IterBot Admin",
+    "SITE_HEADER": "IterBot UTFPR",
     "SITE_URL": "/",
     "SITE_LOGO": {
-        "light": lambda request: static("img/admin/capyvagas-logo-light.svg"),
-        "dark": lambda request: static("img/admin/capyvagas-logo-dark.svg"),
+        "light": lambda request: static("img/admin/iterbot-logo-light.svg"),
+        "dark": lambda request: static("img/admin/iterbot-logo-dark.svg"),
     },
     "SITE_ICON": {
-        "light": lambda request: static("img/admin/capyvagas-icon-light.svg"),
-        "dark": lambda request: static("img/admin/capyvagas-icon-dark.svg"),
+        "light": lambda request: static("img/admin/iterbot-icon-light.svg"),
+        "dark": lambda request: static("img/admin/iterbot-icon-dark.svg"),
     },
     "SHOW_HISTORY": True,
     "SHOW_VIEW_ON_SITE": True,
@@ -411,7 +411,7 @@ UNFOLD = {
                     {
                         "title": "GitHub",
                         "icon": "open_in_new",
-                        "link": "https://github.com/ErickBonruque/CapyVagas-UTFPR",
+                        "link": "https://github.com/ErickBonruque/IterBot-UTFPR",
                     },
                 ],
             },
@@ -420,7 +420,7 @@ UNFOLD = {
 }
 
 # Custom Admin Site
-ADMIN_SITE = "apps.core.admin.capyvagas_admin"
+ADMIN_SITE = "apps.core.admin.iterbot_admin"
 
 LOGGING = {
     "version": 1,

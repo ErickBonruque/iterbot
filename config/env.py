@@ -92,8 +92,8 @@ class DatabaseSettings:
 
         if postgres_password:
             # Build DATABASE_URL from environment variables and secret
-            db_name = env("POSTGRES_DB", default="capyvagas")
-            db_user = env("POSTGRES_USER", default="capyvagas_user")
+            db_name = env("POSTGRES_DB", default="iterbot")
+            db_user = env("POSTGRES_USER", default="iterbot_user")
             db_host = env("POSTGRES_HOST", default="db")
             db_port = env("POSTGRES_PORT", default="5432")
             self.url = f"postgres://{db_user}:{postgres_password}@{db_host}:{db_port}/{db_name}"

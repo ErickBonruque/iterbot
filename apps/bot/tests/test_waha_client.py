@@ -131,7 +131,7 @@ class TestWahaClientStartSession:
         """STAB-01: URL do endpoint deve ser /api/sessions/{session_name}/start."""
         settings = _make_settings(
             base_url="http://waha:3000",
-            session_name="capyvagas",
+            session_name="iterbot",
         )
         client = WahaClient(settings=settings)
         with patch("infra.waha.client.requests.post") as mock_post:
@@ -140,4 +140,4 @@ class TestWahaClientStartSession:
             mock_post.return_value = mock_response
             client.start_session()
         call_url = mock_post.call_args[0][0]
-        assert call_url == "http://waha:3000/api/sessions/capyvagas/start"
+        assert call_url == "http://waha:3000/api/sessions/iterbot/start"

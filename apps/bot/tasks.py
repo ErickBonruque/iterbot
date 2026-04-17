@@ -11,7 +11,7 @@ logger = structlog.get_logger(__name__)
 
 # E-mail de alerta fixo — nao configuravel via admin neste milestone (D-05)
 ALERT_EMAIL = "bonrqueruck@gmail.com"
-ALERT_SUBJECT = "[CapyVagas] ⚠️ Bot WhatsApp offline"
+ALERT_SUBJECT = "[IterBot] ⚠️ Bot WhatsApp offline"
 
 # Backoff entre tentativas de reconexão em segundos (D-02)
 RECONNECT_BACKOFF = [30, 60, 120]
@@ -276,6 +276,7 @@ def send_confirmation_email(self, user_id: int) -> dict:
         Dict with status, sent, user_id fields.
     """
     from django.conf import settings as django_settings
+
     from apps.users.models import UserProfile
 
     try:
@@ -292,11 +293,11 @@ def send_confirmation_email(self, user_id: int) -> dict:
         base_url = getattr(django_settings, "PORTAL_BASE_URL", "https://3-86-57-105.sslip.io")
         confirm_url = f"{base_url}/confirmar-email/{user.email_confirmation_token}"
 
-        subject = "[CapyVagas] Confirme seu e-mail institucional"
+        subject = "[IterBot] Confirme seu e-mail institucional"
         body_lines = [
             f"Olá, {user.ra or 'aluno'}!",
             "",
-            "Você solicitou acesso ao CapyVagas, o assistente de vagas da UTFPR.",
+            "Você solicitou acesso ao IterBot, o assistente de vagas da UTFPR.",
             "",
             f"Seu RA: {user.ra}",
             "",
@@ -309,7 +310,7 @@ def send_confirmation_email(self, user_id: int) -> dict:
             "Se você não solicitou este acesso, ignore este e-mail.",
             "",
             "Atenciosamente,",
-            "Equipe CapyVagas UTFPR",
+            "Equipe IterBot UTFPR",
         ]
         message_body = "\n".join(body_lines)
 

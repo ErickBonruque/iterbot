@@ -18,7 +18,7 @@ class BotServiceMenuTests(TestCase):
         self.service.process_message(chat_id, "oi", from_me=False)
 
         sent_text = self.waha_client.send_message.call_args[0][1]
-        self.assertIn("CapyVagas", sent_text)
+        self.assertIn("IterBot", sent_text)
         self.assertIn("1️⃣ Fazer Cadastro/Login", sent_text)
 
     def test_logout_clears_state(self):

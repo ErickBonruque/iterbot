@@ -63,7 +63,7 @@ class TestCheckWahaHealthTask:
         from apps.bot.tasks import check_waha_health
 
         # Chamar a task diretamente (sem Celery broker)
-        result = check_waha_health()
+        check_waha_health()
 
         mock_monitor.check_bot_status.assert_called_once()
 
@@ -253,7 +253,7 @@ class TestSendOfflineAlert:
         mock_send_mail.assert_called_once()
         call_args = mock_send_mail.call_args
         subject = call_args.kwargs.get("subject", call_args.args[0] if call_args.args else "")
-        assert "CapyVagas" in subject
+        assert "IterBot" in subject
         assert "offline" in subject.lower() or "Bot WhatsApp" in subject
 
     @patch("apps.bot.tasks.send_mail")

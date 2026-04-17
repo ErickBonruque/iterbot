@@ -19,7 +19,7 @@ class BaseHandler(ABC):
     """
 
     BRAND_HEADER = (
-        "🌟 *CapyVagas* | Assistente de Vagas da UTFPR\n"
+        "🌟 *IterBot* | Assistente de Vagas da UTFPR\n"
         "Conecto você às oportunidades certas para o seu curso."
     )
 

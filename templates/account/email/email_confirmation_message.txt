@@ -1,6 +1,6 @@
 Olá!
 
-Você se cadastrou no CapyVagas UTFPR.
+Você se cadastrou no IterBot UTFPR.
 
 Para confirmar seu e-mail e ativar sua conta, acesse o link abaixo:
 
@@ -9,5 +9,5 @@ Para confirmar seu e-mail e ativar sua conta, acesse o link abaixo:
 Se você não solicitou este cadastro, ignore este e-mail.
 
 --
-CapyVagas UTFPR
+IterBot UTFPR
 Sistema de Divulgação de Vagas de Estágio

@@ -2,11 +2,11 @@ from django.contrib import admin
 from unfold.sites import UnfoldAdminSite
 
 
-class CapyVagasAdminSite(UnfoldAdminSite):
-    """Site de administração customizado para CapyVagas UTFPR com métricas na home."""
+class IterBotAdminSite(UnfoldAdminSite):
+    """Site de administração customizado para IterBot UTFPR com métricas na home."""
 
-    site_header = "CapyVagas UTFPR"
-    site_title = "CapyVagas Admin"
+    site_header = "IterBot UTFPR"
+    site_title = "IterBot Admin"
     index_title = "Painel Administrativo"
 
     def index(self, request, extra_context=None):
@@ -48,7 +48,7 @@ class CapyVagasAdminSite(UnfoldAdminSite):
 
 # Patch the existing admin.site instance's class in-place so all @admin.register()
 # decorators (which run before this module is imported) keep their registrations.
-admin.site.__class__ = CapyVagasAdminSite
+admin.site.__class__ = IterBotAdminSite
 
 # Alias used by urls.py
-capyvagas_admin = admin.site
+iterbot_admin = admin.site
