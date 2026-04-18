@@ -1,6 +1,6 @@
 """Middleware to add correlation ID to each request."""
 import uuid
-from typing import Callable
+from collections.abc import Callable
 
 import structlog
 from django.http import HttpRequest, HttpResponse

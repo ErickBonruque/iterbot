@@ -17,6 +17,7 @@ services:
     volumes:
       - ./infra/traefik/traefik.prod.yml:/etc/traefik/traefik.yml:ro
       - ./infra/traefik/dynamic:/etc/traefik/dynamic:ro
+      - ./secrets/users:/etc/traefik/users:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - traefik_certs:/letsencrypt
 
@@ -29,9 +30,17 @@ services:
       - "traefik.http.routers.backend.tls=true"
       - "traefik.http.routers.backend.tls.certresolver=letsencrypt"
       - "traefik.http.routers.backend.middlewares=security-headers@file"
+      - "traefik.http.routers.admin-secure.rule=Host(`${DOMAIN}`) && (PathPrefix(`/admin`) || PathPrefix(`/portal`))"
+      - "traefik.http.routers.admin-secure.entrypoints=websecure"
+      - "traefik.http.routers.admin-secure.tls=true"
+      - "traefik.http.routers.admin-secure.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.admin-secure.middlewares=security-headers@file,admin-auth@file"
+      - "traefik.http.routers.admin-secure.priority=100"
+      - "traefik.http.routers.admin-secure.service=admin-backend"
+      - "traefik.http.services.admin-backend.loadbalancer.server.port=8000"
       - "traefik.http.services.backend.loadbalancer.server.port=8000"
     environment:
-      - DJANGO_SETTINGS_MODULE=waha_bot.settings
+      - DJANGO_SETTINGS_MODULE=waha_bot.settings.production
 
   waha:
     ports: []  # Remove porta 3000 exposta (acesso via Traefik apenas)
@@ -41,7 +50,7 @@ services:
       - "traefik.http.routers.waha.entrypoints=websecure"
       - "traefik.http.routers.waha.tls=true"
       - "traefik.http.routers.waha.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.waha.middlewares=security-headers@file"
+      - "traefik.http.routers.waha.middlewares=security-headers@file,waha-auth@file"
       - "traefik.http.services.waha.loadbalancer.server.port=3000"
 
   # ==========================================================================

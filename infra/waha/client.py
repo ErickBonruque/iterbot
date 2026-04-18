@@ -1,4 +1,3 @@
-from typing import Optional
 
 import requests
 import structlog
@@ -15,7 +14,7 @@ class WahaClient:
         settings: WAHA configuration settings.
     """
 
-    def __init__(self, settings: Optional[WahaSettings] = None) -> None:
+    def __init__(self, settings: WahaSettings | None = None) -> None:
         """Initialize the WAHA client.
 
         Args:

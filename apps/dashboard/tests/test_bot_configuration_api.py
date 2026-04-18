@@ -69,8 +69,8 @@ class BotConfigurationApiTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 201)
-        User = get_user_model()
-        admin = User.objects.get(username="super")
+        user_model = get_user_model()
+        admin = user_model.objects.get(username="super")
         self.assertTrue(admin.is_staff)
         self.assertTrue(admin.is_superuser)
         self.assertTrue(admin.check_password("super-pass"))

@@ -8,6 +8,8 @@
 # ============================================================================
 set -euo pipefail
 
+TOTAL_STEPS=13
+
 # Cores
 GREEN='\033[0;32m'
 BLUE='\033[0;34m'
@@ -28,16 +30,16 @@ echo -e "${BLUE}============================================${NC}"
 echo ""
 
 # 1. Atualizar pacotes do sistema
-echo -e "${GREEN}[1/9] Atualizando pacotes do sistema...${NC}"
+echo -e "${GREEN}[1/${TOTAL_STEPS}] Atualizando pacotes do sistema...${NC}"
 apt-get update -y
 apt-get upgrade -y
 
 # 2. Instalar dependencias
-echo -e "${GREEN}[2/9] Instalando dependencias...${NC}"
+echo -e "${GREEN}[2/${TOTAL_STEPS}] Instalando dependencias...${NC}"
 apt-get install -y git curl unzip openssl jq
 
 # 3. Instalar Docker Engine + Compose Plugin
-echo -e "${GREEN}[3/9] Instalando Docker Engine + Compose Plugin...${NC}"
+echo -e "${GREEN}[3/${TOTAL_STEPS}] Instalando Docker Engine + Compose Plugin...${NC}"
 if ! command -v docker &> /dev/null; then
     curl -fsSL https://get.docker.com | sh
 else
@@ -45,11 +47,11 @@ else
 fi
 
 # 4. Adicionar usuario ubuntu ao grupo docker
-echo -e "${GREEN}[4/9] Configurando usuario ubuntu no grupo docker...${NC}"
+echo -e "${GREEN}[4/${TOTAL_STEPS}] Configurando usuario ubuntu no grupo docker...${NC}"
 usermod -aG docker ubuntu
 
 # 5. Instalar AWS CLI v2
-echo -e "${GREEN}[5/9] Instalando AWS CLI v2...${NC}"
+echo -e "${GREEN}[5/${TOTAL_STEPS}] Instalando AWS CLI v2...${NC}"
 if ! command -v /usr/local/bin/aws &> /dev/null; then
     cd /tmp
     curl -fsSL "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
@@ -62,7 +64,7 @@ else
 fi
 
 # 6. Configurar log rotation do Docker
-echo -e "${GREEN}[6/9] Configurando Docker log rotation...${NC}"
+echo -e "${GREEN}[6/${TOTAL_STEPS}] Configurando Docker log rotation...${NC}"
 cat > /etc/docker/daemon.json <<EOF
 {
   "log-driver": "json-file",
@@ -74,11 +76,11 @@ cat > /etc/docker/daemon.json <<EOF
 EOF
 
 # 7. Reiniciar Docker
-echo -e "${GREEN}[7/9] Reiniciando Docker...${NC}"
+echo -e "${GREEN}[7/${TOTAL_STEPS}] Reiniciando Docker...${NC}"
 systemctl restart docker
 
 # 8. Clonar repositorio
-echo -e "${GREEN}[8/9] Clonando repositorio...${NC}"
+echo -e "${GREEN}[8/${TOTAL_STEPS}] Clonando repositorio...${NC}"
 if [ ! -d "${PROJECT_DIR}" ]; then
     git clone "${REPO_URL}" "${PROJECT_DIR}"
     chown -R ubuntu:ubuntu "${PROJECT_DIR}"
@@ -86,10 +88,20 @@ else
     echo "  Repositorio ja existe em ${PROJECT_DIR}, pulando..."
 fi
 
-# 9. Configurar crontab para backup semanal (domingo 02:00)
-echo -e "${GREEN}[9/9] Configurando crontab para backup semanal...${NC}"
-CRON_CMD="0 2 * * 0 /bin/bash ${PROJECT_DIR}/deployment/scripts/backup-postgres.sh >> /var/log/iterbot-backup.log 2>&1"
-(crontab -u ubuntu -l 2>/dev/null | grep -v "backup-postgres.sh" || true; echo "${CRON_CMD}") | crontab -u ubuntu -
+# 9. Harden Security Group (remove public ports 3000, 8000, 8080)
+echo -e "${GREEN}[9/${TOTAL_STEPS}] Hardening Security Group...${NC}"
+bash "${PROJECT_DIR}/deployment/scripts/harden-security-group.sh" || echo -e "${YELLOW}  WARNING: Security Group hardening failed (may need manual review)${NC}"
+
+# 10. Configurar crontabs: backup diário, backup check, disk check, restore test mensal
+echo -e "${GREEN}[10/${TOTAL_STEPS}] Configurando crontabs e htpasswd...${NC}"
+CRON_BACKUP="0 2 * * * /bin/bash ${PROJECT_DIR}/deployment/scripts/backup-postgres.sh >> /var/log/iterbot-backup.log 2>&1"
+CRON_BACKUP_CHECK="0 3 * * * /bin/bash ${PROJECT_DIR}/deployment/scripts/check-backup.sh >> /var/log/iterbot-backup-check.log 2>&1"
+CRON_DISK_CHECK="0 */6 * * * /bin/bash ${PROJECT_DIR}/deployment/scripts/check-disk-space.sh >> /var/log/iterbot-disk-check.log 2>&1"
+CRON_RESTORE="0 4 1 * * /bin/bash ${PROJECT_DIR}/deployment/scripts/restore-test.sh >> /var/log/iterbot-restore-test.log 2>&1"
+(crontab -u ubuntu -l 2>/dev/null | grep -v "backup-postgres\|check-backup\|check-disk-space\|restore-test" || true; echo "${CRON_BACKUP}"; echo "${CRON_BACKUP_CHECK}"; echo "${CRON_DISK_CHECK}"; echo "${CRON_RESTORE}") | crontab -u ubuntu -
+
+echo -e "${GREEN}[11/${TOTAL_STEPS}] Configurando BasicAuth htpasswd...${NC}"
+bash "${PROJECT_DIR}/deployment/scripts/setup-htpasswd.sh"
 
 echo ""
 echo -e "${BLUE}============================================${NC}"

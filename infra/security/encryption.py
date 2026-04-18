@@ -1,6 +1,5 @@
 """Encryption utilities for sensitive data."""
 import base64
-from typing import Optional
 
 from cryptography.fernet import Fernet
 from django.conf import settings
@@ -53,7 +52,7 @@ class FieldEncryption:
             return ""
 
 
-_encryptor: Optional[FieldEncryption] = None
+_encryptor: FieldEncryption | None = None
 
 
 def get_encryptor() -> FieldEncryption:

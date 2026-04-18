@@ -110,11 +110,20 @@ class BotService:
             return
 
         # --- STATE MACHINE ---
-        if user.current_action:
-            if self._handle_pending_action(user, chat_id, text):
-                return
+        if user.current_action and self._handle_pending_action(user, chat_id, text):
+            return
 
         # --- MAIN MENU COMMANDS ---
+        self._handle_main_menu_command(user, chat_id, text)
+
+    def _handle_main_menu_command(self, user: "UserProfile", chat_id: str, text: str) -> None:
+        """Despacha as opções do menu principal para o handler correto.
+
+        Args:
+            user: User profile.
+            chat_id: WhatsApp chat ID.
+            text: User message (normalized).
+        """
         if text in {"1", "cadastrar", "login", "entrar"}:
             self.auth_handler.start_login_flow(user, chat_id)
             return

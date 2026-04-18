@@ -270,8 +270,8 @@ class BotConfigurationViewSet(viewsets.ModelViewSet):
     def _ensure_admin_user(self, config: BotConfiguration) -> None:
         """Garante que o usuário admin do Django esteja alinhado com a configuração."""
 
-        User = get_user_model()
-        admin_user, _ = User.objects.get_or_create(
+        user_model = get_user_model()
+        admin_user, _ = user_model.objects.get_or_create(
             username=config.admin_username,
             defaults={"is_staff": True, "is_superuser": True},
         )

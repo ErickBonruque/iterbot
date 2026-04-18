@@ -18,3 +18,15 @@ http:
         average: 100
         burst: 50
         period: 1s
+
+    # BasicAuth for WAHA Dashboard
+    waha-auth:
+      basicauth:
+        usersFile: /etc/traefik/users/waha-users.txt
+        realm: "WAHA Dashboard"
+
+    # BasicAuth for Django Admin/Portal
+    admin-auth:
+      basicauth:
+        usersFile: /etc/traefik/users/admin-users.txt
+        realm: "IterBot Admin"

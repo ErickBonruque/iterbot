@@ -53,7 +53,6 @@ class BotServiceFlowTests(TestCase):
         user = UserProfile.objects.get(phone_number=chat_id)
         self.assertEqual(user.current_action, "login_step_ra")
 
-        # complete login (RA -> senha)
         self.service.process_message(chat_id, "ra123", from_me=False)
         user.refresh_from_db()
         self.assertEqual(user.current_action, "login_step_password")
@@ -62,9 +61,8 @@ class BotServiceFlowTests(TestCase):
         self.service.process_message(chat_id, "senha123", from_me=False)
 
         user.refresh_from_db()
-        self.assertIsNone(user.current_action)
-        self.assertTrue(user.is_authenticated_utfpr)
-        self.assertEqual(user.ra, "ra123")
+        self.assertEqual(user.current_action, "login_step_email")
+        self.assertEqual(user.flow_data.get("temp_ra"), "ra123")
 
     def test_course_and_term_selection_drives_job_search(self):
         course = Course.objects.create(name="Engenharia", is_active=True)

@@ -2,14 +2,7 @@ from django.contrib import admin
 from django.utils.html import escape, format_html, mark_safe
 from unfold.admin import ModelAdmin
 
-from .models import BotConfiguration, BotHealthCheck, BotMessage, BotMetrics, InteractionLog
-
-
-@admin.register(BotConfiguration)
-class BotConfigurationAdmin(ModelAdmin):
-    list_display = ("waha_url", "waha_session", "updated_at")
-    readonly_fields = ("created_at", "updated_at")
-    ordering = ("-updated_at",)
+from apps.bot.models import InteractionLog
 
 
 @admin.register(InteractionLog)
@@ -82,39 +75,3 @@ class InteractionLogAdmin(ModelAdmin):
         ("Timeline da Conversa", {"fields": ("conversation_timeline",), "classes": ("wide",)}),
         ("Datas", {"fields": ("created_at", "updated_at"), "classes": ("collapse",)}),
     )
-
-
-@admin.register(BotHealthCheck)
-class BotHealthCheckAdmin(ModelAdmin):
-    list_display = ("status_badge", "response_time", "session_status", "created_at")
-    list_filter = ("status", "created_at")
-    readonly_fields = ("created_at", "updated_at")
-    date_hierarchy = "created_at"
-    ordering = ("-created_at",)
-
-    def status_badge(self, obj):
-        colors = {"online": "#28a745", "offline": "#dc3545", "error": "#ffc107"}
-        color = colors.get(obj.status, "#6c757d")
-        return format_html(
-            '<span style="background:{}; color:white; padding:4px 8px; border-radius:3px;">{}</span>',
-            color,
-            obj.get_status_display(),
-        )
-
-    status_badge.short_description = "Status"
-
-
-@admin.register(BotMetrics)
-class BotMetricsAdmin(ModelAdmin):
-    list_display = ("metric_name", "value", "created_at")
-    list_filter = ("metric_name", "created_at")
-    readonly_fields = ("created_at", "updated_at")
-    ordering = ("-created_at",)
-
-
-@admin.register(BotMessage)
-class BotMessageAdmin(ModelAdmin):
-    list_display = ("key", "description", "updated_at")
-    search_fields = ("key", "text", "description")
-    readonly_fields = ("created_at", "updated_at")
-    ordering = ("key",)

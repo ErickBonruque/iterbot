@@ -1,4 +1,4 @@
-from waha_bot.settings import *
+from waha_bot.settings.development import *  # noqa: F403
 
 CACHES = {
     "default": {

@@ -1,15 +1,19 @@
 from pathlib import Path
 
 import dj_database_url
-import structlog
-from django.core.exceptions import ImproperlyConfigured
 from django.templatetags.static import static
 from django.urls import reverse_lazy
 
 from config.env import settings
 
+from .celery import *  # noqa: F403
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
-BASE_DIR = Path(__file__).resolve().parent.parent
+# __file__ = waha_bot/settings/base.py
+# .parent   = waha_bot/settings/
+# .parent.parent = waha_bot/
+# .parent.parent.parent = raiz do projeto  ← CORRETO
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 
 # Quick-start development settings - unsuitable for production
@@ -18,8 +22,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = settings.django.secret_key
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = settings.django.debug
+# Default seguro — cada ambiente sobrescreve (development.py: True, production.py: False)
+DEBUG = False
 
 ALLOWED_HOSTS = settings.django.allowed_hosts
 
@@ -135,11 +139,6 @@ ACCOUNT_EMAIL_CONFIRMATION_ANONYMOUS_REDIRECT_URL = "/accounts/email-confirmed/"
 # Portal de Empresas (usado pelo bot para enviar links)
 PORTAL_BASE_URL = settings.django.portal_base_url
 
-if not DEBUG and (not PORTAL_BASE_URL or not PORTAL_BASE_URL.startswith(("http://", "https://"))):
-    raise ImproperlyConfigured(
-        "PORTAL_BASE_URL must be set with http:// or https:// when DEBUG=False"
-    )
-
 # Email Configuration (dev usa console, prod usa SES via AWS)
 if settings.aws.access_key_id and settings.aws.secret_access_key:
     # Use AWS SES when AWS credentials are available
@@ -180,7 +179,8 @@ STATICFILES_DIRS = [
     BASE_DIR / "static",
 ]
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
-WHITENOISE_AUTOREFRESH = DEBUG
+# Default seguro (False); development.py sobrescreve para True
+WHITENOISE_AUTOREFRESH = False
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
@@ -201,92 +201,6 @@ REST_FRAMEWORK = {
         "rest_framework.renderers.BrowsableAPIRenderer",
     ],
 }
-
-# Cache (LocMem em desenvolvimento/tests, Redis em produção)
-if DEBUG:
-    CACHES = {
-        "default": {
-            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
-            "LOCATION": "iterbot-dev-cache",
-            "KEY_PREFIX": "iterbot",
-        }
-    }
-else:
-    CACHES = {
-        "default": {
-            "BACKEND": "django.core.cache.backends.redis.RedisCache",
-            "LOCATION": settings.redis.url,
-            "KEY_PREFIX": "iterbot",
-        }
-    }
-
-# Celery Configuration
-CELERY_BROKER_URL = settings.redis.url
-CELERY_RESULT_BACKEND = settings.redis.url
-CELERY_ACCEPT_CONTENT = ["json"]
-CELERY_TASK_SERIALIZER = "json"
-CELERY_RESULT_SERIALIZER = "json"
-CELERY_TIMEZONE = TIME_ZONE
-
-# Celery Beat Schedule - envio semanal de review de vagas
-# Roda toda segunda-feira as 08:00 horario de Brasilia (CELERY_TIMEZONE = "America/Sao_Paulo")
-from celery.schedules import crontab
-
-CELERY_BEAT_SCHEDULE = {
-    # Envio semanal de review de vagas — toda segunda-feira às 08:00 (Brasília)
-    "send-weekly-job-review": {
-        "task": "apps.jobs.tasks.send_weekly_job_review",
-        "schedule": crontab(hour=8, minute=0, day_of_week="monday"),
-    },
-    # Health check da sessão WAHA — a cada 5 minutos (STAB-01)
-    "check-waha-health": {
-        "task": "apps.bot.tasks.check_waha_health",
-        "schedule": crontab(minute="*/5"),
-    },
-    # Limpeza de registros BotHealthCheck antigos — todo domingo às 02:00
-    "clean-old-health-checks": {
-        "task": "apps.bot.tasks.clean_old_health_checks",
-        "schedule": crontab(hour=2, minute=0, day_of_week="sunday"),
-    },
-}
-
-# Security Settings
-if not DEBUG:
-    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
-    SECURE_SSL_REDIRECT = True
-    # WAHA envia webhook internamente por HTTP na rede Docker
-    # (WHATSAPP_HOOK_URL=http://backend:8000/webhook/). Sem essa
-    # exceção, o SecurityMiddleware redireciona POST para HTTPS e o
-    # webhook não chega ao bot.
-    SECURE_REDIRECT_EXEMPT = [r"^webhook/$"]
-    SESSION_COOKIE_SECURE = True
-    CSRF_COOKIE_SECURE = True
-    SECURE_BROWSER_XSS_FILTER = True
-    SECURE_CONTENT_TYPE_NOSNIFF = True
-    X_FRAME_OPTIONS = "DENY"
-    SECURE_HSTS_SECONDS = 31536000
-    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
-    SECURE_HSTS_PRELOAD = True
-
-# Structured Logging with structlog
-structlog.configure(
-    processors=[
-        structlog.contextvars.merge_contextvars,
-        structlog.stdlib.filter_by_level,
-        structlog.processors.TimeStamper(fmt="iso"),
-        structlog.stdlib.add_logger_name,
-        structlog.stdlib.add_log_level,
-        structlog.stdlib.PositionalArgumentsFormatter(),
-        structlog.processors.StackInfoRenderer(),
-        structlog.processors.format_exc_info,
-        structlog.processors.UnicodeDecoder(),
-        structlog.processors.JSONRenderer(),
-    ],
-    wrapper_class=structlog.stdlib.BoundLogger,
-    context_class=dict,
-    logger_factory=structlog.stdlib.LoggerFactory(),
-    cache_logger_on_first_use=True,
-)
 
 UNFOLD = {
     "SITE_TITLE": "IterBot Admin",
@@ -421,36 +335,3 @@ UNFOLD = {
 
 # Custom Admin Site
 ADMIN_SITE = "apps.core.admin.iterbot_admin"
-
-LOGGING = {
-    "version": 1,
-    "disable_existing_loggers": False,
-    "formatters": {
-        "json": {
-            "()": structlog.stdlib.ProcessorFormatter,
-            "processor": structlog.processors.JSONRenderer(),
-        },
-    },
-    "handlers": {
-        "console": {
-            "class": "logging.StreamHandler",
-            "formatter": "json",
-        },
-    },
-    "root": {
-        "handlers": ["console"],
-        "level": "INFO",
-    },
-    "loggers": {
-        "django": {
-            "handlers": ["console"],
-            "level": "INFO",
-            "propagate": False,
-        },
-        "apps": {
-            "handlers": ["console"],
-            "level": "DEBUG" if DEBUG else "INFO",
-            "propagate": False,
-        },
-    },
-}

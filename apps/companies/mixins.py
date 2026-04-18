@@ -12,7 +12,7 @@ class CompanyRequiredMixin(LoginRequiredMixin):
         if hasattr(response, "status_code") and response.status_code == 302:
             return response
         try:
-            request.user.company
-        except Exception:
-            raise PermissionDenied("Usuario nao possui empresa vinculada.")
+            _ = request.user.company
+        except Exception as err:
+            raise PermissionDenied("Usuario nao possui empresa vinculada.") from err
         return response

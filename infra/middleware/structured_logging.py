@@ -1,6 +1,6 @@
 """Middleware for structured logging of requests and responses."""
 import time
-from typing import Callable
+from collections.abc import Callable
 
 import structlog
 from django.http import HttpRequest, HttpResponse

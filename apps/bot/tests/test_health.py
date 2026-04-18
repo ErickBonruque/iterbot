@@ -28,9 +28,11 @@ class TestBotHealthMonitorStructlog:
             mock_response.status_code = 200
             mock_response.json.return_value = {"status": "WORKING"}
             mock_get.return_value = mock_response
-            with patch("apps.bot.health.BotHealthCheck.objects.create"):
-                with patch("apps.bot.health.cache.set"):
-                    result = monitor.check_bot_status()
+            with (
+                patch("apps.bot.health.BotHealthCheck.objects.create"),
+                patch("apps.bot.health.cache.set"),
+            ):
+                result = monitor.check_bot_status()
         assert "status" in result
         assert "session_status" in result
         assert "response_time" in result
@@ -49,9 +51,11 @@ class TestBotHealthMonitorStructlog:
             mock_response.status_code = 200
             mock_response.json.return_value = {"status": "WORKING"}
             mock_get.return_value = mock_response
-            with patch("apps.bot.health.BotHealthCheck.objects.create"):
-                with patch("apps.bot.health.cache.set"):
-                    result = monitor.check_bot_status()
+            with (
+                patch("apps.bot.health.BotHealthCheck.objects.create"),
+                patch("apps.bot.health.cache.set"),
+            ):
+                result = monitor.check_bot_status()
         assert result["status"] == "online"
 
     def test_check_bot_status_non_working_returns_offline(self):
@@ -67,7 +71,9 @@ class TestBotHealthMonitorStructlog:
             mock_response.status_code = 200
             mock_response.json.return_value = {"status": "STOPPED"}
             mock_get.return_value = mock_response
-            with patch("apps.bot.health.BotHealthCheck.objects.create"):
-                with patch("apps.bot.health.cache.set"):
-                    result = monitor.check_bot_status()
+            with (
+                patch("apps.bot.health.BotHealthCheck.objects.create"),
+                patch("apps.bot.health.cache.set"),
+            ):
+                result = monitor.check_bot_status()
         assert result["status"] == "offline"

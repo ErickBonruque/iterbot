@@ -1,6 +1,5 @@
 import uuid
 from datetime import timedelta
-from typing import Optional
 
 from django.utils import timezone
 
@@ -28,14 +27,11 @@ class UTFPRAuthService:
         """
         logger.info(f"Tentando autenticar RA: {ra}")
 
-        if ra == "000000":
-            return False
-
-        return True
+        return ra != "000000"
 
     def link_user(
-        self, phone_number: str, ra: str, password: str, email: Optional[str] = None
-    ) -> Optional[UserProfile]:
+        self, phone_number: str, ra: str, password: str, email: str | None = None
+    ) -> UserProfile | None:
         """Link an RA to a phone number after successful authentication.
 
         Args:
@@ -50,7 +46,7 @@ class UTFPRAuthService:
         """
         if self.authenticate(ra, password):
             token = str(uuid.uuid4())
-            user, created = UserProfile.objects.update_or_create(
+            user, _created = UserProfile.objects.update_or_create(
                 phone_number=phone_number,
                 defaults={
                     "ra": ra,
@@ -65,7 +61,7 @@ class UTFPRAuthService:
             return user
         return None
 
-    def confirm_email(self, token: str) -> Optional[UserProfile]:
+    def confirm_email(self, token: str) -> UserProfile | None:
         """Confirm user email using the confirmation token.
 
         Args:

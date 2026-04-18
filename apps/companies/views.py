@@ -81,7 +81,7 @@ class CompanyCreateView(LoginRequiredMixin, View):
     def dispatch(self, request, *args, **kwargs):
         if request.user.is_authenticated:
             try:
-                request.user.company
+                _ = request.user.company
                 return redirect("/empresas/perfil/")
             except Exception:
                 pass
@@ -138,8 +138,8 @@ class JobUpdateView(CompanyRequiredMixin, UpdateView):
         job = super().get_object(queryset)
         try:
             user_company = self.request.user.company
-        except Exception:
-            raise PermissionDenied("Voce nao tem permissao para editar esta vaga.")
+        except Exception as err:
+            raise PermissionDenied("Voce nao tem permissao para editar esta vaga.") from err
         if job.company != user_company:
             raise PermissionDenied("Voce nao tem permissao para editar esta vaga.")
         return job
@@ -173,8 +173,8 @@ class JobDeleteView(CompanyRequiredMixin, View):
         job = self.get_object()
         try:
             user_company = request.user.company
-        except Exception:
-            raise PermissionDenied("Voce nao tem permissao para remover esta vaga.")
+        except Exception as err:
+            raise PermissionDenied("Voce nao tem permissao para remover esta vaga.") from err
         if job.company != user_company:
             raise PermissionDenied("Voce nao tem permissao para remover esta vaga.")
         return render(request, self.template_name, {"job": job})
@@ -184,8 +184,8 @@ class JobDeleteView(CompanyRequiredMixin, View):
         job = self.get_object()
         try:
             user_company = request.user.company
-        except Exception:
-            raise PermissionDenied("Voce nao tem permissao para remover esta vaga.")
+        except Exception as err:
+            raise PermissionDenied("Voce nao tem permissao para remover esta vaga.") from err
         if job.company != user_company:
             raise PermissionDenied("Voce nao tem permissao para remover esta vaga.")
         job.status = JobStatus.REMOVED
