@@ -190,10 +190,10 @@ class MeuTeste(TestCase):
 
 ### Settings de teste
 
-O arquivo `apps/users/tests/test_settings.py` define configurações de teste que sobrescrevem o settings de produção:
+O arquivo `apps/users/tests/test_settings.py` define configurações de teste que sobrescrevem o settings de desenvolvimento:
 
 ```python
-from waha_bot.settings import *
+from waha_bot.settings.development import *
 
 CACHES = {
     "default": {
