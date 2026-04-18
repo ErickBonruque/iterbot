@@ -1,5 +1,5 @@
 """Custom Django model fields with encryption."""
-from typing import Any, Optional
+from typing import Any
 
 from django.db import models
 
@@ -16,8 +16,8 @@ class EncryptedCharField(models.CharField):
     description = "Encrypted CharField"
 
     def from_db_value(
-        self, value: Optional[str], expression: Any, connection: Any
-    ) -> Optional[str]:
+        self, value: str | None, expression: Any, connection: Any
+    ) -> str | None:
         """Decrypt value when loading from database.
 
         Args:
@@ -32,7 +32,7 @@ class EncryptedCharField(models.CharField):
             return value
         return decrypt_field(value)
 
-    def to_python(self, value: Optional[str]) -> Optional[str]:
+    def to_python(self, value: str | None) -> str | None:
         """Convert value to Python string.
 
         Args:
@@ -45,7 +45,7 @@ class EncryptedCharField(models.CharField):
             return value
         return str(value)
 
-    def get_prep_value(self, value: Optional[str]) -> Optional[str]:
+    def get_prep_value(self, value: str | None) -> str | None:
         """Encrypt value before saving to database.
 
         Args:
@@ -69,8 +69,8 @@ class EncryptedTextField(models.TextField):
     description = "Encrypted TextField"
 
     def from_db_value(
-        self, value: Optional[str], expression: Any, connection: Any
-    ) -> Optional[str]:
+        self, value: str | None, expression: Any, connection: Any
+    ) -> str | None:
         """Decrypt value when loading from database.
 
         Args:
@@ -85,7 +85,7 @@ class EncryptedTextField(models.TextField):
             return value
         return decrypt_field(value)
 
-    def to_python(self, value: Optional[str]) -> Optional[str]:
+    def to_python(self, value: str | None) -> str | None:
         """Convert value to Python string.
 
         Args:
@@ -98,7 +98,7 @@ class EncryptedTextField(models.TextField):
             return value
         return str(value)
 
-    def get_prep_value(self, value: Optional[str]) -> Optional[str]:
+    def get_prep_value(self, value: str | None) -> str | None:
         """Encrypt value before saving to database.
 
         Args:

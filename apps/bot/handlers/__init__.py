@@ -6,8 +6,8 @@ from .job_search import JobSearchHandler
 from .menu import MenuHandler
 
 __all__ = [
-    "BaseHandler",
     "AuthenticationHandler",
+    "BaseHandler",
     "JobReviewHandler",
     "JobSearchHandler",
     "MenuHandler",

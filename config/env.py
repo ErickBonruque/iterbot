@@ -1,6 +1,5 @@
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
 
 import environ
 
@@ -45,7 +44,7 @@ if env_file.exists():
     environ.Env.read_env(str(env_file))
 
 
-def _read_secret_file(secret_name: str) -> Optional[str]:
+def _read_secret_file(secret_name: str) -> str | None:
     """Read secret from Docker secrets file."""
     secret_path = Path(f"/run/secrets/{secret_name}")
     if secret_path.exists():
