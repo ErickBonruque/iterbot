@@ -6,6 +6,8 @@ on:
     branches:
       - 'feature/*'
       - 'fix/*'
+      - 'gsd/*'
+  workflow_dispatch:
 
 jobs:
   lint:
