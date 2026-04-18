@@ -6,7 +6,7 @@ from django.urls import reverse_lazy
 
 from config.env import settings
 
-from .celery import *  # noqa: F401, F403
+from .celery import *  # noqa: F403
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 # __file__ = waha_bot/settings/base.py

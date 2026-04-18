@@ -1,8 +1,8 @@
 # waha_bot/settings/development.py
 # Settings de desenvolvimento — herda de base.py e sobrescreve para dev.
 # Importa logging.py para garantir que structlog.configure() seja chamado.
-from .base import *  # noqa: F401, F403
-from .logging import *  # noqa: F401, F403
+from .base import *  # noqa: F403
+from .logging import *  # noqa: F403
 
 DEBUG = True
 

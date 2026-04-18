@@ -6,14 +6,14 @@ from django.core.exceptions import ImproperlyConfigured
 
 from config.env import settings
 
-from .base import *  # noqa: F401, F403
-from .logging import *  # noqa: F401, F403
-from .security import *  # noqa: F401, F403
+from .base import *  # noqa: F403
+from .logging import *  # noqa: F403
+from .security import *  # noqa: F403
 
 DEBUG = False
 
 # Validação de PORTAL_BASE_URL em produção (runtime check — DEBUG sempre False aqui)
-if not PORTAL_BASE_URL or not PORTAL_BASE_URL.startswith(("http://", "https://")):  # noqa: F821
+if not PORTAL_BASE_URL or not PORTAL_BASE_URL.startswith(("http://", "https://")):  # noqa: F405
     raise ImproperlyConfigured(
         "PORTAL_BASE_URL must be set with http:// or https:// when DEBUG=False"
     )
