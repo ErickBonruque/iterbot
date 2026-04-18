@@ -3,7 +3,6 @@ from unittest.mock import MagicMock, patch
 from django.test import TestCase
 
 from apps.bot.models import ConversationState
-
 from apps.bot.services import BotService
 from apps.users.models import UserProfile
 

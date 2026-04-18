@@ -1,4 +1,3 @@
-from typing import List
 
 import structlog
 
@@ -23,7 +22,7 @@ class JobSearchHandler(BaseHandler):
         return conversation_state
 
     def _format_course_line(self, index: int, course: Course) -> str:
-        details: List[str] = []
+        details: list[str] = []
         if course.code:
             details.append(course.code)
         if course.level:
@@ -195,7 +194,7 @@ class JobSearchHandler(BaseHandler):
         conversation_state.save(update_fields=["current_action", "updated_at"])
         self.perform_search(user, chat_id, selected_terms_list, term_name)
 
-    def perform_search(self, user: UserProfile, chat_id: str, terms: List[str], term_name: str) -> None:
+    def perform_search(self, user: UserProfile, chat_id: str, terms: list[str], term_name: str) -> None:
         self.send_msg(
             user,
             chat_id,

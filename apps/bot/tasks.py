@@ -3,11 +3,11 @@
 import time
 
 import structlog
-
-from apps.bot.messages import BOT_MESSAGES
 from celery import shared_task
 from django.core.cache import cache
 from django.core.mail import send_mail
+
+from apps.bot.messages import BOT_MESSAGES
 
 logger = structlog.get_logger(__name__)
 
