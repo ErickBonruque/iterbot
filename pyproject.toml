@@ -8,7 +8,7 @@ packages = [{include = "apps"}, {include = "config"}, {include = "infra"}, {incl
 
 [tool.poetry.dependencies]
 python = "^3.11"
-django = "^5.0.0"
+django = ">=5.2.11,<6"
 django-allauth = "^0.57.0"
 djangorestframework = "^3.14.0"
 django-filter = "^23.0"

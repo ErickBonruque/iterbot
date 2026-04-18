@@ -106,8 +106,8 @@ class TestDashboardViews(TestCase):
             email="dashboard@test.com",
             password="senha123",
         )
-        UserProfile.objects.create(
-            user=django_user,
+        # Signal already creates UserProfile; update the auto-created one
+        UserProfile.objects.filter(user=django_user).update(
             phone_number="5541988888888@c.us",
             is_authenticated_utfpr=False,
         )
