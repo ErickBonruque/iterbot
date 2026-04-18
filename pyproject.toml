@@ -80,7 +80,7 @@ line-ending = "lf"
 
 [tool.ruff.lint.isort]
 combine-as-imports = true
-known-first-party = ["apps", "infra", "config"]
+known-first-party = ["apps", "infra", "config", "waha_bot"]
 
 [tool.mypy]
 python_version = "3.11"
