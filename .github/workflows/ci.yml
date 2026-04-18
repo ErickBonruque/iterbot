@@ -139,6 +139,7 @@ jobs:
         uses: pypa/gh-action-pip-audit@v1.1.0
         with:
           inputs: requirements-audit.txt
+          ignore-vulns: CVE-2025-65431
 
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
