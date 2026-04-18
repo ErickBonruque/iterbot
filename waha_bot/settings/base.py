@@ -1,7 +1,6 @@
 from pathlib import Path
 
 import dj_database_url
-from django.core.exceptions import ImproperlyConfigured
 from django.templatetags.static import static
 from django.urls import reverse_lazy
 
@@ -139,11 +138,6 @@ ACCOUNT_EMAIL_CONFIRMATION_ANONYMOUS_REDIRECT_URL = "/accounts/email-confirmed/"
 
 # Portal de Empresas (usado pelo bot para enviar links)
 PORTAL_BASE_URL = settings.django.portal_base_url
-
-if not DEBUG and (not PORTAL_BASE_URL or not PORTAL_BASE_URL.startswith(("http://", "https://"))):
-    raise ImproperlyConfigured(
-        "PORTAL_BASE_URL must be set with http:// or https:// when DEBUG=False"
-    )
 
 # Email Configuration (dev usa console, prod usa SES via AWS)
 if settings.aws.access_key_id and settings.aws.secret_access_key:
