@@ -1,6 +1,7 @@
 """
 URLs da API REST para o dashboard.
 """
+
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 

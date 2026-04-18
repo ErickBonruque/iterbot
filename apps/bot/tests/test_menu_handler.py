@@ -13,9 +13,7 @@ class MenuHandlerTests(TestCase):
         self.service = BotService(waha_client=self.waha_client)
 
     def _authenticate_user(self, chat_id: str) -> UserProfile:
-        return UserProfile.objects.create(
-            phone_number=chat_id, is_authenticated_utfpr=True
-        )
+        return UserProfile.objects.create(phone_number=chat_id, is_authenticated_utfpr=True)
 
     def test_unknown_command_shows_menu(self):
         chat_id = "5533111111111@c.us"
@@ -44,9 +42,7 @@ class MenuHandlerContentTests(TestCase):
         self.service = BotService(waha_client=self.waha_client)
 
     def _authenticate_user(self, chat_id: str) -> UserProfile:
-        return UserProfile.objects.create(
-            phone_number=chat_id, is_authenticated_utfpr=True
-        )
+        return UserProfile.objects.create(phone_number=chat_id, is_authenticated_utfpr=True)
 
     def test_new_user_menu_contains_iterbot_brand(self):
         """Novo usuário deve receber mensagem com o nome IterBot."""

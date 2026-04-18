@@ -8,6 +8,7 @@ from celery import shared_task
 from django.conf import settings
 from django.db.models import Q
 
+from apps.bot.messages import BOT_MESSAGES
 from apps.core.portal_links import build_portal_url
 from apps.jobs.models import Job, JobStatus
 from apps.users.models import UserProfile
@@ -145,9 +146,9 @@ def _format_review_message(course_name: str, jobs: list[dict[str, Any]]) -> str:
         Formatted WhatsApp message string.
     """
     lines = [
-        f"🎓 *Review de Vagas — {course_name}*",
+        BOT_MESSAGES.review.weekly_header.text.format(course_name=course_name),
         "",
-        f"Encontrei *{len(jobs)}* oportunidades para voce esta semana:",
+        BOT_MESSAGES.review.weekly_summary.text.format(count=len(jobs)),
         "",
     ]
     for i, job in enumerate(jobs, 1):
@@ -168,7 +169,7 @@ def _format_review_message(course_name: str, jobs: list[dict[str, Any]]) -> str:
             lines.append(f"🔗 {url}")
         lines.append("")
 
-    lines.append('_Para ver mais vagas, acesse o menu e escolha "Buscar Vagas"._')
+    lines.append(BOT_MESSAGES.review.weekly_footer.text)
     return "\n".join(lines)
 
 
@@ -193,9 +194,12 @@ def send_weekly_job_review(self) -> dict[str, int]:
     job_service = JobSearchService()
 
     users = (
-        UserProfile.objects.filter(selected_course__isnull=False, phone_number__isnull=False)
+        UserProfile.objects.filter(
+            conversation_state__selected_course__isnull=False,
+            phone_number__isnull=False,
+        )
         .exclude(phone_number="")
-        .select_related("selected_course")
+        .select_related("conversation_state__selected_course")
     )
 
     stats: dict[str, int] = {"sent": 0, "no_jobs": 0, "errors": 0}
@@ -203,26 +207,27 @@ def send_weekly_job_review(self) -> dict[str, int]:
     logger.info("weekly_review_started", total_users=users.count())
 
     for user in users:
+        selected_course = user.conversation_state.selected_course
         try:
-            jobs = _build_review_for_user(user.selected_course, job_service)
+            jobs = _build_review_for_user(selected_course, job_service)
 
             if not jobs:
                 stats["no_jobs"] += 1
                 logger.debug(
                     "review_no_jobs",
                     user_id=user.id,
-                    course=user.selected_course.name,
+                    course=selected_course.name,
                 )
                 continue
 
-            msg = _format_review_message(user.selected_course.name, jobs)
+            msg = _format_review_message(selected_course.name, jobs)
             waha_client.send_message(user.phone_number, msg)
             stats["sent"] += 1
 
             logger.info(
                 "review_sent",
                 user_id=user.id,
-                course=user.selected_course.name,
+                course=selected_course.name,
                 jobs_count=len(jobs),
             )
 
@@ -233,7 +238,7 @@ def send_weekly_job_review(self) -> dict[str, int]:
             logger.error(
                 "review_send_failed",
                 user_id=user.id,
-                course=user.selected_course.name if user.selected_course else None,
+                course=selected_course.name if selected_course else None,
                 error=str(exc),
                 exc_info=True,
             )

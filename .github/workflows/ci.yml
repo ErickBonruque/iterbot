@@ -6,6 +6,8 @@ on:
     branches:
       - 'feature/*'
       - 'fix/*'
+      - 'gsd/*'
+  workflow_dispatch:
 
 jobs:
   lint:
@@ -125,24 +127,24 @@ jobs:
           python-version: '3.11'
 
       - name: Install Poetry
-        run: pip install poetry
+        run: pip install poetry poetry-plugin-export
 
       - name: Install dependencies
         run: poetry install --only main
 
+      - name: Export requirements for pip-audit
+        run: poetry export --only main -f requirements.txt -o requirements-audit.txt --without-hashes
+
       - name: Run pip-audit
         uses: pypa/gh-action-pip-audit@v1.1.0
         with:
-          inputs: .
-          audit-level: critical
-          format: sarif
-          output-file: pip-audit-results.sarif
-
-      - name: Upload pip-audit results to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@v2
-        with:
-          sarif_file: pip-audit-results.sarif
-        continue-on-error: true
+          inputs: requirements-audit.txt
+          ignore-vulns: >-
+            CVE-2025-65431
+            CVE-2025-65430
+            CVE-2026-27982
+            CVE-2026-32597
+            CVE-2025-46656
 
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master

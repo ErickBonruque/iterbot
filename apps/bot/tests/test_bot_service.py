@@ -28,9 +28,9 @@ class BotServiceMenuTests(TestCase):
         self.service.process_message(user.phone_number, "logout", from_me=False)
 
         user.refresh_from_db()
-        self.assertIsNone(user.current_action)
-        self.assertIsNone(user.selected_course)
-        self.assertIsNone(user.selected_term)
+        self.assertIsNone(user.conversation_state.current_action)
+        self.assertIsNone(user.conversation_state.selected_course)
+        self.assertIsNone(user.conversation_state.selected_term)
         sent_text = self.waha_client.send_message.call_args[0][1]
         self.assertIn("saiu do sistema", sent_text)
 
@@ -51,18 +51,18 @@ class BotServiceFlowTests(TestCase):
         self.service.process_message(chat_id, "1", from_me=False)
 
         user = UserProfile.objects.get(phone_number=chat_id)
-        self.assertEqual(user.current_action, "login_step_ra")
+        self.assertEqual(user.conversation_state.current_action, "login_step_ra")
 
         self.service.process_message(chat_id, "ra123", from_me=False)
         user.refresh_from_db()
-        self.assertEqual(user.current_action, "login_step_password")
+        self.assertEqual(user.conversation_state.current_action, "login_step_password")
 
         self.service.auth_service.authenticate = MagicMock(return_value=True)
         self.service.process_message(chat_id, "senha123", from_me=False)
 
         user.refresh_from_db()
-        self.assertEqual(user.current_action, "login_step_email")
-        self.assertEqual(user.flow_data.get("temp_ra"), "ra123")
+        self.assertEqual(user.conversation_state.current_action, "login_step_email")
+        self.assertEqual(user.conversation_state.flow_data.get("temp_ra"), "ra123")
 
     def test_course_and_term_selection_drives_job_search(self):
         course = Course.objects.create(name="Engenharia", is_active=True)
@@ -74,12 +74,12 @@ class BotServiceFlowTests(TestCase):
 
         self.service.process_message(chat_id, "3", from_me=False)  # select course
         user.refresh_from_db()
-        self.assertEqual(user.current_action, "course_selection")
+        self.assertEqual(user.conversation_state.current_action, "course_selection")
 
         self.service.process_message(chat_id, "1", from_me=False)  # pick first course
         user.refresh_from_db()
-        self.assertEqual(user.current_action, "term_selection")
-        self.assertEqual(user.selected_course, course)
+        self.assertEqual(user.conversation_state.current_action, "term_selection")
+        self.assertEqual(user.conversation_state.selected_course, course)
 
         self.job_service.search.return_value = [
             {"company": "Capy Corp", "title": "Dev", "url": "https://example.com"}
@@ -87,8 +87,8 @@ class BotServiceFlowTests(TestCase):
         self.service.process_message(chat_id, "1", from_me=False)  # pick top priority term
 
         user.refresh_from_db()
-        self.assertIsNone(user.current_action)
-        self.assertEqual(user.selected_term.term, "Python")
+        self.assertIsNone(user.conversation_state.current_action)
+        self.assertEqual(user.conversation_state.selected_term.term, "Python")
         self.job_service.search.assert_called_with(["Python"], limit=5)
         sent_text = self.waha_client.send_message.call_args[0][1]
         self.assertIn("Vagas para Engenharia", sent_text)
@@ -117,7 +117,7 @@ class BotServiceFlowTests(TestCase):
 
         self.service.process_message(chat_id, "3", from_me=False)
         user.refresh_from_db()
-        self.assertEqual(user.current_action, "course_selection")
+        self.assertEqual(user.conversation_state.current_action, "course_selection")
 
         sent_text = self.waha_client.send_message.call_args[0][1]
         self.assertIn("Selecione seu Curso", sent_text)
@@ -136,12 +136,12 @@ class BotServiceFlowTests(TestCase):
         # Inicia fluxo de curso
         self.service.process_message(chat_id, "3", from_me=False)
         user.refresh_from_db()
-        self.assertEqual(user.current_action, "course_selection")
+        self.assertEqual(user.conversation_state.current_action, "course_selection")
 
         # Escolhe o primeiro curso
         self.service.process_message(chat_id, "1", from_me=False)
         user.refresh_from_db()
-        self.assertEqual(user.current_action, "term_selection")
+        self.assertEqual(user.conversation_state.current_action, "term_selection")
 
         # Configura retorno de busca e escolhe opção "Buscar Todos"
         self.job_service.search.return_value = [
@@ -159,7 +159,7 @@ class BotServiceFlowTests(TestCase):
         self.service.process_message(chat_id, "2", from_me=False)
 
         user = UserProfile.objects.get(phone_number=chat_id)
-        self.assertEqual(user.current_action, "company_onboarding_selection")
+        self.assertEqual(user.conversation_state.current_action, "company_onboarding_selection")
         sent_text = self.waha_client.send_message.call_args[0][1]
         self.assertIn("Cadastrar empresa", sent_text)
         self.assertIn("Ja tenho conta / publicar vaga", sent_text)

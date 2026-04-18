@@ -1,7 +1,10 @@
 """Authentication handler for login/logout flows."""
+
 import structlog
 from django.core.exceptions import ValidationError
 
+from apps.bot.messages import BOT_MESSAGES
+from apps.bot.models import ConversationState
 from apps.users.models import UserProfile
 from apps.users.services import UTFPRAuthService
 from apps.users.validators import validate_utfpr_email
@@ -12,147 +15,137 @@ logger = structlog.get_logger(__name__)
 
 
 class AuthenticationHandler(BaseHandler):
-    """Handles user authentication (login/logout) flows.
-
-    Attributes:
-        auth_service: UTFPRAuthService instance for authentication.
-    """
+    """Handles user authentication (login/logout) flows."""
 
     def __init__(self, waha_client, auth_service: UTFPRAuthService) -> None:
-        """
-        Initialize authentication handler.
-
-        Args:
-            waha_client: WAHA client for messaging
-            auth_service: Service for UTFPR authentication
-        """
         super().__init__(waha_client)
         self.auth_service = auth_service
 
-    def start_login_flow(self, user: UserProfile, chat_id: str) -> None:
-        """
-        Start login flow by requesting RA.
+    def _get_conversation_state(self, user: UserProfile) -> ConversationState:
+        conversation_state, _ = ConversationState.objects.get_or_create(user=user)
+        return conversation_state
 
-        Args:
-            user: User profile
-            chat_id: WhatsApp chat ID
-        """
+    def start_login_flow(self, user: UserProfile, chat_id: str) -> None:
         if user.is_authenticated_utfpr:
             self.send_msg(
                 user,
                 chat_id,
-                "✅ Você já está cadastrado! Selecione a opção 3 para buscar vagas.",
+                self.resolve_message(
+                    BOT_MESSAGES.auth.login_already_registered.key,
+                    BOT_MESSAGES.auth.login_already_registered.text,
+                ),
             )
             return
 
-        if user.current_action == "login_step_waiting_confirmation":
+        conversation_state = self._get_conversation_state(user)
+        if conversation_state.current_action == "login_step_waiting_confirmation":
             self.handle_login_waiting_confirmation(user, chat_id, "")
             return
 
-        user.current_action = "login_step_ra"
-        user.flow_data = {}
-        user.save(update_fields=["current_action", "flow_data", "last_activity"])
+        conversation_state.current_action = "login_step_ra"
+        conversation_state.flow_data = {}
+        conversation_state.save(update_fields=["current_action", "flow_data", "updated_at"])
 
-        msg = self.get_text(
-            "login_prompt_ra",
-            "🔐 *Cadastro UTFPR*\n\n"
-            "Por favor, digite seu **RA** (ex: a1234567):\n\n"
-            "_(Digite 'cancelar' para voltar)_",
+        self.send_msg(
+            user,
+            chat_id,
+            self.resolve_message(
+                BOT_MESSAGES.auth.login_prompt_ra.key,
+                BOT_MESSAGES.auth.login_prompt_ra.text,
+            ),
         )
-        self.send_msg(user, chat_id, msg)
 
     def handle_login_ra(self, user: UserProfile, chat_id: str, text: str) -> None:
-        """
-        Handle RA input during login.
-
-        Args:
-            user: User profile
-            chat_id: WhatsApp chat ID
-            text: User input (RA)
-        """
         ra = text.strip().lower()
 
         if len(ra) < 5:
-            self.send_msg(user, chat_id, "❌ RA muito curto. Tente novamente ou digite 'cancelar'.")
+            self.send_msg(
+                user,
+                chat_id,
+                self.resolve_message(
+                    BOT_MESSAGES.auth.login_ra_too_short.key,
+                    BOT_MESSAGES.auth.login_ra_too_short.text,
+                ),
+            )
             return
 
-        user.flow_data["temp_ra"] = ra
-        user.current_action = "login_step_password"
-        user.save(update_fields=["current_action", "flow_data", "last_activity"])
+        conversation_state = self._get_conversation_state(user)
+        conversation_state.flow_data["temp_ra"] = ra
+        conversation_state.current_action = "login_step_password"
+        conversation_state.save(update_fields=["current_action", "flow_data", "updated_at"])
 
-        msg = self.get_text(
-            "login_prompt_password",
-            "🔑 Agora digite sua **Senha** do Portal do Aluno:\n\n"
-            "_(Seus dados são criptografados e usados apenas para validação)_",
+        self.send_msg(
+            user,
+            chat_id,
+            self.resolve_message(
+                BOT_MESSAGES.auth.login_prompt_password.key,
+                BOT_MESSAGES.auth.login_prompt_password.text,
+            ),
         )
-        self.send_msg(user, chat_id, msg)
 
     def handle_login_password(self, user: UserProfile, chat_id: str, text: str) -> bool:
-        """
-        Handle password input and request email verification.
-
-        Args:
-            user: User profile
-            chat_id: WhatsApp chat ID
-            text: User input (password)
-
-        Returns:
-            True if authentication succeeded
-        """
         password = text.strip()
-        ra = user.flow_data.get("temp_ra")
+        conversation_state = self._get_conversation_state(user)
+        ra = conversation_state.flow_data.get("temp_ra")
 
         if not ra:
-            self.send_msg(user, chat_id, "❌ Erro de fluxo. Por favor, comece novamente.")
+            self.send_msg(
+                user,
+                chat_id,
+                self.resolve_message(
+                    BOT_MESSAGES.auth.login_flow_error.key,
+                    BOT_MESSAGES.auth.login_flow_error.text,
+                ),
+            )
             self.reset_state(user)
             return False
 
-        self.send_msg(user, chat_id, "🔄 Validando credenciais...")
+        self.send_msg(
+            user,
+            chat_id,
+            self.resolve_message(
+                BOT_MESSAGES.auth.login_validating_credentials.key,
+                BOT_MESSAGES.auth.login_validating_credentials.text,
+            ),
+        )
 
         if self.auth_service.authenticate(ra, password):
-            user.flow_data["temp_password"] = password
-            user.current_action = "login_step_email"
-            user.save(update_fields=["current_action", "flow_data", "last_activity"])
+            conversation_state.flow_data["temp_password"] = password
+            conversation_state.current_action = "login_step_email"
+            conversation_state.save(update_fields=["current_action", "flow_data", "updated_at"])
 
-            msg = self.get_text(
-                "login_prompt_email",
-                "🔐 *Verificação de E-mail*\n\n"
-                "Por favor, digite seu **e-mail institucional** (@alunos.utfpr.edu.br):\n\n"
-                "_(Digite 'cancelar' para voltar)_",
+            self.send_msg(
+                user,
+                chat_id,
+                self.resolve_message(
+                    BOT_MESSAGES.auth.login_prompt_email.key,
+                    BOT_MESSAGES.auth.login_prompt_email.text,
+                ),
             )
-            self.send_msg(user, chat_id, msg)
             return True
-        else:
-            msg = self.get_text(
-                "login_error",
-                "❌ **Falha no login.**\n"
-                "RA ou senha incorretos.\n\n"
-                "Tente digitar a senha novamente ou digite 'cancelar' para sair.",
-            )
-            self.send_msg(user, chat_id, msg)
 
-            logger.warning("authentication_failed", user_id=user.id, ra=ra)
-            return False
+        self.send_msg(
+            user,
+            chat_id,
+            self.resolve_message(
+                BOT_MESSAGES.auth.login_error.key,
+                BOT_MESSAGES.auth.login_error.text,
+            ),
+        )
+        logger.warning("authentication_failed", user_id=user.id, ra=ra)
+        return False
 
     def handle_login_email(self, user: UserProfile, chat_id: str, text: str) -> bool:
-        """
-        Handle email input and initiate email confirmation flow.
-
-        Args:
-            user: User profile
-            chat_id: WhatsApp chat ID
-            text: User input (email)
-
-        Returns:
-            True if email validation succeeded
-        """
         email = text.strip().lower()
 
         if len(email) < 10:
             self.send_msg(
                 user,
                 chat_id,
-                "❌ E-mail muito curto. Digite seu e-mail completo (@alunos.utfpr.edu.br).",
+                self.resolve_message(
+                    BOT_MESSAGES.auth.login_email_too_short.key,
+                    BOT_MESSAGES.auth.login_email_too_short.text,
+                ),
             )
             return True
 
@@ -162,58 +155,61 @@ class AuthenticationHandler(BaseHandler):
             self.send_msg(
                 user,
                 chat_id,
-                "❌ E-mail inválido. Use apenas endereços @alunos.utfpr.edu.br.\n\n"
-                "Digite 'cancelar' para voltar ao menu.",
+                self.resolve_message(
+                    BOT_MESSAGES.auth.login_email_invalid.key,
+                    BOT_MESSAGES.auth.login_email_invalid.text,
+                ),
             )
             return True
 
-        ra = user.flow_data.get("temp_ra")
-        password = user.flow_data.get("temp_password")
+        conversation_state = self._get_conversation_state(user)
+        ra = conversation_state.flow_data.get("temp_ra")
+        password = conversation_state.flow_data.get("temp_password")
 
         if not ra or not password:
-            self.send_msg(user, chat_id, "❌ Erro de fluxo. Por favor, comece novamente.")
+            self.send_msg(
+                user,
+                chat_id,
+                self.resolve_message(
+                    BOT_MESSAGES.auth.login_flow_error.key,
+                    BOT_MESSAGES.auth.login_flow_error.text,
+                ),
+            )
             self.reset_state(user)
             return False
 
         linked_user = self.auth_service.link_user(chat_id, ra, password, email)
 
         if linked_user:
-            user.current_action = "login_step_waiting_confirmation"
-            user.save(update_fields=["current_action", "last_activity"])
+            conversation_state.current_action = "login_step_waiting_confirmation"
+            conversation_state.save(update_fields=["current_action", "updated_at"])
 
             from apps.bot.tasks import send_confirmation_email
 
             send_confirmation_email.delay(linked_user.id)
-
-            msg = self.get_text(
-                "login_waiting_confirmation",
-                "📧 *Confirmação de E-mail*\n\n"
-                "Enviamos um link de confirmação para:\n"
-                f"`{email}`\n\n"
-                "Clique no link para confirmar seu e-mail.\n"
-                "O link expira em 24 horas.\n\n"
-                "Após confirmar, você terá acesso ao bot.\n\n"
-                "Digite 'reenviar' se não recebeu o email.",
+            self.send_msg(
+                user,
+                chat_id,
+                self.resolve_message(
+                    BOT_MESSAGES.auth.login_waiting_confirmation.key,
+                    BOT_MESSAGES.auth.login_waiting_confirmation.text,
+                    email=email,
+                ),
             )
-            self.send_msg(user, chat_id, msg)
             return True
-        else:
-            self.send_msg(user, chat_id, "❌ Erro ao processar. Por favor, comece novamente.")
-            self.reset_state(user)
-            return False
+
+        self.send_msg(
+            user,
+            chat_id,
+            self.resolve_message(
+                BOT_MESSAGES.auth.login_flow_error.key,
+                BOT_MESSAGES.auth.login_flow_error.text,
+            ),
+        )
+        self.reset_state(user)
+        return False
 
     def handle_login_waiting_confirmation(self, user: UserProfile, chat_id: str, text: str) -> bool:
-        """
-        Handle waiting for email confirmation state.
-
-        Args:
-            user: User profile.
-            chat_id: WhatsApp chat ID.
-            text: User input (can be 'reenviar' to resend email).
-
-        Returns:
-            True if handled.
-        """
         text_lower = text.strip().lower()
 
         if text_lower == "reenviar":
@@ -221,87 +217,72 @@ class AuthenticationHandler(BaseHandler):
                 self.send_msg(
                     user,
                     chat_id,
-                    "📧 E-mail de confirmação reenviado!\n\n"
-                    "Verifique sua caixa de entrada (e spam também).\n\n"
-                    "Digite 'menu' para voltar ao início.",
+                    self.resolve_message(
+                        BOT_MESSAGES.auth.login_resend_success.key,
+                        BOT_MESSAGES.auth.login_resend_success.text,
+                    ),
                 )
             else:
                 self.send_msg(
                     user,
                     chat_id,
-                    "❌ Erro ao reenviar. Tente novamente ou digite 'menu' para voltar.",
+                    self.resolve_message(
+                        BOT_MESSAGES.auth.login_resend_error.key,
+                        BOT_MESSAGES.auth.login_resend_error.text,
+                    ),
                 )
             return True
 
         self.send_msg(
             user,
             chat_id,
-            "⏳ Aguardando confirmação de e-mail...\n\n"
-            "Clique no link enviado para seu email ou digite 'reenviar' para receber novamente.\n\n"
-            "Digite 'menu' para voltar ao início.",
+            self.resolve_message(
+                BOT_MESSAGES.auth.login_waiting_status.key,
+                BOT_MESSAGES.auth.login_waiting_status.text,
+            ),
         )
         return True
 
     def handle_logout(self, user: UserProfile, chat_id: str) -> None:
-        """
-        Handle user logout.
-
-        Args:
-            user: User profile
-            chat_id: WhatsApp chat ID
-        """
         self.auth_service.logout(chat_id)
-        self.send_msg(user, chat_id, "🔒 Você saiu do sistema. Até logo!")
+        self.send_msg(
+            user,
+            chat_id,
+            self.resolve_message(
+                BOT_MESSAGES.auth.logout_success.key,
+                BOT_MESSAGES.auth.logout_success.text,
+            ),
+        )
 
-        user.current_action = None
-        user.selected_course = None
-        user.selected_term = None
-        user.save(
-            update_fields=[
-                "current_action",
-                "selected_course",
-                "selected_term",
-                "last_activity",
-            ]
+        conversation_state = self._get_conversation_state(user)
+        conversation_state.current_action = None
+        conversation_state.selected_course = None
+        conversation_state.selected_term = None
+        conversation_state.save(
+            update_fields=["current_action", "selected_course", "selected_term", "updated_at"]
         )
 
         logger.info("user_logged_out", user_id=user.id)
 
     def reset_state(self, user: UserProfile) -> None:
-        """
-        Reset user conversation state.
-
-        Args:
-            user: User profile to reset
-        """
-        user.current_action = None
-        user.flow_data = {}
-        user.save(update_fields=["current_action", "flow_data", "last_activity"])
+        conversation_state = self._get_conversation_state(user)
+        conversation_state.current_action = None
+        conversation_state.flow_data = {}
+        conversation_state.save(update_fields=["current_action", "flow_data", "updated_at"])
 
     def handle(self, user: UserProfile, chat_id: str, text: str) -> bool:
-        """
-        Handle authentication-related messages.
-
-        Args:
-            user: User profile
-            chat_id: WhatsApp chat ID
-            text: User message
-
-        Returns:
-            True if message was handled
-        """
-        action = user.current_action
+        action = self._get_conversation_state(user).current_action
 
         if action == "login_step_ra":
             self.handle_login_ra(user, chat_id, text)
             return True
-        elif action == "login_step_password":
+        if action == "login_step_password":
             self.handle_login_password(user, chat_id, text)
             return True
-        elif action == "login_step_email":
+        if action == "login_step_email":
             self.handle_login_email(user, chat_id, text)
             return True
-        elif action == "login_step_waiting_confirmation":
+        if action == "login_step_waiting_confirmation":
             self.handle_login_waiting_confirmation(user, chat_id, text)
             return True
 

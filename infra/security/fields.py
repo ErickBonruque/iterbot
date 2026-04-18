@@ -1,4 +1,5 @@
 """Custom Django model fields with encryption."""
+
 from typing import Any
 
 from django.db import models
@@ -15,9 +16,7 @@ class EncryptedCharField(models.CharField):
 
     description = "Encrypted CharField"
 
-    def from_db_value(
-        self, value: str | None, expression: Any, connection: Any
-    ) -> str | None:
+    def from_db_value(self, value: str | None, expression: Any, connection: Any) -> str | None:
         """Decrypt value when loading from database.
 
         Args:
@@ -68,9 +67,7 @@ class EncryptedTextField(models.TextField):
 
     description = "Encrypted TextField"
 
-    def from_db_value(
-        self, value: str | None, expression: Any, connection: Any
-    ) -> str | None:
+    def from_db_value(self, value: str | None, expression: Any, connection: Any) -> str | None:
         """Decrypt value when loading from database.
 
         Args:

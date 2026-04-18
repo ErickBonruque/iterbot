@@ -1,4 +1,5 @@
 """Middleware for structured logging of requests and responses."""
+
 import time
 from collections.abc import Callable
 

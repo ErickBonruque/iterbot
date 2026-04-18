@@ -1,4 +1,5 @@
 """Middleware to add correlation ID to each request."""
+
 import uuid
 from collections.abc import Callable
 
