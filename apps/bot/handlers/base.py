@@ -1,5 +1,6 @@
 """Base handler for bot conversation flows."""
 from abc import ABC, abstractmethod
+from typing import Any
 
 import structlog
 
@@ -8,6 +9,13 @@ from apps.users.models import UserProfile
 from infra.waha.client import WahaClient
 
 logger = structlog.get_logger(__name__)
+
+
+class _SafeFormatDict(dict[str, Any]):
+    """Returns original placeholder when key is missing."""
+
+    def __missing__(self, key: str) -> str:  # pragma: no cover - trivial
+        return "{" + key + "}"
 
 
 class BaseHandler(ABC):
@@ -50,6 +58,23 @@ class BaseHandler(ABC):
         except Exception as e:
             logger.warning("failed_to_fetch_message", key=key, error=str(e))
         return default
+
+    def resolve_message(self, key: str, default: str, **kwargs: Any) -> str:
+        """Resolve message from DB override and format named placeholders safely."""
+        template = self.get_text(key, default)
+        if not kwargs:
+            return template
+
+        try:
+            return template.format_map(_SafeFormatDict(kwargs))
+        except Exception as e:
+            logger.warning(
+                "failed_to_render_message_template",
+                key=key,
+                error=str(e),
+                placeholders=sorted(kwargs.keys()),
+            )
+            return template
 
     def send_msg(self, user: UserProfile, chat_id: str, message: str) -> None:
         """

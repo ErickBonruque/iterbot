@@ -3,6 +3,8 @@
 import time
 
 import structlog
+
+from apps.bot.messages import BOT_MESSAGES
 from celery import shared_task
 from django.core.cache import cache
 from django.core.mail import send_mail
@@ -11,7 +13,7 @@ logger = structlog.get_logger(__name__)
 
 # E-mail de alerta fixo — nao configuravel via admin neste milestone (D-05)
 ALERT_EMAIL = "bonrqueruck@gmail.com"
-ALERT_SUBJECT = "[IterBot] ⚠️ Bot WhatsApp offline"
+ALERT_SUBJECT = BOT_MESSAGES.tasks.alert_subject_offline.text
 
 # Backoff entre tentativas de reconexão em segundos (D-02)
 RECONNECT_BACKOFF = [30, 60, 120]
@@ -185,13 +187,13 @@ def _send_offline_alert(
     from django.conf import settings as django_settings
 
     body_lines = [
-        f"O bot WhatsApp (sessão: {session_name}) foi detectado como OFFLINE.",
+        BOT_MESSAGES.tasks.alert_offline_intro.text.format(session_name=session_name),
         "",
-        f"Status atual: {current_status}",
+        BOT_MESSAGES.tasks.alert_status_line.text.format(current_status=current_status),
     ]
 
     if error_message:
-        body_lines.append(f"Mensagem de erro: {error_message}")
+        body_lines.append(BOT_MESSAGES.tasks.alert_error_line.text.format(error_message=error_message))
 
     if reconnect_attempted:
         reconnect_result = (
@@ -199,7 +201,7 @@ def _send_offline_alert(
             if reconnect_success
             else "❌ Reconexão falhou após 3 tentativas"
         )
-        body_lines.append(f"Tentativa de reconexão automática: {reconnect_result}")
+        body_lines.append(BOT_MESSAGES.tasks.alert_reconnect_line.text.format(reconnect_result=reconnect_result))
 
     body_lines.extend(
         [
@@ -293,9 +295,9 @@ def send_confirmation_email(self, user_id: int) -> dict:
         base_url = getattr(django_settings, "PORTAL_BASE_URL", "https://3-86-57-105.sslip.io")
         confirm_url = f"{base_url}/confirmar-email/{user.email_confirmation_token}"
 
-        subject = "[IterBot] Confirme seu e-mail institucional"
+        subject = BOT_MESSAGES.tasks.confirm_email_subject.text
         body_lines = [
-            f"Olá, {user.ra or 'aluno'}!",
+            BOT_MESSAGES.tasks.confirm_email_greeting.text.format(ra=user.ra or "aluno"),
             "",
             "Você solicitou acesso ao IterBot, o assistente de vagas da UTFPR.",
             "",
