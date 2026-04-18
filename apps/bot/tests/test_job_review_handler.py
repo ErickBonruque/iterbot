@@ -2,6 +2,7 @@ from unittest.mock import MagicMock, patch
 
 from django.test import TestCase
 
+from apps.bot.models import ConversationState
 from apps.bot.services import BotService
 from apps.courses.models import Course
 from apps.users.models import UserProfile
@@ -14,9 +15,11 @@ class JobReviewHandlerTests(TestCase):
         self.service = BotService(waha_client=self.waha_client)
 
     def _authenticate_user(self, chat_id: str) -> UserProfile:
-        return UserProfile.objects.create(
+        user = UserProfile.objects.create(
             phone_number=chat_id, is_authenticated_utfpr=True
         )
+        ConversationState.objects.get_or_create(user=user)
+        return user
 
     def test_authenticated_user_job_review_option_sends_response(self):
         """Opção '4' (review de vagas) deve enviar resposta ao usuário autenticado."""
@@ -51,11 +54,13 @@ class JobReviewHandlerNoCourseTests(TestCase):
         """Usuário autenticado sem curso deve receber aviso para buscar vagas primeiro."""
         chat_id = "5544444444444@c.us"
         # Usuário autenticado mas sem curso selecionado
-        UserProfile.objects.create(
+        user = UserProfile.objects.create(
             phone_number=chat_id,
             is_authenticated_utfpr=True,
-            selected_course=None,
         )
+        state, _ = ConversationState.objects.get_or_create(user=user)
+        state.selected_course = None
+        state.save(update_fields=["selected_course", "updated_at"])
         self.service.process_message(chat_id, "4", from_me=False)
         sent_text = self.waha_client.send_message.call_args[0][1]
         # Deve mencionar buscar vagas ou curso
@@ -73,11 +78,13 @@ class JobReviewHandlerNoCourseTests(TestCase):
 
         chat_id = "5544555555555@c.us"
         course = Course.objects.create(name="Ciência da Computação", is_active=True)
-        UserProfile.objects.create(
+        user = UserProfile.objects.create(
             phone_number=chat_id,
             is_authenticated_utfpr=True,
-            selected_course=course,
         )
+        state, _ = ConversationState.objects.get_or_create(user=user)
+        state.selected_course = course
+        state.save(update_fields=["selected_course", "updated_at"])
         self.service.process_message(chat_id, "4", from_me=False)
         # Deve ter enviado alguma mensagem (busca em progresso + resultado)
         self.assertTrue(self.waha_client.send_message.called)
