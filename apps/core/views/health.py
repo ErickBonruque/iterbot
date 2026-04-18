@@ -1,4 +1,5 @@
 """Health check endpoint for monitoring."""
+
 from typing import Any
 
 import structlog

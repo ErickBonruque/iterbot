@@ -1,6 +1,7 @@
 """
 Views da API REST para o dashboard.
 """
+
 from datetime import timedelta
 
 from django.contrib.auth import get_user_model
@@ -80,10 +81,10 @@ class CourseViewSet(viewsets.ModelViewSet):
 
 
 class UserProfileViewSet(viewsets.ModelViewSet):
-    queryset = UserProfile.objects.select_related("selected_course").all()
+    queryset = UserProfile.objects.select_related("conversation_state__selected_course").all()
     permission_classes = [AllowAny]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
-    filterset_fields = ["is_authenticated_utfpr", "selected_course"]
+    filterset_fields = ["is_authenticated_utfpr", "conversation_state__selected_course"]
     search_fields = ["phone_number", "ra"]
     ordering_fields = ["last_activity", "created_at", "ra", "phone_number"]
     ordering = ["-last_activity"]

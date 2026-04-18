@@ -14,9 +14,7 @@ class AuthenticationHandlerStartLoginTests(TestCase):
         self.service = BotService(waha_client=self.waha_client)
 
     def _authenticate_user(self, chat_id: str) -> UserProfile:
-        user = UserProfile.objects.create(
-            phone_number=chat_id, is_authenticated_utfpr=True
-        )
+        user = UserProfile.objects.create(phone_number=chat_id, is_authenticated_utfpr=True)
         ConversationState.objects.get_or_create(user=user)
         return user
 

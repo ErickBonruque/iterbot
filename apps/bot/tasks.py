@@ -193,7 +193,9 @@ def _send_offline_alert(
     ]
 
     if error_message:
-        body_lines.append(BOT_MESSAGES.tasks.alert_error_line.text.format(error_message=error_message))
+        body_lines.append(
+            BOT_MESSAGES.tasks.alert_error_line.text.format(error_message=error_message)
+        )
 
     if reconnect_attempted:
         reconnect_result = (
@@ -201,7 +203,9 @@ def _send_offline_alert(
             if reconnect_success
             else "❌ Reconexão falhou após 3 tentativas"
         )
-        body_lines.append(BOT_MESSAGES.tasks.alert_reconnect_line.text.format(reconnect_result=reconnect_result))
+        body_lines.append(
+            BOT_MESSAGES.tasks.alert_reconnect_line.text.format(reconnect_result=reconnect_result)
+        )
 
     body_lines.extend(
         [

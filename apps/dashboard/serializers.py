@@ -1,6 +1,7 @@
 """
 Serializers para a API REST do dashboard.
 """
+
 from rest_framework import serializers
 
 from apps.bot.models import BotConfiguration, BotHealthCheck, BotMetrics, InteractionLog
@@ -58,7 +59,7 @@ class CourseListSerializer(serializers.ModelSerializer):
 
 class UserProfileListSerializer(serializers.ModelSerializer):
     interactions_count = serializers.SerializerMethodField()
-    selected_course_name = serializers.CharField(source="selected_course.name", read_only=True)
+    selected_course_name = serializers.SerializerMethodField()
 
     class Meta:
         model = UserProfile
@@ -75,10 +76,17 @@ class UserProfileListSerializer(serializers.ModelSerializer):
     def get_interactions_count(self, obj):
         return obj.interactions.count()
 
+    def get_selected_course_name(self, obj):
+        conversation_state = getattr(obj, "conversation_state", None)
+        if conversation_state and conversation_state.selected_course:
+            return conversation_state.selected_course.name
+        return None
+
 
 class UserProfileSerializer(serializers.ModelSerializer):
     interactions_count = serializers.SerializerMethodField()
-    selected_course_name = serializers.CharField(source="selected_course.name", read_only=True)
+    selected_course = serializers.SerializerMethodField()
+    selected_course_name = serializers.SerializerMethodField()
 
     class Meta:
         model = UserProfile
@@ -104,6 +112,18 @@ class UserProfileSerializer(serializers.ModelSerializer):
 
     def get_interactions_count(self, obj):
         return obj.interactions.count()
+
+    def get_selected_course(self, obj):
+        conversation_state = getattr(obj, "conversation_state", None)
+        if conversation_state:
+            return conversation_state.selected_course_id
+        return None
+
+    def get_selected_course_name(self, obj):
+        conversation_state = getattr(obj, "conversation_state", None)
+        if conversation_state and conversation_state.selected_course:
+            return conversation_state.selected_course.name
+        return None
 
 
 class InteractionLogSerializer(serializers.ModelSerializer):

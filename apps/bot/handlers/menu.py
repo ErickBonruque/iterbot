@@ -1,4 +1,5 @@
 """Menu handler for displaying navigation options."""
+
 import structlog
 
 from apps.bot.messages import BOT_MESSAGES

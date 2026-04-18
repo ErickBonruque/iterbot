@@ -2,6 +2,7 @@
 
 Cobre STAB-01 (beat schedule), STAB-02 (reconexão), STAB-03 (alerta e-mail).
 """
+
 from unittest.mock import MagicMock, patch
 
 
@@ -74,9 +75,10 @@ class TestCheckWahaHealthTask:
         """STAB-02: Não deve tentar reconexão quando check anterior estava ok."""
         mock_cache.get.return_value = {"status": "online"}
 
-        with patch("apps.bot.health.BotHealthMonitor") as mock_monitor_cls, patch(
-            "config.env.settings"
-        ) as mock_settings:
+        with (
+            patch("apps.bot.health.BotHealthMonitor") as mock_monitor_cls,
+            patch("config.env.settings") as mock_settings,
+        ):
             mock_settings.waha.session_name = "default"
             mock_monitor = MagicMock()
             mock_monitor.check_bot_status.return_value = {
@@ -105,9 +107,10 @@ class TestCheckWahaHealthTask:
         # Simular que o check anterior também estava offline
         mock_cache.get.return_value = {"status": "offline"}
 
-        with patch("apps.bot.health.BotHealthMonitor") as mock_monitor_cls, patch(
-            "config.env.settings"
-        ) as mock_settings:
+        with (
+            patch("apps.bot.health.BotHealthMonitor") as mock_monitor_cls,
+            patch("config.env.settings") as mock_settings,
+        ):
             mock_settings.waha.session_name = "default"
             mock_monitor = MagicMock()
             mock_monitor.check_bot_status.return_value = {
@@ -134,9 +137,10 @@ class TestCheckWahaHealthTask:
         # Simular check anterior offline → 2ª falha consecutiva
         mock_cache.get.return_value = {"status": "error"}
 
-        with patch("apps.bot.health.BotHealthMonitor") as mock_monitor_cls, patch(
-            "config.env.settings"
-        ) as mock_settings:
+        with (
+            patch("apps.bot.health.BotHealthMonitor") as mock_monitor_cls,
+            patch("config.env.settings") as mock_settings,
+        ):
             mock_settings.waha.session_name = "default"
             mock_monitor = MagicMock()
             mock_monitor.check_bot_status.return_value = {
@@ -168,9 +172,10 @@ class TestAttemptReconnect:
     @patch("apps.bot.tasks.time.sleep")
     def test_attempt_reconnect_returns_true_on_first_success(self, mock_sleep):
         """STAB-02: _attempt_reconnect retorna True quando start_session succeeds."""
-        with patch("infra.waha.client.WahaClient") as mock_client_cls, patch(
-            "apps.bot.models.BotConfiguration"
-        ) as mock_config:
+        with (
+            patch("infra.waha.client.WahaClient") as mock_client_cls,
+            patch("apps.bot.models.BotConfiguration") as mock_config,
+        ):
             mock_config.get_active.return_value = MagicMock()
             mock_client = MagicMock()
             mock_client.start_session.return_value = True
@@ -187,9 +192,10 @@ class TestAttemptReconnect:
     @patch("apps.bot.tasks.time.sleep")
     def test_attempt_reconnect_returns_false_after_all_failures(self, mock_sleep):
         """STAB-02: _attempt_reconnect retorna False após 3 tentativas sem sucesso."""
-        with patch("infra.waha.client.WahaClient") as mock_client_cls, patch(
-            "apps.bot.models.BotConfiguration"
-        ) as mock_config:
+        with (
+            patch("infra.waha.client.WahaClient") as mock_client_cls,
+            patch("apps.bot.models.BotConfiguration") as mock_config,
+        ):
             mock_config.get_active.return_value = MagicMock()
             mock_client = MagicMock()
             mock_client.start_session.return_value = False
@@ -205,9 +211,10 @@ class TestAttemptReconnect:
     @patch("apps.bot.tasks.time.sleep")
     def test_attempt_reconnect_sleeps_between_attempts(self, mock_sleep):
         """STAB-02: Deve dormir 30s e 60s entre as tentativas (não após a 3ª)."""
-        with patch("infra.waha.client.WahaClient") as mock_client_cls, patch(
-            "apps.bot.models.BotConfiguration"
-        ) as mock_config:
+        with (
+            patch("infra.waha.client.WahaClient") as mock_client_cls,
+            patch("apps.bot.models.BotConfiguration") as mock_config,
+        ):
             mock_config.get_active.return_value = MagicMock()
             mock_client = MagicMock()
             mock_client.start_session.return_value = False

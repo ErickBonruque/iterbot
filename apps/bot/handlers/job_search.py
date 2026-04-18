@@ -1,4 +1,3 @@
-
 import structlog
 
 from apps.bot.messages import BOT_MESSAGES
@@ -53,7 +52,9 @@ class JobSearchHandler(BaseHandler):
             self.send_msg(
                 user,
                 chat_id,
-                self.resolve_message(BOT_MESSAGES.search.no_courses.key, BOT_MESSAGES.search.no_courses.text),
+                self.resolve_message(
+                    BOT_MESSAGES.search.no_courses.key, BOT_MESSAGES.search.no_courses.text
+                ),
             )
             return
 
@@ -111,7 +112,9 @@ class JobSearchHandler(BaseHandler):
             self.send_msg(
                 user,
                 chat_id,
-                self.resolve_message(BOT_MESSAGES.search.missing_course.key, BOT_MESSAGES.search.missing_course.text),
+                self.resolve_message(
+                    BOT_MESSAGES.search.missing_course.key, BOT_MESSAGES.search.missing_course.text
+                ),
             )
             return
 
@@ -142,7 +145,12 @@ class JobSearchHandler(BaseHandler):
         conversation_state.current_action = "term_selection"
         conversation_state.save(update_fields=["current_action", "updated_at"])
         self.send_msg(user, chat_id, msg)
-        logger.info("term_selection_started", user_id=user.id, course_id=selected_course.id, terms=len(terms))
+        logger.info(
+            "term_selection_started",
+            user_id=user.id,
+            course_id=selected_course.id,
+            terms=len(terms),
+        )
 
     def handle_term_selection(self, user: UserProfile, chat_id: str, text: str) -> None:
         conversation_state = self._get_conversation_state(user)
@@ -152,7 +160,9 @@ class JobSearchHandler(BaseHandler):
             self.send_msg(
                 user,
                 chat_id,
-                self.resolve_message(BOT_MESSAGES.search.missing_course.key, BOT_MESSAGES.search.missing_course.text),
+                self.resolve_message(
+                    BOT_MESSAGES.search.missing_course.key, BOT_MESSAGES.search.missing_course.text
+                ),
             )
             return
 
@@ -194,7 +204,9 @@ class JobSearchHandler(BaseHandler):
         conversation_state.save(update_fields=["current_action", "updated_at"])
         self.perform_search(user, chat_id, selected_terms_list, term_name)
 
-    def perform_search(self, user: UserProfile, chat_id: str, terms: list[str], term_name: str) -> None:
+    def perform_search(
+        self, user: UserProfile, chat_id: str, terms: list[str], term_name: str
+    ) -> None:
         self.send_msg(
             user,
             chat_id,
@@ -208,14 +220,18 @@ class JobSearchHandler(BaseHandler):
         try:
             jobs = self.job_service.search(terms, limit=5)
         except Exception as exc:  # pragma: no cover
-            logger.error("job_search_failed", user_id=user.id, terms=terms, error=str(exc), exc_info=True)
+            logger.error(
+                "job_search_failed", user_id=user.id, terms=terms, error=str(exc), exc_info=True
+            )
             jobs = []
 
         if not jobs:
             self.send_msg(
                 user,
                 chat_id,
-                self.resolve_message(BOT_MESSAGES.search.no_jobs.key, BOT_MESSAGES.search.no_jobs.text),
+                self.resolve_message(
+                    BOT_MESSAGES.search.no_jobs.key, BOT_MESSAGES.search.no_jobs.text
+                ),
             )
             return
 

@@ -51,6 +51,7 @@ INSTALLED_APPS = [
     "apps.courses",
     "apps.jobs",
     "apps.bot",
+    "apps.dashboard",
     "apps.companies",
 ]
 

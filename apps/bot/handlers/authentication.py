@@ -1,4 +1,5 @@
 """Authentication handler for login/logout flows."""
+
 import structlog
 from django.core.exceptions import ValidationError
 
@@ -257,7 +258,9 @@ class AuthenticationHandler(BaseHandler):
         conversation_state.current_action = None
         conversation_state.selected_course = None
         conversation_state.selected_term = None
-        conversation_state.save(update_fields=["current_action", "selected_course", "selected_term", "updated_at"])
+        conversation_state.save(
+            update_fields=["current_action", "selected_course", "selected_term", "updated_at"]
+        )
 
         logger.info("user_logged_out", user_id=user.id)
 

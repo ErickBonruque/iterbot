@@ -21,11 +21,6 @@ class UserProfileAdmin(ModelAdmin):
             {"fields": ("is_authenticated_utfpr", "utfpr_password"), "classes": ("wide",)},
         ),
         (
-            "Preferências",
-            {"fields": ("selected_course", "selected_term"), "classes": ("collapse",)},
-        ),
-        ("Dados do Fluxo", {"fields": ("current_action", "flow_data"), "classes": ("collapse",)}),
-        (
             "Datas",
             {"fields": ("created_at", "updated_at", "last_activity"), "classes": ("collapse",)},
         ),

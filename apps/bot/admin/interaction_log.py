@@ -58,9 +58,9 @@ class InteractionLogAdmin(ModelAdmin):
                 f'<div style="display:inline-block; max-width:70%; background:{bg}; '
                 f'padding:8px 12px; border-radius:8px; border:{border}; text-align:left;">'
                 f'<small style="color:#6c757d;"><strong>{label}</strong> — '
-                f'{log.created_at.strftime("%d/%m %H:%M")}</small><br>'
-                f'{escape(log.message_content)}'
-                f'</div></div>'
+                f"{log.created_at.strftime('%d/%m %H:%M')}</small><br>"
+                f"{escape(log.message_content)}"
+                f"</div></div>"
             )
         html_parts.append("</div>")
         return mark_safe("".join(html_parts))

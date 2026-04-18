@@ -1,6 +1,7 @@
 """
 Sistema de health check e monitoramento do bot WAHA.
 """
+
 import time
 from datetime import timedelta
 

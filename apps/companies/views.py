@@ -2,15 +2,14 @@ import structlog
 from allauth.account.views import LoginView, LogoutView, SignupView
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.core.exceptions import PermissionDenied
-from django.http import Http404
 from django.shortcuts import redirect, render
 from django.urls import reverse_lazy
 from django.views.generic import CreateView, UpdateView, View
 
 from apps.companies.forms import CompanyOnlyForm, CompanyProfileForm, CompanySignupForm, JobForm
 from apps.companies.mixins import CompanyRequiredMixin
-from apps.jobs.models import Company, CompanyStatus, Job, JobStatus
+from apps.companies.services import CompaniesService
+from apps.jobs.models import Company, Job
 
 logger = structlog.get_logger(__name__)
 
@@ -46,10 +45,7 @@ class CompanyProfileView(LoginRequiredMixin, UpdateView):
     login_url = "/empresas/login/"
 
     def get_object(self, queryset=None):
-        try:
-            return self.request.user.company
-        except Exception:
-            return None
+        return CompaniesService.get_user_company_or_none(self.request.user)
 
     def get(self, request, *args, **kwargs):
         self.object = self.get_object()
@@ -94,16 +90,7 @@ class CompanyCreateView(LoginRequiredMixin, View):
     def post(self, request):
         form = CompanyOnlyForm(request.POST)
         if form.is_valid():
-            Company.objects.create(
-                user=request.user,
-                cnpj=form.cleaned_data["cnpj"],
-                nome=form.cleaned_data["nome"],
-                email=request.user.email,
-                telefone=form.cleaned_data["telefone"],
-                contato_nome=form.cleaned_data["contato_nome"],
-                contato_cargo=form.cleaned_data["contato_cargo"],
-                status=CompanyStatus.PENDING,
-            )
+            CompaniesService.create_company_for_user(request.user, form.cleaned_data)
             messages.success(request, "Empresa cadastrada com sucesso. Aguardando aprovacao.")
             return redirect("/empresas/perfil/")
         return render(request, "companies/company_create.html", {"form": form})
@@ -119,8 +106,7 @@ class JobCreateView(CompanyRequiredMixin, CreateView):
     login_url = "/empresas/login/"
 
     def form_valid(self, form):
-        form.instance.company = self.request.user.company
-        form.instance.status = JobStatus.PENDING
+        CompaniesService.prepare_job_for_creation(form.instance, self.request.user)
         messages.success(self.request, "Vaga cadastrada com sucesso. Aguardando aprovacao.")
         return super().form_valid(form)
 
@@ -136,13 +122,7 @@ class JobUpdateView(CompanyRequiredMixin, UpdateView):
 
     def get_object(self, queryset=None):
         job = super().get_object(queryset)
-        try:
-            user_company = self.request.user.company
-        except Exception as err:
-            raise PermissionDenied("Voce nao tem permissao para editar esta vaga.") from err
-        if job.company != user_company:
-            raise PermissionDenied("Voce nao tem permissao para editar esta vaga.")
-        return job
+        return CompaniesService.get_editable_job_or_403(job, self.request.user)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -163,32 +143,15 @@ class JobDeleteView(CompanyRequiredMixin, View):
 
     def get_object(self, queryset=None):
         """Obter vaga excluindo ja removidas (retorna 404 natural)."""
-        job = Job.objects.get(pk=self.kwargs["pk"])
-        if job.status == JobStatus.REMOVED:
-            raise Http404("Vaga ja removida.")
-        return job
+        return CompaniesService.get_deletable_job_or_404(self.kwargs["pk"])
 
     def get(self, request, *args, **kwargs):
         """Exibe pagina de confirmacao."""
-        job = self.get_object()
-        try:
-            user_company = request.user.company
-        except Exception as err:
-            raise PermissionDenied("Voce nao tem permissao para remover esta vaga.") from err
-        if job.company != user_company:
-            raise PermissionDenied("Voce nao tem permissao para remover esta vaga.")
+        job = CompaniesService.get_deletable_job_for_user_or_403(self.kwargs["pk"], request.user)
         return render(request, self.template_name, {"job": job})
 
     def post(self, request, *args, **kwargs):
         """Executa soft delete."""
-        job = self.get_object()
-        try:
-            user_company = request.user.company
-        except Exception as err:
-            raise PermissionDenied("Voce nao tem permissao para remover esta vaga.") from err
-        if job.company != user_company:
-            raise PermissionDenied("Voce nao tem permissao para remover esta vaga.")
-        job.status = JobStatus.REMOVED
-        job.save()
+        CompaniesService.soft_delete_job(self.kwargs["pk"], request.user)
         messages.success(request, "Vaga removida com sucesso.")
         return redirect(self.success_url)

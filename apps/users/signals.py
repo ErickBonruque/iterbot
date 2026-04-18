@@ -26,3 +26,12 @@ def save_user_profile(sender, instance, **kwargs):
     if hasattr(instance, "profile") and instance.profile.email != instance.email:
         instance.profile.email = instance.email
         instance.profile.save()
+
+
+@receiver(post_save, sender=UserProfile)
+def create_conversation_state(sender, instance, created, **kwargs):
+    """Cria ConversationState automaticamente quando UserProfile é criado."""
+    if created:
+        from apps.bot.models import ConversationState
+
+        ConversationState.objects.get_or_create(user=instance)

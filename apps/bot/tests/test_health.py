@@ -1,4 +1,5 @@
 """Testes para apps/bot/health.py — BotHealthMonitor (STAB-04)."""
+
 from unittest.mock import MagicMock, patch
 
 

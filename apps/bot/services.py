@@ -1,4 +1,5 @@
 """Refactored bot service using handler pattern and separation of concerns."""
+
 import structlog
 from django.conf import settings
 

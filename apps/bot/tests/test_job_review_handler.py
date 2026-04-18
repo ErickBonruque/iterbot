@@ -15,9 +15,7 @@ class JobReviewHandlerTests(TestCase):
         self.service = BotService(waha_client=self.waha_client)
 
     def _authenticate_user(self, chat_id: str) -> UserProfile:
-        user = UserProfile.objects.create(
-            phone_number=chat_id, is_authenticated_utfpr=True
-        )
+        user = UserProfile.objects.create(phone_number=chat_id, is_authenticated_utfpr=True)
         ConversationState.objects.get_or_create(user=user)
         return user
 
@@ -65,7 +63,8 @@ class JobReviewHandlerNoCourseTests(TestCase):
         sent_text = self.waha_client.send_message.call_args[0][1]
         # Deve mencionar buscar vagas ou curso
         self.assertTrue(
-            "curso" in sent_text.lower() or "opção" in sent_text.lower()
+            "curso" in sent_text.lower()
+            or "opção" in sent_text.lower()
             or "buscar" in sent_text.lower()
         )
 
