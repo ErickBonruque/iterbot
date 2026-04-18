@@ -40,7 +40,7 @@ services:
       - "traefik.http.services.admin-backend.loadbalancer.server.port=8000"
       - "traefik.http.services.backend.loadbalancer.server.port=8000"
     environment:
-      - DJANGO_SETTINGS_MODULE=waha_bot.settings
+      - DJANGO_SETTINGS_MODULE=waha_bot.settings.production
 
   waha:
     ports: []  # Remove porta 3000 exposta (acesso via Traefik apenas)

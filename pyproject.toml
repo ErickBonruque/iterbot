@@ -63,7 +63,7 @@ select = ["E", "F", "I", "N", "W", "UP", "B", "SIM", "TCH", "C901", "RUF"]
 ignore = ["E501"]
 
 [tool.ruff.lint.per-file-ignores]
-"waha_bot/settings.py" = ["E402"]
+"waha_bot/settings/*.py" = ["E402"]
 "**/models.py" = ["RUF012"]
 "**/admin.py" = ["RUF012"]
 "**/serializers.py" = ["RUF012"]
@@ -90,7 +90,7 @@ disallow_untyped_defs = true
 plugins = ["mypy_django_plugin.main"]
 
 [tool.django-stubs]
-django_settings_module = "waha_bot.settings"
+django_settings_module = "waha_bot.settings.development"
 
 [tool.commitizen]
 name = "cz_conventional_commits"
@@ -102,7 +102,7 @@ update_changelog_on_bump = true
 changelog_file = "CHANGELOG.md"
 
 [tool.pytest.ini_options]
-DJANGO_SETTINGS_MODULE = "waha_bot.settings"
+DJANGO_SETTINGS_MODULE = "waha_bot.settings.development"
 python_files = ["test_*.py", "*_test.py"]
 addopts = "-v --tb=short --strict-markers --cov=apps/bot --cov=waha_bot --cov-report=term-missing --cov-report=html --cov-report=xml --cov-report=lcov"
 testpaths = ["apps"]
