@@ -6,12 +6,26 @@ from django.conf import settings
 from apps.bot.handlers import AuthenticationHandler, JobReviewHandler, JobSearchHandler, MenuHandler
 from apps.bot.messages import BOT_MESSAGES
 from apps.bot.models import BotConfiguration, ConversationState, InteractionLog
+from apps.bot.tasks import send_confirmation_email
 from apps.users.models import UserProfile
 from apps.users.services import UTFPRAuthService
 from infra.jobspy.service import JobSearchService
 from infra.waha.client import WahaClient
+from infra.waha.protocols import (
+    Authenticator,
+    EmailConfirmationDispatcher,
+    JobSearcher,
+    MessageSender,
+)
 
 logger = structlog.get_logger(__name__)
+
+
+class CeleryEmailConfirmationDispatcher:
+    """Adapter that dispatches confirmation email via Celery task."""
+
+    def dispatch_confirmation_email(self, user_id: int) -> None:
+        send_confirmation_email.delay(user_id)
 
 
 class BotService:
@@ -19,16 +33,22 @@ class BotService:
 
     def __init__(
         self,
-        auth_service: UTFPRAuthService | None = None,
-        job_service: JobSearchService | None = None,
-        waha_client: WahaClient | None = None,
+        auth_service: Authenticator | None = None,
+        job_service: JobSearcher | None = None,
+        waha_client: MessageSender | None = None,
+        email_dispatcher: EmailConfirmationDispatcher | None = None,
     ) -> None:
         waha_settings = BotConfiguration.get_active()
         self.auth_service = auth_service or UTFPRAuthService()
         self.job_service = job_service or JobSearchService()
         self.waha_client = waha_client or WahaClient(settings=waha_settings)
+        self.email_dispatcher = email_dispatcher or CeleryEmailConfirmationDispatcher()
 
-        self.auth_handler = AuthenticationHandler(self.waha_client, self.auth_service)
+        self.auth_handler = AuthenticationHandler(
+            self.waha_client,
+            self.auth_service,
+            self.email_dispatcher,
+        )
         self.job_handler = JobSearchHandler(self.waha_client, self.job_service)
         self.menu_handler = MenuHandler(self.waha_client)
         self.review_handler = JobReviewHandler(self.waha_client, self.job_service)
@@ -174,13 +194,17 @@ class BotService:
         conversation_state, _ = ConversationState.objects.get_or_create(user=user)
         return conversation_state
 
+    def _session_name(self) -> str:
+        settings_obj = getattr(self.waha_client, "settings", None)
+        return getattr(settings_obj, "session_name", "unknown")
+
     def _log_received(self, user: UserProfile, message: str) -> None:
         try:
             InteractionLog.objects.create(
                 user=user,
                 message_content=message,
                 message_type="RECEIVED",
-                session_id=self.waha_client.settings.session_name,
+                session_id=self._session_name(),
             )
         except Exception as e:
             logger.error(
