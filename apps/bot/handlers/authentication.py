@@ -6,8 +6,8 @@ from django.core.exceptions import ValidationError
 from apps.bot.messages import BOT_MESSAGES
 from apps.bot.models import ConversationState
 from apps.users.models import UserProfile
-from apps.users.services import UTFPRAuthService
 from apps.users.validators import validate_utfpr_email
+from infra.waha.protocols import Authenticator, EmailConfirmationDispatcher, MessageSender
 
 from .base import BaseHandler
 
@@ -17,9 +17,15 @@ logger = structlog.get_logger(__name__)
 class AuthenticationHandler(BaseHandler):
     """Handles user authentication (login/logout) flows."""
 
-    def __init__(self, waha_client, auth_service: UTFPRAuthService) -> None:
+    def __init__(
+        self,
+        waha_client: MessageSender,
+        auth_service: Authenticator,
+        email_dispatcher: EmailConfirmationDispatcher,
+    ) -> None:
         super().__init__(waha_client)
         self.auth_service = auth_service
+        self.email_dispatcher = email_dispatcher
 
     def _get_conversation_state(self, user: UserProfile) -> ConversationState:
         conversation_state, _ = ConversationState.objects.get_or_create(user=user)
@@ -183,10 +189,7 @@ class AuthenticationHandler(BaseHandler):
         if linked_user:
             conversation_state.current_action = "login_step_waiting_confirmation"
             conversation_state.save(update_fields=["current_action", "updated_at"])
-
-            from apps.bot.tasks import send_confirmation_email
-
-            send_confirmation_email.delay(linked_user.id)
+            self.email_dispatcher.dispatch_confirmation_email(linked_user.id)
             self.send_msg(
                 user,
                 chat_id,

@@ -5,7 +5,7 @@ import structlog
 from apps.bot.messages import BOT_MESSAGES
 from apps.bot.models import ConversationState
 from apps.users.models import UserProfile
-from infra.jobspy.service import JobSearchService
+from infra.waha.protocols import JobSearcher, MessageSender
 
 from .base import BaseHandler
 
@@ -15,9 +15,9 @@ logger = structlog.get_logger(__name__)
 class JobReviewHandler(BaseHandler):
     """Sends on-demand job review to the student."""
 
-    def __init__(self, waha_client, job_service: JobSearchService | None = None) -> None:
+    def __init__(self, waha_client: MessageSender, job_service: JobSearcher) -> None:
         super().__init__(waha_client)
-        self.job_service = job_service or JobSearchService()
+        self.job_service = job_service
 
     def _get_conversation_state(self, user: UserProfile) -> ConversationState:
         conversation_state, _ = ConversationState.objects.get_or_create(user=user)

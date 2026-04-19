@@ -5,6 +5,7 @@ import structlog
 from apps.bot.messages import BOT_MESSAGES
 from apps.core.portal_links import build_portal_url
 from apps.users.models import UserProfile
+from infra.waha.protocols import MessageSender
 
 from .base import BaseHandler
 
@@ -13,6 +14,9 @@ logger = structlog.get_logger(__name__)
 
 class MenuHandler(BaseHandler):
     """Handles menu display and navigation."""
+
+    def __init__(self, waha_client: MessageSender) -> None:
+        super().__init__(waha_client)
 
     def send_menu(self, user: UserProfile, chat_id: str) -> None:
         if user.is_authenticated_utfpr:

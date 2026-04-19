@@ -7,7 +7,7 @@ import structlog
 
 from apps.bot.models import BotMessage, InteractionLog
 from apps.users.models import UserProfile
-from infra.waha.client import WahaClient
+from infra.waha.protocols import MessageSender
 
 logger = structlog.get_logger(__name__)
 
@@ -23,7 +23,7 @@ class BaseHandler(ABC):
     """Abstract base class for conversation handlers following SRP.
 
     Attributes:
-        waha_client: WAHA client for sending WhatsApp messages.
+        waha_client: Message sender contract used by handlers.
         BRAND_HEADER: Brand header text used in messages.
     """
 
@@ -32,14 +32,18 @@ class BaseHandler(ABC):
         "Conecto você às oportunidades certas para o seu curso."
     )
 
-    def __init__(self, waha_client: WahaClient) -> None:
+    def __init__(self, waha_client: MessageSender) -> None:
         """
-        Initialize handler with WAHA client.
+        Initialize handler with message sender contract.
 
         Args:
-            waha_client: Client for sending WhatsApp messages
+            waha_client: Sender used for outbound bot messages.
         """
         self.waha_client = waha_client
+
+    def _session_name(self) -> str:
+        settings = getattr(self.waha_client, "settings", None)
+        return getattr(settings, "session_name", "unknown")
 
     def get_text(self, key: str, default: str) -> str:
         """
@@ -111,7 +115,7 @@ class BaseHandler(ABC):
                 user=user,
                 message_content=message,
                 message_type="SENT",
-                session_id=self.waha_client.settings.session_name,
+                session_id=self._session_name(),
             )
         except Exception as e:
             logger.error(
