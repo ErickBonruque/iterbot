@@ -8,6 +8,7 @@ from django.core.cache import cache
 from django.core.mail import send_mail
 
 from apps.bot.messages import BOT_MESSAGES
+from infra.waha.protocols import EmailConfirmationDispatcher
 
 logger = structlog.get_logger(__name__)
 
@@ -17,6 +18,13 @@ ALERT_SUBJECT = BOT_MESSAGES.tasks.alert_subject_offline.text
 
 # Backoff entre tentativas de reconexão em segundos (D-02)
 RECONNECT_BACKOFF = [30, 60, 120]
+
+
+class CeleryEmailConfirmationDispatcher:
+    """Concrete dispatcher for confirmation emails using Celery."""
+
+    def dispatch_confirmation_email(self, user_id: int) -> None:
+        send_confirmation_email.delay(user_id)
 
 
 @shared_task(bind=True, max_retries=0)

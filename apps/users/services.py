@@ -4,46 +4,26 @@ from datetime import timedelta
 from django.utils import timezone
 
 from apps.users.models import UserProfile
+from infra.waha.protocols import EmailConfirmationDispatcher
 
 logger = __import__("logging").getLogger(__name__)
 
 
 class UTFPRAuthService:
-    """Service for UTFPR student authentication.
+    """Service for UTFPR student authentication."""
 
-    Attributes:
-        None: This class is stateless.
-    """
+    def __init__(self, email_dispatcher: EmailConfirmationDispatcher | None = None) -> None:
+        self.email_dispatcher = email_dispatcher
 
     def authenticate(self, ra: str, password: str) -> bool:
-        """Authenticate user against UTFPR student portal.
-
-        Args:
-            ra: Student registration number (RA).
-            password: Student portal password.
-
-        Returns:
-            True if authentication succeeded, False otherwise.
-        """
+        """Authenticate user against UTFPR student portal."""
         logger.info(f"Tentando autenticar RA: {ra}")
-
         return ra != "000000"
 
     def link_user(
         self, phone_number: str, ra: str, password: str, email: str | None = None
     ) -> UserProfile | None:
-        """Link an RA to a phone number after successful authentication.
-
-        Args:
-            phone_number: WhatsApp phone number.
-            ra: Student registration number.
-            password: Student portal password.
-            email: Student institutional email (@alunos.utfpr.edu.br).
-
-        Returns:
-            UserProfile instance if linked, None if authentication failed.
-            Note: is_authenticated_utfpr remains False until email is verified.
-        """
+        """Link an RA to a phone number after successful authentication."""
         if self.authenticate(ra, password):
             token = str(uuid.uuid4())
             user, _created = UserProfile.objects.update_or_create(
@@ -62,14 +42,7 @@ class UTFPRAuthService:
         return None
 
     def confirm_email(self, token: str) -> UserProfile | None:
-        """Confirm user email using the confirmation token.
-
-        Args:
-            token: UUID token sent to user's email.
-
-        Returns:
-            UserProfile if token is valid and not expired, None otherwise.
-        """
+        """Confirm user email using the confirmation token."""
         try:
             user = UserProfile.objects.get(email_confirmation_token=token)
             if user.email_confirmation_sent_at:
@@ -90,14 +63,7 @@ class UTFPRAuthService:
             return None
 
     def resend_confirmation(self, phone_number: str) -> bool:
-        """Resend confirmation email to user.
-
-        Args:
-            phone_number: WhatsApp phone number.
-
-        Returns:
-            True if confirmation was resent, False if user not found.
-        """
+        """Resend confirmation email to user."""
         try:
             user = UserProfile.objects.get(phone_number=phone_number)
             token = str(uuid.uuid4())
@@ -105,23 +71,17 @@ class UTFPRAuthService:
             user.email_confirmation_sent_at = timezone.now()
             user.save(update_fields=["email_confirmation_token", "email_confirmation_sent_at"])
 
-            from apps.bot.tasks import send_confirmation_email
+            if self.email_dispatcher is None:
+                logger.warning("email_dispatcher_missing", user_id=user.id)
+                return False
 
-            send_confirmation_email.delay(str(user.id))
-
+            self.email_dispatcher.dispatch_confirmation_email(user.id)
             return True
         except UserProfile.DoesNotExist:
             return False
 
     def logout(self, phone_number: str) -> bool:
-        """Unlink student credentials from a phone number.
-
-        Args:
-            phone_number: WhatsApp phone number.
-
-        Returns:
-            True if user was found and logged out, False if not found.
-        """
+        """Unlink student credentials from a phone number."""
         try:
             user = UserProfile.objects.get(phone_number=phone_number)
             user.is_authenticated_utfpr = False
