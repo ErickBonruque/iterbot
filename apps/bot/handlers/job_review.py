@@ -4,6 +4,7 @@ import structlog
 
 from apps.bot.messages import BOT_MESSAGES
 from apps.bot.models import ConversationState
+from apps.jobs.services import build_review_for_user, format_review_message
 from apps.users.models import UserProfile
 from infra.waha.protocols import JobSearcher, MessageSender
 
@@ -24,8 +25,6 @@ class JobReviewHandler(BaseHandler):
         return conversation_state
 
     def send_review(self, user: UserProfile, chat_id: str) -> None:
-        from apps.jobs.tasks import _build_review_for_user, _format_review_message
-
         selected_course = self._get_conversation_state(user).selected_course
         if not selected_course:
             self.send_msg(
@@ -49,7 +48,7 @@ class JobReviewHandler(BaseHandler):
         )
 
         try:
-            jobs = _build_review_for_user(selected_course, self.job_service)
+            jobs = build_review_for_user(selected_course, self.job_service)
         except Exception as exc:
             logger.error(
                 "review_on_demand_failed",
@@ -84,7 +83,7 @@ class JobReviewHandler(BaseHandler):
             )
             return
 
-        msg = _format_review_message(selected_course.name, jobs)
+        msg = format_review_message(selected_course.name, jobs)
         self.send_msg(user, chat_id, msg)
         logger.info(
             "review_on_demand_sent",
