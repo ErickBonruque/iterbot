@@ -6,7 +6,7 @@ from django.conf import settings
 from apps.bot.handlers import AuthenticationHandler, JobReviewHandler, JobSearchHandler, MenuHandler
 from apps.bot.messages import BOT_MESSAGES
 from apps.bot.models import BotConfiguration, ConversationState, InteractionLog
-from apps.bot.tasks import send_confirmation_email
+from apps.bot.tasks import CeleryEmailConfirmationDispatcher
 from apps.users.models import UserProfile
 from apps.users.services import UTFPRAuthService
 from infra.jobspy.service import JobSearchService
@@ -21,13 +21,6 @@ from infra.waha.protocols import (
 logger = structlog.get_logger(__name__)
 
 
-class CeleryEmailConfirmationDispatcher:
-    """Adapter that dispatches confirmation email via Celery task."""
-
-    def dispatch_confirmation_email(self, user_id: int) -> None:
-        send_confirmation_email.delay(user_id)
-
-
 class BotService:
     """Orchestrates bot conversation flow using specialized handlers."""
 
@@ -39,10 +32,10 @@ class BotService:
         email_dispatcher: EmailConfirmationDispatcher | None = None,
     ) -> None:
         waha_settings = BotConfiguration.get_active()
-        self.auth_service = auth_service or UTFPRAuthService()
+        self.email_dispatcher = email_dispatcher or CeleryEmailConfirmationDispatcher()
+        self.auth_service = auth_service or UTFPRAuthService(email_dispatcher=self.email_dispatcher)
         self.job_service = job_service or JobSearchService()
         self.waha_client = waha_client or WahaClient(settings=waha_settings)
-        self.email_dispatcher = email_dispatcher or CeleryEmailConfirmationDispatcher()
 
         self.auth_handler = AuthenticationHandler(
             self.waha_client,
