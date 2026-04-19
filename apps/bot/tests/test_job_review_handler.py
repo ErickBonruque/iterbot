@@ -68,7 +68,7 @@ class JobReviewHandlerNoCourseTests(TestCase):
             or "buscar" in sent_text.lower()
         )
 
-    @patch("apps.jobs.tasks._build_review_for_user")
+    @patch("apps.jobs.services.build_review_for_user")
     def test_authenticated_user_with_course_but_no_jobs_sends_empty_message(
         self, mock_build_review
     ):
