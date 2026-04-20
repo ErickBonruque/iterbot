@@ -2,171 +2,94 @@ from unittest.mock import MagicMock, patch
 
 from django.test import TestCase
 
-from apps.jobs.tasks import (
-    _build_review_for_user,
-    _deduplicate,
-    _format_review_message,
-    _get_local_jobs_for_course,
-)
 
-
-class TestFormatReviewMessage(TestCase):
-    def test_format_message_header(self):
-        jobs = [{"title": "Dev Python", "company": "TechCorp", "job_url": "http://example.com"}]
-
-        message = _format_review_message("Engenharia de Software", jobs)
-
-        self.assertIn("🎓 *Review de Vagas — Engenharia de Software*", message)
-
-    def test_format_message_job_line(self):
-        jobs = [{"title": "Dev Python", "company": "TechCorp", "job_url": "http://example.com"}]
-
-        message = _format_review_message("Engenharia", jobs)
-
-        self.assertIn("*1. Dev Python* — TechCorp", message)
-
-    def test_format_message_footer(self):
-        jobs = [{"title": "Dev Python", "company": "TechCorp"}]
-
-        message = _format_review_message("Engenharia", jobs)
-
-        self.assertIn("_Para ver mais vagas", message)
-
-    def test_format_message_no_url(self):
-        jobs = [{"title": "Dev Python", "company": "TechCorp", "location": "Curitiba"}]
-
-        message = _format_review_message("Engenharia", jobs)
-
-        self.assertNotIn("🔗", message)
-
-    def test_format_message_with_url(self):
-        jobs = [{"title": "Dev Python", "company": "TechCorp", "job_url": "http://example.com"}]
-
-        message = _format_review_message("Engenharia", jobs)
-
-        self.assertIn("🔗 http://example.com", message)
-
-
-class TestDeduplicate(TestCase):
-    def test_dedup_removes_same_title_company(self):
-        jobs = [
-            {"title": "Dev Python", "company": "TechCorp"},
-            {"title": "Dev Python", "company": "TechCorp"},
-        ]
-
-        unique = _deduplicate(jobs)
-
-        self.assertEqual(len(unique), 1)
-
-    def test_dedup_case_insensitive(self):
-        jobs = [
-            {"title": "Dev Python", "company": "TechCorp"},
-            {"title": "dev python", "company": "techcorp"},
-        ]
-
-        unique = _deduplicate(jobs)
-
-        self.assertEqual(len(unique), 1)
-
-    def test_dedup_keeps_different_titles(self):
-        jobs = [
-            {"title": "Dev Python", "company": "TechCorp"},
-            {"title": "Dev Django", "company": "TechCorp"},
-        ]
-
-        unique = _deduplicate(jobs)
-
-        self.assertEqual(len(unique), 2)
-
-
-class TestBuildReviewForUser(TestCase):
-    @patch("apps.jobs.tasks._get_online_jobs_for_course")
-    @patch("apps.jobs.tasks._get_local_jobs_for_course")
-    def test_max_5_vagas(self, local_mock, online_mock):
-        local_mock.return_value = [
-            {"title": f"Local {i}", "company": "Empresa L"} for i in range(4)
-        ]
-        online_mock.return_value = [
-            {"title": f"Online {i}", "company": "Empresa O"} for i in range(4)
-        ]
+class TestSendWeeklyReviewsService(TestCase):
+    @patch("apps.jobs.services.time.sleep")
+    @patch("apps.jobs.services.UserProfile.objects.filter")
+    @patch("apps.jobs.services.build_review_for_user")
+    def test_service_returns_stats_and_uses_interval(
+        self, mock_build_review, mock_filter, mock_sleep
+    ):
+        from apps.jobs.services import send_weekly_reviews
 
         course = MagicMock()
-        service = MagicMock()
-
-        jobs = _build_review_for_user(course, service)
-
-        self.assertEqual(len(jobs), 5)
-
-
-class TestLocalJobsPortalUrl(TestCase):
-    def _mock_course_with_search_terms(self):
-        course = MagicMock()
-        search_terms = MagicMock()
-        query_set = MagicMock()
-        ordered = MagicMock()
-
-        course.id = 1
         course.name = "Engenharia"
-        course.search_terms = search_terms
-        search_terms.filter.return_value = query_set
-        query_set.order_by.return_value = ordered
-        ordered.values_list.return_value = ["python"]
 
-        return course
+        user = MagicMock()
+        user.id = 1
+        user.phone_number = "5511999999999@c.us"
+        user.conversation_state.selected_course = course
 
-    @patch("apps.jobs.tasks.Job.objects.filter")
-    def test_local_jobs_normalize_trailing_slash(self, filter_mock):
-        course = self._mock_course_with_search_terms()
+        users_qs = MagicMock()
+        users_qs.count.return_value = 1
+        users_qs.__iter__.return_value = iter([user])
 
-        company = MagicMock(nome="Empresa X", endereco="Curitiba")
-        job = MagicMock(titulo="Dev Python", company=company, tipo="Estagio", pk=42)
+        mock_filter.return_value.exclude.return_value.select_related.return_value = users_qs
+        mock_build_review.return_value = [{"title": "Dev Python", "company": "TechCorp"}]
 
-        filter_mock.return_value.filter.return_value.select_related.return_value.order_by.return_value.__getitem__.return_value = [
-            job
-        ]
+        sender = MagicMock()
+        searcher = MagicMock()
 
-        with self.settings(PORTAL_BASE_URL="https://52-201-248-14.sslip.io/"):
-            jobs = _get_local_jobs_for_course(course)
-
-        self.assertEqual(jobs[0]["job_url"], "https://52-201-248-14.sslip.io/empresas/vagas/42/")
-        self.assertNotIn("//empresas", jobs[0]["job_url"])
-
-    @patch("apps.jobs.tasks.logger.error")
-    @patch("apps.jobs.tasks.Job.objects.filter")
-    def test_local_jobs_invalid_base_omits_link(self, filter_mock, logger_error_mock):
-        course = self._mock_course_with_search_terms()
-
-        company = MagicMock(nome="Empresa Y", endereco="Curitiba")
-        job = MagicMock(titulo="Backend", company=company, tipo="Estagio", pk=7)
-
-        filter_mock.return_value.filter.return_value.select_related.return_value.order_by.return_value.__getitem__.return_value = [
-            job
-        ]
-
-        with self.settings(PORTAL_BASE_URL="localhost:8000"):
-            jobs = _get_local_jobs_for_course(course)
-
-        self.assertIsNone(jobs[0]["job_url"])
-        logger_error_mock.assert_called_once_with(
-            "invalid_portal_base_url_for_review",
-            portal_base_url="localhost:8000",
-            job_id=7,
+        stats = send_weekly_reviews(
+            message_sender=sender,
+            job_searcher=searcher,
+            interval_seconds=2,
         )
 
-    @patch("apps.jobs.tasks.Job.objects.filter")
-    def test_review_message_with_invalid_base_has_no_localhost(self, filter_mock):
-        course = self._mock_course_with_search_terms()
+        self.assertEqual(stats, {"sent": 1, "no_jobs": 0, "errors": 0})
+        sender.send_message.assert_called_once()
+        mock_sleep.assert_called_once_with(2)
 
-        company = MagicMock(nome="Empresa Z", endereco="Curitiba")
-        job = MagicMock(titulo="Fullstack", company=company, tipo="Estagio", pk=11)
+    @patch("apps.jobs.services.UserProfile.objects.filter")
+    @patch("apps.jobs.services.build_review_for_user", return_value=[])
+    def test_service_counts_no_jobs(self, _mock_review, mock_filter):
+        from apps.jobs.services import send_weekly_reviews
 
-        filter_mock.return_value.filter.return_value.select_related.return_value.order_by.return_value.__getitem__.return_value = [
-            job
-        ]
+        course = MagicMock()
+        course.name = "Engenharia"
 
-        with self.settings(PORTAL_BASE_URL="localhost:8000"):
-            jobs = _get_local_jobs_for_course(course)
+        user = MagicMock()
+        user.id = 1
+        user.phone_number = "5511999999999@c.us"
+        user.conversation_state.selected_course = course
 
-        message = _format_review_message("Engenharia", jobs)
+        users_qs = MagicMock()
+        users_qs.count.return_value = 1
+        users_qs.__iter__.return_value = iter([user])
 
-        self.assertNotIn("localhost:8000", message)
+        mock_filter.return_value.exclude.return_value.select_related.return_value = users_qs
+
+        stats = send_weekly_reviews(
+            message_sender=MagicMock(),
+            job_searcher=MagicMock(),
+            interval_seconds=0,
+        )
+
+        self.assertEqual(stats, {"sent": 0, "no_jobs": 1, "errors": 0})
+
+
+class TestWeeklyTaskWrapper(TestCase):
+    @patch("apps.jobs.tasks.send_weekly_reviews")
+    @patch("infra.jobspy.service.JobSearchService")
+    @patch("infra.waha.client.WahaClient")
+    @patch("apps.bot.models.BotConfiguration.get_active")
+    def test_task_is_thin_wrapper(
+        self,
+        mock_get_active,
+        mock_waha_client,
+        mock_job_search_service,
+        mock_send_weekly_reviews,
+    ):
+        from apps.jobs.tasks import send_weekly_job_review
+
+        mock_get_active.return_value = MagicMock()
+        mock_send_weekly_reviews.return_value = {"sent": 2, "no_jobs": 1, "errors": 0}
+
+        result = send_weekly_job_review()
+
+        self.assertEqual(result, {"sent": 2, "no_jobs": 1, "errors": 0})
+        mock_send_weekly_reviews.assert_called_once_with(
+            message_sender=mock_waha_client.return_value,
+            job_searcher=mock_job_search_service.return_value,
+            interval_seconds=1,
+        )

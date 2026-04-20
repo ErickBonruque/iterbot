@@ -1,5 +1,6 @@
 """Servicos de curadoria e formatacao para review de vagas."""
 
+import time
 from typing import Any
 
 import structlog
@@ -9,7 +10,8 @@ from django.db.models import Q
 from apps.bot.messages import BOT_MESSAGES
 from apps.core.portal_links import build_portal_url
 from apps.jobs.models import Job, JobStatus
-from infra.jobspy.service import JobSearchService
+from apps.users.models import UserProfile
+from infra.waha.protocols import JobSearcher, MessageSender
 
 logger = structlog.get_logger(__name__)
 
@@ -63,7 +65,7 @@ def get_local_jobs_for_course(course) -> list[dict[str, Any]]:
     return local_jobs
 
 
-def get_online_jobs_for_course(course, job_service: JobSearchService) -> list[dict[str, Any]]:
+def get_online_jobs_for_course(course, job_searcher: JobSearcher) -> list[dict[str, Any]]:
     """Search online jobs via JobSpy using default course terms."""
     terms = list(
         course.search_terms.filter(is_default=True)
@@ -77,7 +79,7 @@ def get_online_jobs_for_course(course, job_service: JobSearchService) -> list[di
             course_name=course.name,
         )
         return []
-    return job_service.search(terms, limit=10)
+    return job_searcher.search(terms, limit=10)
 
 
 def deduplicate_jobs(jobs: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -94,10 +96,10 @@ def deduplicate_jobs(jobs: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return unique
 
 
-def build_review_for_user(course, job_service: JobSearchService) -> list[dict[str, Any]]:
+def build_review_for_user(course, job_searcher: JobSearcher) -> list[dict[str, Any]]:
     """Combine local and online jobs, deduplicate, and return top entries."""
     local_jobs = get_local_jobs_for_course(course)
-    online_jobs = get_online_jobs_for_course(course, job_service)
+    online_jobs = get_online_jobs_for_course(course, job_searcher)
     combined = deduplicate_jobs(local_jobs + online_jobs)
     return combined[:5]
 
@@ -130,3 +132,62 @@ def format_review_message(course_name: str, jobs: list[dict[str, Any]]) -> str:
 
     lines.append(BOT_MESSAGES.review.weekly_footer.text)
     return "\n".join(lines)
+
+
+def send_weekly_reviews(
+    *,
+    message_sender: MessageSender,
+    job_searcher: JobSearcher,
+    interval_seconds: float = 1.0,
+) -> dict[str, int]:
+    """Envia review semanal para usuarios elegiveis, com stats consolidadas."""
+    users = (
+        UserProfile.objects.filter(
+            conversation_state__selected_course__isnull=False,
+            phone_number__isnull=False,
+        )
+        .exclude(phone_number="")
+        .select_related("conversation_state__selected_course")
+    )
+
+    stats: dict[str, int] = {"sent": 0, "no_jobs": 0, "errors": 0}
+    logger.info("weekly_review_started", total_users=users.count())
+
+    for user in users:
+        selected_course = user.conversation_state.selected_course
+        try:
+            jobs = build_review_for_user(selected_course, job_searcher)
+            if not jobs:
+                stats["no_jobs"] += 1
+                logger.debug(
+                    "review_no_jobs",
+                    user_id=user.id,
+                    course=selected_course.name,
+                )
+                continue
+
+            msg = format_review_message(selected_course.name, jobs)
+            message_sender.send_message(user.phone_number, msg)
+            stats["sent"] += 1
+
+            logger.info(
+                "review_sent",
+                user_id=user.id,
+                course=selected_course.name,
+                jobs_count=len(jobs),
+            )
+
+            if interval_seconds > 0:
+                time.sleep(interval_seconds)
+        except Exception as exc:
+            stats["errors"] += 1
+            logger.error(
+                "review_send_failed",
+                user_id=user.id,
+                course=selected_course.name if selected_course else None,
+                error=str(exc),
+                exc_info=True,
+            )
+
+    logger.info("weekly_review_completed", **stats)
+    return stats
