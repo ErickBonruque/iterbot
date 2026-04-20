@@ -6,6 +6,15 @@ from django.conf import settings
 from apps.bot.handlers import AuthenticationHandler, JobReviewHandler, JobSearchHandler, MenuHandler
 from apps.bot.messages import BOT_MESSAGES
 from apps.bot.models import BotConfiguration, ConversationState, InteractionLog
+from apps.bot.state_machine import (
+    ROUTE_COMPANY,
+    STATE_COMPANY_ONBOARDING_SELECTION,
+    STATE_IDLE,
+    apply_state_transition,
+    has_active_flow,
+    is_waiting_confirmation,
+    route_for_action,
+)
 from apps.bot.tasks import CeleryEmailConfirmationDispatcher
 from apps.users.models import UserProfile
 from apps.users.services import UTFPRAuthService
@@ -97,16 +106,18 @@ class BotService:
             self.menu_handler.send_menu(user, chat_id)
             return
 
-        if conversation_state.current_action == "login_step_waiting_confirmation":
+        if is_waiting_confirmation(conversation_state.current_action):
             self.auth_handler.handle_login_waiting_confirmation(user, chat_id, text)
             return
 
-        if conversation_state.current_action and self._handle_pending_action(user, chat_id, text):
+        if has_active_flow(conversation_state.current_action) and self._handle_pending_action(
+            user, chat_id, text
+        ):
             return
 
         self._handle_main_menu_command(user, chat_id, text)
 
-    def _handle_main_menu_command(self, user: "UserProfile", chat_id: str, text: str) -> None:
+    def _handle_main_menu_command(self, user: UserProfile, chat_id: str, text: str) -> None:
         if text in {"1", "cadastrar", "login", "entrar"}:
             self.auth_handler.start_login_flow(user, chat_id)
             return
@@ -119,9 +130,11 @@ class BotService:
             "publicar vaga",
         }:
             conversation_state = self._get_conversation_state(user)
-            conversation_state.current_action = "company_onboarding_selection"
-            conversation_state.flow_data = {}
-            conversation_state.save(update_fields=["current_action", "flow_data", "updated_at"])
+            apply_state_transition(
+                conversation_state=conversation_state,
+                next_state=STATE_COMPANY_ONBOARDING_SELECTION,
+                clear_flow_data=True,
+            )
             self.menu_handler.send_company_onboarding_menu(user, chat_id)
             return
 
@@ -147,7 +160,7 @@ class BotService:
             return True
 
         conversation_state = self._get_conversation_state(user)
-        if conversation_state.current_action == "company_onboarding_selection":
+        if route_for_action(conversation_state.current_action) == ROUTE_COMPANY:
             if text in {"1", "2"}:
                 sent = self.menu_handler.send_company_onboarding_links(
                     user,
@@ -179,9 +192,11 @@ class BotService:
 
     def _reset_state(self, user: UserProfile) -> None:
         conversation_state = self._get_conversation_state(user)
-        conversation_state.current_action = None
-        conversation_state.flow_data = {}
-        conversation_state.save(update_fields=["current_action", "flow_data", "updated_at"])
+        apply_state_transition(
+            conversation_state=conversation_state,
+            next_state=STATE_IDLE,
+            clear_flow_data=True,
+        )
 
     def _get_conversation_state(self, user: UserProfile) -> ConversationState:
         conversation_state, _ = ConversationState.objects.get_or_create(user=user)

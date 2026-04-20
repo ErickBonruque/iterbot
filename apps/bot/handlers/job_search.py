@@ -2,6 +2,13 @@ import structlog
 
 from apps.bot.messages import BOT_MESSAGES
 from apps.bot.models import ConversationState
+from apps.bot.state_machine import (
+    STATE_COURSE_SELECTION,
+    STATE_IDLE,
+    STATE_TERM_SELECTION,
+    apply_state_transition,
+    normalize_current_action,
+)
 from apps.courses.models import Course
 from apps.users.models import UserProfile
 from infra.waha.protocols import JobSearcher, MessageSender
@@ -66,8 +73,10 @@ class JobSearchHandler(BaseHandler):
         )
 
         conversation_state = self._get_conversation_state(user)
-        conversation_state.current_action = "course_selection"
-        conversation_state.save(update_fields=["current_action", "updated_at"])
+        apply_state_transition(
+            conversation_state=conversation_state,
+            next_state=STATE_COURSE_SELECTION,
+        )
         self.send_msg(user, chat_id, msg)
         logger.info("course_selection_started", user_id=user.id, total_courses=len(courses))
 
@@ -129,8 +138,10 @@ class JobSearchHandler(BaseHandler):
                     course_name=selected_course.name,
                 ),
             )
-            conversation_state.current_action = None
-            conversation_state.save(update_fields=["current_action", "updated_at"])
+            apply_state_transition(
+                conversation_state=conversation_state,
+                next_state=STATE_IDLE,
+            )
             return
 
         lines = [f"*{i + 1}*) {t.term}" for i, t in enumerate(terms)]
@@ -142,8 +153,10 @@ class JobSearchHandler(BaseHandler):
             terms_menu="\n".join(lines),
         )
 
-        conversation_state.current_action = "term_selection"
-        conversation_state.save(update_fields=["current_action", "updated_at"])
+        apply_state_transition(
+            conversation_state=conversation_state,
+            next_state=STATE_TERM_SELECTION,
+        )
         self.send_msg(user, chat_id, msg)
         logger.info(
             "term_selection_started",
@@ -200,8 +213,10 @@ class JobSearchHandler(BaseHandler):
             )
             return
 
-        conversation_state.current_action = None
-        conversation_state.save(update_fields=["current_action", "updated_at"])
+        apply_state_transition(
+            conversation_state=conversation_state,
+            next_state=STATE_IDLE,
+        )
         self.perform_search(user, chat_id, selected_terms_list, term_name)
 
     def perform_search(
@@ -252,11 +267,11 @@ class JobSearchHandler(BaseHandler):
         self.send_msg(user, chat_id, "\n".join(lines))
 
     def handle(self, user: UserProfile, chat_id: str, text: str) -> bool:
-        current_action = self._get_conversation_state(user).current_action
-        if current_action == "course_selection":
+        current_action = normalize_current_action(self._get_conversation_state(user).current_action)
+        if current_action == STATE_COURSE_SELECTION:
             self.handle_course_selection(user, chat_id, text)
             return True
-        if current_action == "term_selection":
+        if current_action == STATE_TERM_SELECTION:
             self.handle_term_selection(user, chat_id, text)
             return True
         return False

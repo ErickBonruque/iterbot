@@ -5,6 +5,16 @@ from django.core.exceptions import ValidationError
 
 from apps.bot.messages import BOT_MESSAGES
 from apps.bot.models import ConversationState
+from apps.bot.state_machine import (
+    STATE_IDLE,
+    STATE_LOGIN_STEP_EMAIL,
+    STATE_LOGIN_STEP_PASSWORD,
+    STATE_LOGIN_STEP_RA,
+    STATE_LOGIN_STEP_WAITING_CONFIRMATION,
+    apply_state_transition,
+    is_waiting_confirmation,
+    normalize_current_action,
+)
 from apps.users.models import UserProfile
 from apps.users.validators import validate_utfpr_email
 from infra.waha.protocols import Authenticator, EmailConfirmationDispatcher, MessageSender
@@ -44,13 +54,15 @@ class AuthenticationHandler(BaseHandler):
             return
 
         conversation_state = self._get_conversation_state(user)
-        if conversation_state.current_action == "login_step_waiting_confirmation":
+        if is_waiting_confirmation(conversation_state.current_action):
             self.handle_login_waiting_confirmation(user, chat_id, "")
             return
 
-        conversation_state.current_action = "login_step_ra"
-        conversation_state.flow_data = {}
-        conversation_state.save(update_fields=["current_action", "flow_data", "updated_at"])
+        apply_state_transition(
+            conversation_state=conversation_state,
+            next_state=STATE_LOGIN_STEP_RA,
+            clear_flow_data=True,
+        )
 
         self.send_msg(
             user,
@@ -77,8 +89,11 @@ class AuthenticationHandler(BaseHandler):
 
         conversation_state = self._get_conversation_state(user)
         conversation_state.flow_data["temp_ra"] = ra
-        conversation_state.current_action = "login_step_password"
-        conversation_state.save(update_fields=["current_action", "flow_data", "updated_at"])
+        apply_state_transition(
+            conversation_state=conversation_state,
+            next_state=STATE_LOGIN_STEP_PASSWORD,
+            update_fields=["flow_data"],
+        )
 
         self.send_msg(
             user,
@@ -117,8 +132,11 @@ class AuthenticationHandler(BaseHandler):
 
         if self.auth_service.authenticate(ra, password):
             conversation_state.flow_data["temp_password"] = password
-            conversation_state.current_action = "login_step_email"
-            conversation_state.save(update_fields=["current_action", "flow_data", "updated_at"])
+            apply_state_transition(
+                conversation_state=conversation_state,
+                next_state=STATE_LOGIN_STEP_EMAIL,
+                update_fields=["flow_data"],
+            )
 
             self.send_msg(
                 user,
@@ -187,8 +205,10 @@ class AuthenticationHandler(BaseHandler):
         linked_user = self.auth_service.link_user(chat_id, ra, password, email)
 
         if linked_user:
-            conversation_state.current_action = "login_step_waiting_confirmation"
-            conversation_state.save(update_fields=["current_action", "updated_at"])
+            apply_state_transition(
+                conversation_state=conversation_state,
+                next_state=STATE_LOGIN_STEP_WAITING_CONFIRMATION,
+            )
             self.email_dispatcher.dispatch_confirmation_email(linked_user.id)
             self.send_msg(
                 user,
@@ -258,34 +278,37 @@ class AuthenticationHandler(BaseHandler):
         )
 
         conversation_state = self._get_conversation_state(user)
-        conversation_state.current_action = None
         conversation_state.selected_course = None
         conversation_state.selected_term = None
-        conversation_state.save(
-            update_fields=["current_action", "selected_course", "selected_term", "updated_at"]
+        apply_state_transition(
+            conversation_state=conversation_state,
+            next_state=STATE_IDLE,
+            update_fields=["selected_course", "selected_term"],
         )
 
         logger.info("user_logged_out", user_id=user.id)
 
     def reset_state(self, user: UserProfile) -> None:
         conversation_state = self._get_conversation_state(user)
-        conversation_state.current_action = None
-        conversation_state.flow_data = {}
-        conversation_state.save(update_fields=["current_action", "flow_data", "updated_at"])
+        apply_state_transition(
+            conversation_state=conversation_state,
+            next_state=STATE_IDLE,
+            clear_flow_data=True,
+        )
 
     def handle(self, user: UserProfile, chat_id: str, text: str) -> bool:
-        action = self._get_conversation_state(user).current_action
+        action = normalize_current_action(self._get_conversation_state(user).current_action)
 
-        if action == "login_step_ra":
+        if action == STATE_LOGIN_STEP_RA:
             self.handle_login_ra(user, chat_id, text)
             return True
-        if action == "login_step_password":
+        if action == STATE_LOGIN_STEP_PASSWORD:
             self.handle_login_password(user, chat_id, text)
             return True
-        if action == "login_step_email":
+        if action == STATE_LOGIN_STEP_EMAIL:
             self.handle_login_email(user, chat_id, text)
             return True
-        if action == "login_step_waiting_confirmation":
+        if action == STATE_LOGIN_STEP_WAITING_CONFIRMATION:
             self.handle_login_waiting_confirmation(user, chat_id, text)
             return True
 
