@@ -1,14 +1,62 @@
 """Servicos de email para fluxos operacionais do bot."""
 
+import structlog
 from django.conf import settings as django_settings
-from django.core.mail import send_mail
 
 from apps.bot.messages import BOT_MESSAGES
 from apps.users.models import UserProfile
+from infra.email.factory import (
+    EmailProviderConfigurationError,
+    UnknownEmailProviderError,
+    get_email_provider,
+)
 
-# E-mail de alerta fixo — nao configuravel via admin neste milestone (D-05)
+logger = structlog.get_logger(__name__)
+
+# E-mail de alerta fixo - nao configuravel via admin neste milestone (D-05)
 ALERT_EMAIL = "bonrqueruck@gmail.com"
 ALERT_SUBJECT = BOT_MESSAGES.tasks.alert_subject_offline.text
+
+
+def _send_transactional_email(
+    *,
+    subject: str,
+    message: str,
+    recipient_list: list[str],
+) -> dict[str, str | None]:
+    try:
+        provider = get_email_provider()
+        result = provider.send(
+            subject=subject,
+            message=message,
+            from_email=django_settings.DEFAULT_FROM_EMAIL,
+            recipient_list=recipient_list,
+        )
+        return result.to_dict()
+    except UnknownEmailProviderError as exc:
+        logger.error("email_provider_unknown", error=str(exc), exc_info=True)
+        return {
+            "status": "error",
+            "provider": getattr(django_settings, "EMAIL_PROVIDER", "unknown"),
+            "message_id": None,
+            "error_code": "unknown_provider",
+        }
+    except EmailProviderConfigurationError as exc:
+        logger.error("email_provider_configuration_error", error=str(exc), exc_info=True)
+        return {
+            "status": "error",
+            "provider": getattr(django_settings, "EMAIL_PROVIDER", "unknown"),
+            "message_id": None,
+            "error_code": "provider_misconfigured",
+        }
+    except Exception as exc:
+        logger.error("email_provider_send_failed", error=str(exc), exc_info=True)
+        return {
+            "status": "error",
+            "provider": getattr(django_settings, "EMAIL_PROVIDER", "unknown"),
+            "message_id": None,
+            "error_code": exc.__class__.__name__.lower(),
+        }
 
 
 def send_offline_alert_email(
@@ -48,13 +96,19 @@ def send_offline_alert_email(
         ]
     )
 
-    send_mail(
+    result = _send_transactional_email(
         subject=ALERT_SUBJECT,
         message="\n".join(body_lines),
-        from_email=django_settings.DEFAULT_FROM_EMAIL,
         recipient_list=[ALERT_EMAIL],
-        fail_silently=True,
     )
+
+    if result["status"] != "sent":
+        logger.warning(
+            "offline_alert_email_failed",
+            provider=result.get("provider"),
+            error_code=result.get("error_code"),
+            session_name=session_name,
+        )
 
 
 def send_confirmation_email_to_user(user_id: int) -> dict:
@@ -69,6 +123,9 @@ def send_confirmation_email_to_user(user_id: int) -> dict:
 
     if not user.email_confirmation_token:
         return {"status": "error", "reason": "no_token", "user_id": user_id}
+
+    if not user.email:
+        return {"status": "error", "reason": "no_email", "user_id": user_id}
 
     base_url = getattr(django_settings, "PORTAL_BASE_URL", "https://3-86-57-105.sslip.io")
     confirm_url = f"{base_url}/confirmar-email/{user.email_confirmation_token}"
@@ -92,12 +149,25 @@ def send_confirmation_email_to_user(user_id: int) -> dict:
         "Equipe IterBot UTFPR",
     ]
 
-    send_mail(
+    result = _send_transactional_email(
         subject=BOT_MESSAGES.tasks.confirm_email_subject.text,
         message="\n".join(body_lines),
-        from_email=django_settings.DEFAULT_FROM_EMAIL,
         recipient_list=[user.email],
-        fail_silently=False,
     )
 
-    return {"status": "sent", "user_id": user_id, "email": user.email}
+    if result["status"] != "sent":
+        return {
+            "status": "error",
+            "reason": "provider_error",
+            "provider": result.get("provider"),
+            "error_code": result.get("error_code"),
+            "user_id": user_id,
+        }
+
+    return {
+        "status": "sent",
+        "provider": result.get("provider"),
+        "message_id": result.get("message_id"),
+        "user_id": user_id,
+        "email": user.email,
+    }
