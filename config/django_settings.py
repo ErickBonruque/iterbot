@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from config._helpers import BASE_DIR, _read_secret_file, _get_secret_or_env, env
+from config._helpers import BASE_DIR, _get_secret_or_env, _read_secret_file, env
 
 
 @dataclass
