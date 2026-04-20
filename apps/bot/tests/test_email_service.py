@@ -1,3 +1,5 @@
+from unittest.mock import MagicMock
+
 from apps.bot.email_service import (
     mask_recipient,
     send_confirmation_email_to_user,
@@ -297,3 +299,67 @@ def test_send_offline_alert_email_logs_warning_on_provider_failure(mocker):
     send_offline_alert_email(session_name="default", current_status="offline")
 
     warning_spy.assert_called_once()
+
+
+# --- Integration-level fallback tests ---
+
+
+class TestSendConfirmationEmailFallbackIntegration:
+    """Integration tests for send_confirmation_email_to_user with fallback."""
+
+    def test_confirmation_email_works_end_to_end_primary_succeeds(self, db, mocker):
+        """send_confirmation_email_to_user works end-to-end when primary succeeds (no fallback)."""
+        user = UserProfile.objects.create(
+            phone_number="554199999998@c.us",
+            email="aluno_fb@alunos.utfpr.edu.br",
+            ra="112233",
+            email_verified=False,
+            email_confirmation_token="token-fb-1",
+        )
+        provider = RecordingProvider(
+            EmailSendResult(status="sent", provider="resend", message_id="msg-1", error_code=None)
+        )
+        mock_settings = MagicMock()
+        mock_settings.email.fallback_provider = ""
+        mocker.patch("apps.bot.email_service.app_settings", mock_settings)
+        mocker.patch("apps.bot.email_service.get_email_provider", return_value=provider)
+
+        result = send_confirmation_email_to_user(user.id)
+
+        assert result["status"] == "sent"
+        assert result["provider"] == "resend"
+
+    def test_confirmation_email_falls_back_on_primary_failure(self, db, mocker):
+        """send_confirmation_email_to_user falls back when primary fails and fallback configured."""
+        user = UserProfile.objects.create(
+            phone_number="554199999997@c.us",
+            email="aluno_fb2@alunos.utfpr.edu.br",
+            ra="445566",
+            email_verified=False,
+            email_confirmation_token="token-fb-2",
+        )
+        primary_provider = RecordingProvider(
+            EmailSendResult(
+                status="error", provider="resend", message_id=None, error_code="api_error"
+            )
+        )
+        fallback_provider = RecordingProvider(
+            EmailSendResult(
+                status="sent", provider="smtp", message_id="msg-fb-1", error_code=None
+            )
+        )
+
+        mock_settings = MagicMock()
+        mock_settings.email.fallback_provider = "smtp"
+        mocker.patch("apps.bot.email_service.app_settings", mock_settings)
+        mocker.patch("apps.bot.email_service.get_email_provider", return_value=primary_provider)
+        mocker.patch(
+            "apps.bot.email_service.get_email_fallback_provider",
+            return_value=fallback_provider,
+        )
+
+        result = send_confirmation_email_to_user(user.id)
+
+        assert result["status"] == "sent"
+        # fallback sends the email successfully
+        assert result["provider"] == "smtp"

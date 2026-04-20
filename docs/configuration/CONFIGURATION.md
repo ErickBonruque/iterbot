@@ -99,8 +99,13 @@ A configuração é centralizada no módulo `config/env.py`, que define dataclas
 | `EMAIL_HOST_USER` | Não | Usuário SMTP. | — |
 | `EMAIL_HOST_PASSWORD` | Não | Senha SMTP. | `email_password` |
 | `DEFAULT_FROM_EMAIL` | Não | Email remetente padrão. | — |
+| `EMAIL_PROVIDER` | Não | Provider principal de email: `resend`, `ses`, `smtp`, `console`. Padrão: `console`. | — |
+| `EMAIL_FALLBACK_PROVIDER` | Não | Provider de fallback para envio de email quando o provider principal falha. Valores: `resend`, `ses`, `smtp`, `console`. Vazio = sem fallback (comportamento padrão). | — |
+| `RESEND_API_KEY` | Não | Chave de API do Resend. | `resend_api_key` |
 
 > **Nota:** Quando `AWS_ACCESS_KEY_ID` e `AWS_SECRET_ACCESS_KEY` estão configurados, o backend de email muda automaticamente para `django_ses.SESBackend` (AWS SES), ignorando as configurações SMTP.
+
+> **Nota:** Quando `EMAIL_FALLBACK_PROVIDER` está configurado, o sistema tenta automaticamente o provider de fallback se o primary falhar. O health check em `/health/` verifica ambos os providers.
 
 ### AWS
 
@@ -301,6 +306,9 @@ Os valores padrão são definidos em `config/env.py` com resolução em cascata:
 | `EMAIL_HOST_USER` | `""` (string vazia) | `str` |
 | `EMAIL_HOST_PASSWORD` | `""` (string vazia) | `str` |
 | `DEFAULT_FROM_EMAIL` | `"bonrqueruck@gmail.com"` | `str` |
+| `EMAIL_PROVIDER` | `"console"` | `str` |
+| `EMAIL_FALLBACK_PROVIDER` | `""` (string vazia) | `str` |
+| `RESEND_API_KEY` | `""` (string vazia) | `str` |
 | `AWS_ACCESS_KEY_ID` | `""` (string vazia) | `str` |
 | `AWS_SECRET_ACCESS_KEY` | `""` (string vazia) | `str` |
 | `AWS_DEFAULT_REGION` | `"us-east-1"` | `str` |
@@ -379,6 +387,7 @@ Configurações obrigatórias para produção:
 | `PORTAL_BASE_URL` | `https://${DOMAIN}` | Links HTTPS no bot |
 | `EMAIL_BACKEND` | `django.core.mail.backends.smtp.EmailBackend` | Envio real de emails |
 | `EMAIL_HOST` | `email-smtp.us-east-1.amazonaws.com` | AWS SES <!-- VERIFY: Host SMTP do SES varia por região --> |
+| `EMAIL_FALLBACK_PROVIDER` | `ses` | Fallback para SMTP quando Resend falha |
 
 > **Nota:** Em produção, se `AWS_ACCESS_KEY_ID` e `AWS_SECRET_ACCESS_KEY` estiverem presentes, o backend de email muda automaticamente para `django_ses.SESBackend` — não é necessário configurar `EMAIL_BACKEND` manualmente.
 
