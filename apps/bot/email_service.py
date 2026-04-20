@@ -175,12 +175,11 @@ def send_transactional_email(
                     primary_error_code=result.error_code,
                 )
         return result.to_dict()
-    except UnknownEmailProviderError as exc:
+    except UnknownEmailProviderError:
         logger.error(
             "email_provider_unknown",
-            error=str(exc),
+            error_code="unknown_provider",  # T-42-06: no raw str(exc) which may contain PII
             event_type=event_type,
-            exc_info=True,
         )
         primary_provider_name = getattr(django_settings, "EMAIL_PROVIDER", "unknown")
         primary_error_code = "unknown_provider"
@@ -203,12 +202,11 @@ def send_transactional_email(
             "message_id": None,
             "error_code": primary_error_code,
         }
-    except EmailProviderConfigurationError as exc:
+    except EmailProviderConfigurationError:
         logger.error(
             "email_provider_configuration_error",
-            error=str(exc),
+            error_code="provider_misconfigured",  # T-42-06: no raw str(exc) which may contain PII
             event_type=event_type,
-            exc_info=True,
         )
         primary_provider_name = getattr(django_settings, "EMAIL_PROVIDER", "unknown")
         primary_error_code = "provider_misconfigured"
@@ -234,9 +232,8 @@ def send_transactional_email(
     except Exception as exc:
         logger.error(
             "email_provider_send_failed",
-            error=str(exc),
+            error_code=exc.__class__.__name__.lower(),  # T-42-06: no raw str(exc) which may contain PII
             event_type=event_type,
-            exc_info=True,
         )
         primary_provider_name = getattr(django_settings, "EMAIL_PROVIDER", "unknown")
         primary_error_code = exc.__class__.__name__.lower()

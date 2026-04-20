@@ -64,7 +64,7 @@ def _check_resend_health(api_key: str | None) -> dict[str, str]:
         _resend.Domains.list()
         return {"status": "healthy", "provider": "resend"}
     except Exception as exc:
-        error_msg = str(exc)[:200]  # Truncate to avoid leaking sensitive info (T-42-01)
+        error_msg = f"{type(exc).__name__}: API connectivity check failed"  # T-42-01: never expose raw exception (may contain API key)
         return {
             "status": "unhealthy",
             "provider": "resend",
@@ -124,10 +124,10 @@ def check_email_health() -> dict:
 
         return {"email": primary}
     except Exception as exc:
-        logger.error("email_health_check_failed", error=str(exc), exc_info=True)
+        logger.error("email_health_check_failed", error=str(exc)[:200], exc_info=True)
         return {
             "email": {
                 "status": "unhealthy",
-                "error": str(exc)[:200],
+                "error": f"{type(exc).__name__}: health check failed",  # T-42-01: no raw exception in response
             }
         }

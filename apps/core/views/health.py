@@ -53,22 +53,16 @@ class HealthCheckView(View):
         # Check email provider(s)
         try:
             email_result = check_email_health()
-            health_status["components"]["email"] = email_result["email"]
-            # If any email component is unhealthy, mark overall as unhealthy
             email_data = email_result["email"]
+            health_status["components"]["email"] = email_data
+            # Determine if any email component is unhealthy
             if isinstance(email_data, dict):
-                # Check primary
-                primary = email_data if "status" in email_data else email_data.get("primary", {})
-                if isinstance(primary, dict) and primary.get("status") == "unhealthy":
-                    health_status["status"] = "unhealthy"
-                # Check fallback if present
-                fallback = (
-                    email_data.get("fallback")
-                    if isinstance(email_data, dict) and "fallback" in email_data
-                    else None
-                )
-                if isinstance(fallback, dict) and fallback.get("status") == "unhealthy":
-                    health_status["status"] = "unhealthy"
+                checks = [email_data]
+                if "primary" in email_data:
+                    checks = [email_data.get("primary", {}), email_data.get("fallback")]
+                for check in checks:
+                    if isinstance(check, dict) and check.get("status") == "unhealthy":
+                        health_status["status"] = "unhealthy"
         except Exception as e:
             logger.error("email_health_check_failed", error=str(e))
             health_status["components"]["email"] = {"status": "unhealthy", "error": str(e)[:200]}
