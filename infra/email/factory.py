@@ -50,7 +50,10 @@ def _build_resend_provider() -> EmailProvider:
     if not resend_api_key:
         raise EmailProviderConfigurationError("RESEND_API_KEY ausente para provider resend")
 
-    from infra.email.providers.resend_provider import ResendEmailProvider
+    try:
+        from infra.email.providers.resend_provider import ResendEmailProvider
+    except ModuleNotFoundError as exc:
+        raise EmailProviderConfigurationError("Dependencia resend nao instalada") from exc
 
     return ResendEmailProvider(api_key=resend_api_key)
 
