@@ -14,6 +14,7 @@ class EmailSettings:
     password: str
     from_email: str
     resend_api_key: str
+    fallback_provider: str
 
     def __init__(self) -> None:
         self.provider = env("EMAIL_PROVIDER")
@@ -25,3 +26,4 @@ class EmailSettings:
         self.password = _get_secret_or_env("email_password", "EMAIL_HOST_PASSWORD", "")
         self.from_email = env("DEFAULT_FROM_EMAIL")
         self.resend_api_key = _get_secret_or_env("resend_api_key", "RESEND_API_KEY", "")
+        self.fallback_provider = env("EMAIL_FALLBACK_PROVIDER")

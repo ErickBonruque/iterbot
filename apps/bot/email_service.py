@@ -1,5 +1,7 @@
 """Servicos de email para fluxos operacionais do bot."""
 
+import time
+
 import structlog
 from django.conf import settings as django_settings
 
@@ -14,9 +16,19 @@ from infra.email.idempotency import build_email_idempotency_key
 
 logger = structlog.get_logger(__name__)
 
-# E-mail de alerta fixo - nao configuravel via admin neste milestone (D-05)
+# E-mail de alerta fixo - nao configuravel via admin nesta milestone (D-05)
 ALERT_EMAIL = "bonrqueruck@gmail.com"
 ALERT_SUBJECT = BOT_MESSAGES.tasks.alert_subject_offline.text
+
+
+def mask_recipient(recipient: str) -> str:
+    """Mask email address for logging: j***@domain.com pattern (D-10)."""
+    if "@" not in recipient:
+        return "***"
+    local, domain = recipient.rsplit("@", 1)
+    if not local:
+        return f"***@{domain}"
+    return f"{local[0]}***@{domain}"
 
 
 def send_transactional_email(
@@ -25,9 +37,11 @@ def send_transactional_email(
     message: str,
     recipient_list: list[str],
     idempotency_key: str | None = None,
+    event_type: str = "transactional",
 ) -> dict[str, str | None]:
     try:
         provider = get_email_provider()
+        start = time.monotonic()
         result = provider.send(
             subject=subject,
             message=message,
@@ -35,9 +49,34 @@ def send_transactional_email(
             recipient_list=recipient_list,
             idempotency_key=idempotency_key,
         )
+        elapsed = round((time.monotonic() - start) * 1000)
+
+        if result.status == "sent":
+            logger.info(
+                "email_send_success",
+                provider=result.provider,
+                status="sent",
+                message_id=result.message_id,
+                event_type=event_type,
+                duration_ms=elapsed,
+                recipient=mask_recipient(recipient_list[0]) if recipient_list else "",
+            )
+        else:
+            logger.error(
+                "email_send_failure",
+                provider=result.provider,
+                error_code=result.error_code,
+                event_type=event_type,
+                duration_ms=elapsed,
+            )
         return result.to_dict()
     except UnknownEmailProviderError as exc:
-        logger.error("email_provider_unknown", error=str(exc), exc_info=True)
+        logger.error(
+            "email_provider_unknown",
+            error=str(exc),
+            event_type=event_type,
+            exc_info=True,
+        )
         return {
             "status": "error",
             "provider": getattr(django_settings, "EMAIL_PROVIDER", "unknown"),
@@ -45,7 +84,12 @@ def send_transactional_email(
             "error_code": "unknown_provider",
         }
     except EmailProviderConfigurationError as exc:
-        logger.error("email_provider_configuration_error", error=str(exc), exc_info=True)
+        logger.error(
+            "email_provider_configuration_error",
+            error=str(exc),
+            event_type=event_type,
+            exc_info=True,
+        )
         return {
             "status": "error",
             "provider": getattr(django_settings, "EMAIL_PROVIDER", "unknown"),
@@ -53,7 +97,12 @@ def send_transactional_email(
             "error_code": "provider_misconfigured",
         }
     except Exception as exc:
-        logger.error("email_provider_send_failed", error=str(exc), exc_info=True)
+        logger.error(
+            "email_provider_send_failed",
+            error=str(exc),
+            event_type=event_type,
+            exc_info=True,
+        )
         return {
             "status": "error",
             "provider": getattr(django_settings, "EMAIL_PROVIDER", "unknown"),
@@ -83,9 +132,7 @@ def send_offline_alert_email(
 
     if reconnect_attempted:
         reconnect_result = (
-            "Reconexao bem-sucedida"
-            if reconnect_success
-            else "Reconexao falhou apos 3 tentativas"
+            "Reconexao bem-sucedida" if reconnect_success else "Reconexao falhou apos 3 tentativas"
         )
         body_lines.append(
             BOT_MESSAGES.tasks.alert_reconnect_line.text.format(reconnect_result=reconnect_result)
@@ -103,6 +150,7 @@ def send_offline_alert_email(
         subject=ALERT_SUBJECT,
         message="\n".join(body_lines),
         recipient_list=[ALERT_EMAIL],
+        event_type="offline_alert",
     )
 
     if result["status"] != "sent":
@@ -163,6 +211,7 @@ def send_confirmation_email_to_user(user_id: int) -> dict:
         message="\n".join(body_lines),
         recipient_list=[user.email],
         idempotency_key=idempotency_key,
+        event_type="email_confirmation",
     )
 
     if result["status"] != "sent":

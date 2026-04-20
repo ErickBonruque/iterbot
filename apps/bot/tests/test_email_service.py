@@ -1,6 +1,15 @@
-from apps.bot.email_service import send_confirmation_email_to_user, send_offline_alert_email
-from infra.email.idempotency import build_email_idempotency_key
+from apps.bot.email_service import (
+    mask_recipient,
+    send_confirmation_email_to_user,
+    send_offline_alert_email,
+    send_transactional_email,
+)
 from apps.users.models import UserProfile
+from infra.email.factory import (
+    EmailProviderConfigurationError,
+    UnknownEmailProviderError,
+)
+from infra.email.idempotency import build_email_idempotency_key
 from infra.email.protocols import EmailSendResult
 
 
@@ -12,6 +21,186 @@ class RecordingProvider:
     def send(self, **kwargs) -> EmailSendResult:
         self.calls.append(kwargs)
         return self._result
+
+
+# --- mask_recipient tests ---
+
+
+def test_mask_recipient_normal_email():
+    assert mask_recipient("joao@alunos.utfpr.edu.br") == "j***@alunos.utfpr.edu.br"
+
+
+def test_mask_recipient_short_local_part():
+    assert mask_recipient("a@b.co") == "a***@b.co"
+
+
+def test_mask_recipient_no_at_sign():
+    assert mask_recipient("not_an_email") == "***"
+
+
+def test_mask_recipient_empty_local():
+    assert mask_recipient("@domain.com") == "***@domain.com"
+
+
+# --- Structured logging tests ---
+
+
+def test_send_transactional_email_logs_success(mocker):
+    provider = RecordingProvider(
+        EmailSendResult(status="sent", provider="resend", message_id="msg-1", error_code=None)
+    )
+    mocker.patch("apps.bot.email_service.get_email_provider", return_value=provider)
+    info_spy = mocker.patch("apps.bot.email_service.logger.info")
+
+    result = send_transactional_email(
+        subject="Test",
+        message="body",
+        recipient_list=["joao@alunos.utfpr.edu.br"],
+        event_type="email_confirmation",
+    )
+
+    assert result["status"] == "sent"
+    info_spy.assert_called_once()
+    call_kwargs = info_spy.call_args[1]
+    assert call_kwargs["provider"] == "resend"
+    assert call_kwargs["status"] == "sent"
+    assert call_kwargs["message_id"] == "msg-1"
+    assert call_kwargs["event_type"] == "email_confirmation"
+    assert "duration_ms" in call_kwargs
+    assert call_kwargs["recipient"] == "j***@alunos.utfpr.edu.br"
+
+
+def test_send_transactional_email_logs_failure(mocker):
+    provider = RecordingProvider(
+        EmailSendResult(
+            status="error",
+            provider="resend",
+            message_id=None,
+            error_code="api_error",
+        )
+    )
+    mocker.patch("apps.bot.email_service.get_email_provider", return_value=provider)
+    error_spy = mocker.patch("apps.bot.email_service.logger.error")
+
+    result = send_transactional_email(
+        subject="Test",
+        message="body",
+        recipient_list=["joao@alunos.utfpr.edu.br"],
+        event_type="offline_alert",
+    )
+
+    assert result["status"] == "error"
+    # Find the email_send_failure call (there should be exactly one)
+    failure_calls = [c for c in error_spy.call_args_list if c[0][0] == "email_send_failure"]
+    assert len(failure_calls) == 1
+    call_kwargs = failure_calls[0][1]
+    assert call_kwargs["provider"] == "resend"
+    assert call_kwargs["error_code"] == "api_error"
+    assert call_kwargs["event_type"] == "offline_alert"
+    assert "duration_ms" in call_kwargs
+
+
+def test_send_transactional_email_logs_unknown_provider_error(mocker):
+    mocker.patch(
+        "apps.bot.email_service.get_email_provider",
+        side_effect=UnknownEmailProviderError("bad provider"),
+    )
+    error_spy = mocker.patch("apps.bot.email_service.logger.error")
+
+    result = send_transactional_email(
+        subject="Test",
+        message="body",
+        recipient_list=["test@test.com"],
+        event_type="transactional",
+    )
+
+    assert result["status"] == "error"
+    unknown_calls = [c for c in error_spy.call_args_list if c[0][0] == "email_provider_unknown"]
+    assert len(unknown_calls) == 1
+    assert unknown_calls[0][1]["event_type"] == "transactional"
+
+
+def test_send_transactional_email_logs_configuration_error(mocker):
+    mocker.patch(
+        "apps.bot.email_service.get_email_provider",
+        side_effect=EmailProviderConfigurationError("misconfigured"),
+    )
+    error_spy = mocker.patch("apps.bot.email_service.logger.error")
+
+    result = send_transactional_email(
+        subject="Test",
+        message="body",
+        recipient_list=["test@test.com"],
+        event_type="email_confirmation",
+    )
+
+    assert result["status"] == "error"
+    config_calls = [
+        c for c in error_spy.call_args_list if c[0][0] == "email_provider_configuration_error"
+    ]
+    assert len(config_calls) == 1
+    assert config_calls[0][1]["event_type"] == "email_confirmation"
+
+
+def test_send_transactional_email_logs_generic_exception(mocker):
+    mocker.patch(
+        "apps.bot.email_service.get_email_provider",
+        side_effect=RuntimeError("unexpected"),
+    )
+    error_spy = mocker.patch("apps.bot.email_service.logger.error")
+
+    result = send_transactional_email(
+        subject="Test",
+        message="body",
+        recipient_list=["test@test.com"],
+        event_type="offline_alert",
+    )
+
+    assert result["status"] == "error"
+    failed_calls = [c for c in error_spy.call_args_list if c[0][0] == "email_provider_send_failed"]
+    assert len(failed_calls) == 1
+    assert failed_calls[0][1]["event_type"] == "offline_alert"
+
+
+# --- event_type passthrough tests ---
+
+
+def test_send_confirmation_email_to_user_passes_event_type(db, mocker):
+    user = UserProfile.objects.create(
+        phone_number="554199999999@c.us",
+        email="aluno@alunos.utfpr.edu.br",
+        ra="123456",
+        email_verified=False,
+        email_confirmation_token="token-123",
+    )
+    provider = RecordingProvider(
+        EmailSendResult(status="sent", provider="resend", message_id="msg-1", error_code=None)
+    )
+    mocker.patch("apps.bot.email_service.get_email_provider", return_value=provider)
+    info_spy = mocker.patch("apps.bot.email_service.logger.info")
+
+    result = send_confirmation_email_to_user(user.id)
+
+    assert result["status"] == "sent"
+    # Verify that the structured log was called with event_type=email_confirmation
+    call_kwargs = info_spy.call_args[1]
+    assert call_kwargs["event_type"] == "email_confirmation"
+
+
+def test_send_offline_alert_email_passes_event_type(mocker):
+    provider = RecordingProvider(
+        EmailSendResult(status="sent", provider="resend", message_id="msg-2", error_code=None)
+    )
+    mocker.patch("apps.bot.email_service.get_email_provider", return_value=provider)
+    info_spy = mocker.patch("apps.bot.email_service.logger.info")
+
+    send_offline_alert_email(session_name="default", current_status="offline")
+
+    call_kwargs = info_spy.call_args[1]
+    assert call_kwargs["event_type"] == "offline_alert"
+
+
+# --- Original existing tests (preserved) ---
 
 
 def test_send_confirmation_email_to_user_returns_sent_with_provider_payload(db, mocker):
