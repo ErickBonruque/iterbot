@@ -1,10 +1,13 @@
 
 """Factory para resolucao explicita do provider de email."""
 
+import structlog
 from django.core.mail import send_mail
 
 from config.env import settings
 from infra.email.protocols import EmailProvider, EmailSendResult
+
+logger = structlog.get_logger(__name__)
 
 
 class UnknownEmailProviderError(ValueError):
@@ -74,3 +77,25 @@ def get_email_provider(provider_name: str | None = None) -> EmailProvider:
         f"Provider de email desconhecido: {resolved_provider!r}. "
         "Configure EMAIL_PROVIDER com um valor valido."
     )
+
+
+def get_email_fallback_provider() -> EmailProvider | None:
+    """Resolve fallback provider se EMAIL_FALLBACK_PROVIDER estiver configurado.
+
+    Returns the fallback provider instance, or None if:
+    - EMAIL_FALLBACK_PROVIDER is not configured (empty string)
+    - The fallback provider name is unknown or misconfigured (graceful degradation)
+    """
+    fallback_name = settings.email.fallback_provider
+    if not fallback_name:
+        return None
+
+    try:
+        return get_email_provider(fallback_name)
+    except (UnknownEmailProviderError, EmailProviderConfigurationError) as exc:
+        logger.warning(
+            "email_fallback_provider_config_error",
+            fallback_provider=fallback_name,
+            error=str(exc),
+        )
+        return None

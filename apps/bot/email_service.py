@@ -7,9 +7,11 @@ from django.conf import settings as django_settings
 
 from apps.bot.messages import BOT_MESSAGES
 from apps.users.models import UserProfile
+from config.env import settings as app_settings
 from infra.email.factory import (
     EmailProviderConfigurationError,
     UnknownEmailProviderError,
+    get_email_fallback_provider,
     get_email_provider,
 )
 from infra.email.idempotency import build_email_idempotency_key
@@ -31,6 +33,95 @@ def mask_recipient(recipient: str) -> str:
     return f"{local[0]}***@{domain}"
 
 
+def _try_fallback(
+    *,
+    subject: str,
+    message: str,
+    from_email: str,
+    recipient_list: list[str],
+    idempotency_key: str | None,
+    event_type: str,
+    primary_provider_name: str,
+    primary_error_code: str | None,
+) -> dict[str, str | None]:
+    """Attempt fallback send after primary failure.
+
+    Returns the fallback result dict, or the primary error dict if fallback
+    is not available.
+    """
+    fallback_provider_name = app_settings.email.fallback_provider
+
+    # Log fallback trigger BEFORE attempting fallback (D-12, D-05)
+    logger.info(
+        "email_fallback_triggered",
+        primary_provider=primary_provider_name,
+        fallback_provider=fallback_provider_name,
+        reason=primary_error_code,
+        event_type=event_type,
+    )
+
+    fallback_provider = get_email_fallback_provider()
+
+    if fallback_provider is None:
+        # Fallback not configured or misconfigured
+        logger.warning(
+            "email_fallback_provider_unavailable",
+            reason="config_error",
+            event_type=event_type,
+        )
+        return {
+            "status": "error",
+            "provider": primary_provider_name,
+            "message_id": None,
+            "error_code": primary_error_code,
+        }
+
+    try:
+        start = time.monotonic()
+        fallback_result = fallback_provider.send(
+            subject=subject,
+            message=message,
+            from_email=from_email,
+            recipient_list=recipient_list,
+            idempotency_key=idempotency_key,
+        )
+        elapsed = round((time.monotonic() - start) * 1000)
+
+        if fallback_result.status == "sent":
+            logger.info(
+                "email_send_success",
+                provider=fallback_result.provider,
+                status="sent",
+                message_id=fallback_result.message_id,
+                event_type=event_type,
+                duration_ms=elapsed,
+                recipient=mask_recipient(recipient_list[0]) if recipient_list else "",
+            )
+        else:
+            logger.error(
+                "email_fallback_failed",
+                primary_provider=primary_provider_name,
+                fallback_provider=fallback_result.provider,
+                fallback_error=fallback_result.error_code,
+                event_type=event_type,
+            )
+        return fallback_result.to_dict()
+    except Exception as exc:
+        logger.error(
+            "email_fallback_failed",
+            primary_provider=primary_provider_name,
+            fallback_provider=fallback_provider_name,
+            fallback_error=exc.__class__.__name__.lower(),
+            event_type=event_type,
+        )
+        return {
+            "status": "error",
+            "provider": fallback_provider_name,
+            "message_id": None,
+            "error_code": exc.__class__.__name__.lower(),
+        }
+
+
 def send_transactional_email(
     *,
     subject: str,
@@ -39,6 +130,8 @@ def send_transactional_email(
     idempotency_key: str | None = None,
     event_type: str = "transactional",
 ) -> dict[str, str | None]:
+    fallback_configured = bool(app_settings.email.fallback_provider)
+
     try:
         provider = get_email_provider()
         start = time.monotonic()
@@ -69,6 +162,18 @@ def send_transactional_email(
                 event_type=event_type,
                 duration_ms=elapsed,
             )
+            # Primary failed with status="error" — try fallback if configured (D-02)
+            if fallback_configured:
+                return _try_fallback(
+                    subject=subject,
+                    message=message,
+                    from_email=django_settings.DEFAULT_FROM_EMAIL,
+                    recipient_list=recipient_list,
+                    idempotency_key=idempotency_key,
+                    event_type=event_type,
+                    primary_provider_name=result.provider,
+                    primary_error_code=result.error_code,
+                )
         return result.to_dict()
     except UnknownEmailProviderError as exc:
         logger.error(
@@ -77,11 +182,26 @@ def send_transactional_email(
             event_type=event_type,
             exc_info=True,
         )
+        primary_provider_name = getattr(django_settings, "EMAIL_PROVIDER", "unknown")
+        primary_error_code = "unknown_provider"
+
+        if fallback_configured:
+            return _try_fallback(
+                subject=subject,
+                message=message,
+                from_email=django_settings.DEFAULT_FROM_EMAIL,
+                recipient_list=recipient_list,
+                idempotency_key=idempotency_key,
+                event_type=event_type,
+                primary_provider_name=primary_provider_name,
+                primary_error_code=primary_error_code,
+            )
+
         return {
             "status": "error",
-            "provider": getattr(django_settings, "EMAIL_PROVIDER", "unknown"),
+            "provider": primary_provider_name,
             "message_id": None,
-            "error_code": "unknown_provider",
+            "error_code": primary_error_code,
         }
     except EmailProviderConfigurationError as exc:
         logger.error(
@@ -90,11 +210,26 @@ def send_transactional_email(
             event_type=event_type,
             exc_info=True,
         )
+        primary_provider_name = getattr(django_settings, "EMAIL_PROVIDER", "unknown")
+        primary_error_code = "provider_misconfigured"
+
+        if fallback_configured:
+            return _try_fallback(
+                subject=subject,
+                message=message,
+                from_email=django_settings.DEFAULT_FROM_EMAIL,
+                recipient_list=recipient_list,
+                idempotency_key=idempotency_key,
+                event_type=event_type,
+                primary_provider_name=primary_provider_name,
+                primary_error_code=primary_error_code,
+            )
+
         return {
             "status": "error",
-            "provider": getattr(django_settings, "EMAIL_PROVIDER", "unknown"),
+            "provider": primary_provider_name,
             "message_id": None,
-            "error_code": "provider_misconfigured",
+            "error_code": primary_error_code,
         }
     except Exception as exc:
         logger.error(
@@ -103,11 +238,26 @@ def send_transactional_email(
             event_type=event_type,
             exc_info=True,
         )
+        primary_provider_name = getattr(django_settings, "EMAIL_PROVIDER", "unknown")
+        primary_error_code = exc.__class__.__name__.lower()
+
+        if fallback_configured:
+            return _try_fallback(
+                subject=subject,
+                message=message,
+                from_email=django_settings.DEFAULT_FROM_EMAIL,
+                recipient_list=recipient_list,
+                idempotency_key=idempotency_key,
+                event_type=event_type,
+                primary_provider_name=primary_provider_name,
+                primary_error_code=primary_error_code,
+            )
+
         return {
             "status": "error",
-            "provider": getattr(django_settings, "EMAIL_PROVIDER", "unknown"),
+            "provider": primary_provider_name,
             "message_id": None,
-            "error_code": exc.__class__.__name__.lower(),
+            "error_code": primary_error_code,
         }
 
 
