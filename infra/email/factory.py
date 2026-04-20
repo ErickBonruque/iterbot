@@ -1,4 +1,3 @@
-
 """Factory para resolucao explicita do provider de email."""
 
 import structlog

@@ -344,9 +344,7 @@ class TestSendConfirmationEmailFallbackIntegration:
             )
         )
         fallback_provider = RecordingProvider(
-            EmailSendResult(
-                status="sent", provider="smtp", message_id="msg-fb-1", error_code=None
-            )
+            EmailSendResult(status="sent", provider="smtp", message_id="msg-fb-1", error_code=None)
         )
 
         mock_settings = MagicMock()

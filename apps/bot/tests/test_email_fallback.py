@@ -245,9 +245,7 @@ class TestFallbackOnExceptionErrors:
     def test_unknown_provider_error_triggers_fallback(self, mocker):
         """When primary raises UnknownEmailProviderError, fallback is attempted (D-02)."""
         fallback_provider = RecordingProvider(
-            EmailSendResult(
-                status="sent", provider="smtp", message_id="msg-fb", error_code=None
-            )
+            EmailSendResult(status="sent", provider="smtp", message_id="msg-fb", error_code=None)
         )
 
         mock_settings = MagicMock()
@@ -275,9 +273,7 @@ class TestFallbackOnExceptionErrors:
     def test_configuration_error_triggers_fallback(self, mocker):
         """When primary raises EmailProviderConfigurationError, fallback is attempted (D-02)."""
         fallback_provider = RecordingProvider(
-            EmailSendResult(
-                status="sent", provider="smtp", message_id="msg-fb", error_code=None
-            )
+            EmailSendResult(status="sent", provider="smtp", message_id="msg-fb", error_code=None)
         )
 
         mock_settings = MagicMock()
@@ -304,9 +300,7 @@ class TestFallbackOnExceptionErrors:
     def test_generic_exception_triggers_fallback(self, mocker):
         """When primary raises a generic Exception, fallback is attempted (D-02)."""
         fallback_provider = RecordingProvider(
-            EmailSendResult(
-                status="sent", provider="smtp", message_id="msg-fb", error_code=None
-            )
+            EmailSendResult(status="sent", provider="smtp", message_id="msg-fb", error_code=None)
         )
 
         mock_settings = MagicMock()
@@ -440,9 +434,7 @@ class TestFallbackLogging:
             event_type="email_confirmation",
         )
 
-        failed_calls = [
-            c for c in error_spy.call_args_list if c[0][0] == "email_fallback_failed"
-        ]
+        failed_calls = [c for c in error_spy.call_args_list if c[0][0] == "email_fallback_failed"]
         assert len(failed_calls) == 1
         call_kwargs = failed_calls[0][1]
         assert call_kwargs["primary_provider"] == "resend"
@@ -473,7 +465,9 @@ class TestFallbackLogging:
         )
 
         unavailable_calls = [
-            c for c in warning_spy.call_args_list if c[0][0] == "email_fallback_provider_unavailable"
+            c
+            for c in warning_spy.call_args_list
+            if c[0][0] == "email_fallback_provider_unavailable"
         ]
         assert len(unavailable_calls) == 1
         assert unavailable_calls[0][1]["reason"] == "config_error"
@@ -579,7 +573,5 @@ class TestFallbackExceptionInSend:
         assert result["provider"] == "smtp"
         assert result["error_code"] == "runtimeerror"
 
-        failed_calls = [
-            c for c in error_spy.call_args_list if c[0][0] == "email_fallback_failed"
-        ]
+        failed_calls = [c for c in error_spy.call_args_list if c[0][0] == "email_fallback_failed"]
         assert len(failed_calls) == 1
