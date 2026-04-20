@@ -1,3 +1,6 @@
+from types import SimpleNamespace
+from unittest.mock import ANY, patch
+
 from django.contrib.auth.models import User
 from django.core import mail
 from django.test import TestCase
@@ -17,9 +20,6 @@ class AuthFlowTestCase(TestCase):
         self.password = "TesteSenha123!"
 
     def test_signup_with_valid_email(self):
-        """
-        Registro com @alunos.utfpr.edu.br cria User e UserProfile.
-        """
         response = self.client.post(
             reverse("account_signup"),
             {
@@ -34,14 +34,9 @@ class AuthFlowTestCase(TestCase):
 
         user = User.objects.get(email=self.valid_email)
         self.assertTrue(UserProfile.objects.filter(user=user).exists())
-
-        profile = user.profile
-        self.assertEqual(profile.email, self.valid_email)
+        self.assertEqual(user.profile.email, self.valid_email)
 
     def test_signup_with_invalid_email(self):
-        """
-        Registro com @gmail.com é rejeitado.
-        """
         response = self.client.post(
             reverse("account_signup"),
             {
@@ -56,9 +51,6 @@ class AuthFlowTestCase(TestCase):
         self.assertContains(response, "Apenas e-mails @alunos.utfpr.edu.br são aceitos")
 
     def test_email_confirmation_sent(self):
-        """
-        E-mail de confirmação é enviado após registro.
-        """
         self.client.post(
             reverse("account_signup"),
             {
@@ -73,9 +65,6 @@ class AuthFlowTestCase(TestCase):
         self.assertIn(self.valid_email, mail.outbox[0].to)
 
     def test_login_success(self):
-        """
-        Login com credenciais válidas redireciona corretamente.
-        """
         user = User.objects.create_user(
             username=self.valid_email, email=self.valid_email, password=self.password
         )
@@ -90,9 +79,6 @@ class AuthFlowTestCase(TestCase):
         self.assertRedirects(response, "/accounts/success/")
 
     def test_login_unverified_email(self):
-        """
-        Login com e-mail não confirmado redireciona para confirmação.
-        """
         User.objects.create_user(
             username=self.valid_email, email=self.valid_email, password=self.password
         )
@@ -107,9 +93,6 @@ class AuthFlowTestCase(TestCase):
         self.assertIn("confirm-email", response.request["PATH_INFO"])
 
     def test_logout(self):
-        """
-        Logout limpa sessão.
-        """
         user = User.objects.create_user(
             username=self.valid_email, email=self.valid_email, password=self.password
         )
@@ -121,15 +104,51 @@ class AuthFlowTestCase(TestCase):
         self.assertFalse("_auth_user_id" in self.client.session)
 
     def test_password_reset_flow(self):
-        """
-        Recuperação de senha envia e-mail.
-        """
-        User.objects.create_user(
+        user = User.objects.create_user(
             username=self.valid_email, email=self.valid_email, password=self.password
         )
+        user.emailaddress_set.create(email=self.valid_email, verified=True, primary=True)
 
-        response = self.client.post(reverse("account_reset_password"), {"email": self.valid_email})
+        with patch(
+            "apps.users.adapters.DefaultAccountAdapter.render_mail",
+            return_value=SimpleNamespace(subject="Reset subject", body="Reset body"),
+        ), patch(
+            "apps.users.adapters.build_email_idempotency_key",
+            return_value="reset-idempotency-key",
+        ) as key_spy, patch(
+            "apps.users.adapters.send_transactional_email",
+            return_value={"status": "sent"},
+        ) as send_spy:
+            response = self.client.post(
+                reverse("account_reset_password"),
+                {"email": self.valid_email},
+            )
 
         self.assertEqual(response.status_code, 302)
-        self.assertEqual(len(mail.outbox), 1)
-        self.assertIn(self.valid_email, mail.outbox[0].to)
+        key_spy.assert_called_once_with(
+            "password_reset",
+            recipient=self.valid_email,
+            event_token=ANY,
+            event_uid=ANY,
+        )
+        send_spy.assert_called_once_with(
+            subject="Reset subject",
+            message="Reset body",
+            recipient_list=[self.valid_email],
+            idempotency_key="reset-idempotency-key",
+        )
+
+    def test_password_reset_unknown_email_keeps_generic_response(self):
+        with patch("apps.users.adapters.send_transactional_email") as send_spy:
+            response = self.client.post(
+                reverse("account_reset_password"),
+                {"email": "missing@alunos.utfpr.edu.br"},
+            )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertRedirects(
+            response,
+            reverse("account_reset_password_done"),
+            fetch_redirect_response=False,
+        )
+        send_spy.assert_not_called()

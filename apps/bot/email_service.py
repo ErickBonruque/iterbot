@@ -10,6 +10,7 @@ from infra.email.factory import (
     UnknownEmailProviderError,
     get_email_provider,
 )
+from infra.email.idempotency import build_email_idempotency_key
 
 logger = structlog.get_logger(__name__)
 
@@ -18,11 +19,12 @@ ALERT_EMAIL = "bonrqueruck@gmail.com"
 ALERT_SUBJECT = BOT_MESSAGES.tasks.alert_subject_offline.text
 
 
-def _send_transactional_email(
+def send_transactional_email(
     *,
     subject: str,
     message: str,
     recipient_list: list[str],
+    idempotency_key: str | None = None,
 ) -> dict[str, str | None]:
     try:
         provider = get_email_provider()
@@ -31,6 +33,7 @@ def _send_transactional_email(
             message=message,
             from_email=django_settings.DEFAULT_FROM_EMAIL,
             recipient_list=recipient_list,
+            idempotency_key=idempotency_key,
         )
         return result.to_dict()
     except UnknownEmailProviderError as exc:
@@ -96,7 +99,7 @@ def send_offline_alert_email(
         ]
     )
 
-    result = _send_transactional_email(
+    result = send_transactional_email(
         subject=ALERT_SUBJECT,
         message="\n".join(body_lines),
         recipient_list=[ALERT_EMAIL],
@@ -148,11 +151,18 @@ def send_confirmation_email_to_user(user_id: int) -> dict:
         "Atenciosamente,",
         "Equipe IterBot UTFPR",
     ]
+    idempotency_key = build_email_idempotency_key(
+        "email_confirmation",
+        recipient=user.email,
+        event_token=user.email_confirmation_token,
+        event_uid=str(user.id),
+    )
 
-    result = _send_transactional_email(
+    result = send_transactional_email(
         subject=BOT_MESSAGES.tasks.confirm_email_subject.text,
         message="\n".join(body_lines),
         recipient_list=[user.email],
+        idempotency_key=idempotency_key,
     )
 
     if result["status"] != "sent":

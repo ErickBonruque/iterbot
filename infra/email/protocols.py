@@ -1,3 +1,4 @@
+
 """Contratos de provider para envio de email transacional."""
 
 from dataclasses import asdict, dataclass
@@ -27,5 +28,6 @@ class EmailProvider(Protocol):
         message: str,
         from_email: str,
         recipient_list: list[str],
+        idempotency_key: str | None = None,
     ) -> EmailSendResult:
         """Envia email transacional e retorna metadados padronizados."""

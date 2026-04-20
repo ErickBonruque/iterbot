@@ -1,3 +1,4 @@
+
 """Factory para resolucao explicita do provider de email."""
 
 from django.core.mail import send_mail
@@ -27,6 +28,7 @@ class DjangoSendMailProvider:
         message: str,
         from_email: str,
         recipient_list: list[str],
+        idempotency_key: str | None = None,
     ) -> EmailSendResult:
         try:
             send_mail(

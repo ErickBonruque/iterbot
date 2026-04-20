@@ -20,17 +20,19 @@ class ResendEmailProvider:
         message: str,
         from_email: str,
         recipient_list: list[str],
+        idempotency_key: str | None = None,
     ) -> EmailSendResult:
         try:
             resend.api_key = self._api_key
-            response = resend.Emails.send(
-                {
-                    "from": from_email,
-                    "to": recipient_list,
-                    "subject": subject,
-                    "text": message,
-                }
-            )
+            payload = {
+                "from": from_email,
+                "to": recipient_list,
+                "subject": subject,
+                "text": message,
+            }
+            if idempotency_key:
+                payload["headers"] = {"Idempotency-Key": idempotency_key}
+            response = resend.Emails.send(payload)
             message_id = response.get("id") if isinstance(response, dict) else None
             return EmailSendResult(
                 status="sent",
