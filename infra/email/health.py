@@ -124,7 +124,7 @@ def check_email_health() -> dict:
 
         return {"email": primary}
     except Exception as exc:
-        logger.error("email_health_check_failed", error=str(exc)[:200], exc_info=True)
+        logger.error("email_health_check_failed", error=type(exc).__name__, exc_info=True)
         return {
             "email": {
                 "status": "unhealthy",

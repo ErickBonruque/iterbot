@@ -92,7 +92,7 @@ class TestHealthMonitorReconnectFlow:
 
 
 class TestSendConfirmationTask:
-    @patch("apps.bot.tasks.send_confirmation_email_to_user")
+    @patch("apps.bot.email_service.send_confirmation_email_to_user")
     def test_send_confirmation_email_delegates_to_service(self, mock_service):
         mock_service.return_value = {"status": "sent", "user_id": 10, "email": "x@utfpr.edu"}
 
@@ -105,8 +105,10 @@ class TestSendConfirmationTask:
 
 
 class TestEmailService:
-    @patch("apps.bot.email_service.send_mail")
-    def test_offline_alert_uses_fail_silently(self, mock_send_mail):
+    @patch("apps.bot.email_service.send_transactional_email")
+    def test_offline_alert_delegates_to_transactional_email(self, mock_send):
+        mock_send.return_value = {"status": "sent", "provider": "resend", "message_id": "test-id"}
+
         from apps.bot.email_service import send_offline_alert_email
 
         send_offline_alert_email(
@@ -116,5 +118,5 @@ class TestEmailService:
             reconnect_success=False,
         )
 
-        mock_send_mail.assert_called_once()
-        assert mock_send_mail.call_args.kwargs.get("fail_silently") is True
+        mock_send.assert_called_once()
+        assert mock_send.call_args.kwargs.get("event_type") == "offline_alert"

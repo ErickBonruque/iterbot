@@ -4,7 +4,7 @@ from django.db import migrations
 class Migration(migrations.Migration):
     dependencies = [
         ("users", "0004_add_email_verification_fields"),
-        ("bot", "0004_migrate_conversation_data"),
+        ("bot", "0005_normalize_conversation_state"),
     ]
 
     operations = [
