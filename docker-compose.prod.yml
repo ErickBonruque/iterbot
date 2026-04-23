@@ -25,18 +25,14 @@ services:
     ports: []  # Remove porta 8000 exposta (Traefik roteia via rede interna)
     labels:
       - "traefik.enable=true"
-      # backend-secure (definido no base) permanece como router HTTPS principal.
-      # Em prod, adicionamos middlewares de segurança a ele.
-      - "traefik.http.routers.backend-secure.middlewares=security-headers@file"
+      # Declara service explicitamente para evitar ambiguidade com múltiplos services
+      - "traefik.http.routers.backend-secure.service=backend"
       # Router dedicado para admin e portal — BasicAuth obrigatório, prioridade alta
       - "traefik.http.routers.admin-secure.rule=Host(`${DOMAIN}`) && (PathPrefix(`/admin`) || PathPrefix(`/portal`))"
       - "traefik.http.routers.admin-secure.entrypoints=websecure"
-      - "traefik.http.routers.admin-secure.tls=true"
-      - "traefik.http.routers.admin-secure.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.admin-secure.middlewares=security-headers@file,admin-auth@file"
+      - "traefik.http.routers.admin-secure.middlewares=admin-auth@file"
       - "traefik.http.routers.admin-secure.priority=100"
-      - "traefik.http.routers.admin-secure.service=admin-backend"
-      - "traefik.http.services.admin-backend.loadbalancer.server.port=8000"
+      - "traefik.http.routers.admin-secure.service=backend"
       - "traefik.http.services.backend.loadbalancer.server.port=8000"
     environment:
       - DJANGO_SETTINGS_MODULE=waha_bot.settings.production
