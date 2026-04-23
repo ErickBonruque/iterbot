@@ -25,11 +25,16 @@ services:
     ports: []  # Remove porta 8000 exposta (Traefik roteia via rede interna)
     labels:
       - "traefik.enable=true"
+      # Desabilita o router 'backend-secure' definido em docker-compose.yml (base),
+      # que conflitaria com o router 'backend' abaixo — ambos no websecure com Host($DOMAIN).
+      - "traefik.http.routers.backend-secure.rule=Host(`disabled.invalid`)"
+      # Router principal — todo o trafego HTTPS (exceto /admin e /portal, cobertos por admin-secure)
       - "traefik.http.routers.backend.rule=Host(`${DOMAIN}`)"
       - "traefik.http.routers.backend.entrypoints=websecure"
       - "traefik.http.routers.backend.tls=true"
       - "traefik.http.routers.backend.tls.certresolver=letsencrypt"
       - "traefik.http.routers.backend.middlewares=security-headers@file"
+      # Router dedicado para admin e portal — BasicAuth obrigatório, prioridade alta
       - "traefik.http.routers.admin-secure.rule=Host(`${DOMAIN}`) && (PathPrefix(`/admin`) || PathPrefix(`/portal`))"
       - "traefik.http.routers.admin-secure.entrypoints=websecure"
       - "traefik.http.routers.admin-secure.tls=true"
