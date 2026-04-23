@@ -27,7 +27,12 @@ services:
       - "traefik.enable=true"
       # Declara service explicitamente para evitar ambiguidade com múltiplos services
       - "traefik.http.routers.backend-secure.service=backend"
-      # Router dedicado para admin e portal — BasicAuth obrigatório, prioridade alta
+      # certResolver explicito — backend-secure tem tls=true (do compose base),
+      # mas sem certResolver o Traefik v3 nao resolve certificado e descarta o router.
+      # Routers COM tls=true precisam de certResolver proprio (fallback do entrypoint
+      # nao se aplica quando tls esta explicitamente habilitado no router).
+      - "traefik.http.routers.backend-secure.tls.certresolver=letsencrypt"
+      # Router dedicado para admin e portal — BasicAuth obrigatorio, prioridade alta
       - "traefik.http.routers.admin-secure.rule=Host(`${DOMAIN}`) && (PathPrefix(`/admin`) || PathPrefix(`/portal`))"
       - "traefik.http.routers.admin-secure.entrypoints=websecure"
       - "traefik.http.routers.admin-secure.middlewares=admin-auth@file"
