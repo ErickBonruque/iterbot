@@ -3,8 +3,6 @@
 import structlog
 from celery import shared_task
 
-from infra.waha.protocols import EmailConfirmationDispatcher
-
 logger = structlog.get_logger(__name__)
 
 

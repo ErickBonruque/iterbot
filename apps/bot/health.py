@@ -2,6 +2,7 @@
 
 import time
 from datetime import timedelta
+from typing import ClassVar
 
 import requests
 import structlog
@@ -18,7 +19,7 @@ logger = structlog.get_logger(__name__)
 class BotHealthMonitor:
     """Monitora a saude e performance do bot WAHA."""
 
-    reconnect_backoff = [30, 60, 120]
+    reconnect_backoff: ClassVar[list[int]] = [30, 60, 120]
 
     def __init__(self, waha_url=None, session_name=None):
         self.waha_url = waha_url or settings.waha.base_url

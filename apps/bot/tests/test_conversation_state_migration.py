@@ -28,11 +28,11 @@ class ConversationStateMigrationTests(TransactionTestCase):
         ConversationState.objects.create(user_id=user_none.id, current_action=None)
 
         new_apps = self._migrate_to(self.migrate_to)
-        NewConversationState = new_apps.get_model("bot", "ConversationState")
+        new_conversation_state = new_apps.get_model("bot", "ConversationState")
 
         by_user = {
             row.user_id: row.current_action
-            for row in NewConversationState.objects.order_by("id")
+            for row in new_conversation_state.objects.order_by("id")
         }
 
         self.assertEqual(by_user[user_valid.id], "login_step_password")
@@ -49,8 +49,8 @@ class ConversationStateMigrationTests(TransactionTestCase):
         ConversationState.objects.create(user_id=user.id, current_action="waiting_password")
 
         new_apps = self._migrate_to(self.migrate_to)
-        NewConversationState = new_apps.get_model("bot", "ConversationState")
-        row = NewConversationState.objects.get(user_id=user.id)
+        new_conversation_state = new_apps.get_model("bot", "ConversationState")
+        row = new_conversation_state.objects.get(user_id=user.id)
         self.assertEqual(row.current_action, "login_step_password")
 
         # Simulate running normalization logic over already-normalized rows.
