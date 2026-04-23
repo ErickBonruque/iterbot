@@ -233,7 +233,7 @@ echo ""
 echo "[SEC-03] HTTPS"
 if [ "$DOMAIN" != "localhost" ]; then
     REDIRECT_URL="http://${DOMAIN}"
-    REDIRECT_STATUS=$(curl -k -sS -o /dev/null -w '%{http_code}' -L --max-redirs 0 "$REDIRECT_URL" 2>/dev/null || echo "000")
+    REDIRECT_STATUS=$(curl -k -sS -o /dev/null -w '%{http_code}' --max-redirs 0 "$REDIRECT_URL" 2>/dev/null || echo "000")
     printf "  %-50s " "HTTP redirects to HTTPS"
     if [ "$REDIRECT_STATUS" = "301" ] || [ "$REDIRECT_STATUS" = "308" ] || [ "$REDIRECT_STATUS" = "302" ]; then
         echo "[OK] (${REDIRECT_STATUS})"
