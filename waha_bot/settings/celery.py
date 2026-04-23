@@ -27,9 +27,9 @@ CELERY_BEAT_SCHEDULE = {
         "task": "apps.bot.tasks.check_waha_health",
         "schedule": crontab(minute="*/5"),
     },
-    # Limpeza de registros BotHealthCheck antigos — todo domingo às 02:00
+    # Limpeza de registros BotHealthCheck antigos — diariamente às 02:00
     "clean-old-health-checks": {
         "task": "apps.bot.tasks.clean_old_health_checks",
-        "schedule": crontab(hour=2, minute=0, day_of_week="sunday"),
+        "schedule": crontab(hour=2, minute=0),
     },
 }

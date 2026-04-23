@@ -8,11 +8,12 @@ from apps.bot.models import InteractionLog
 @admin.register(InteractionLog)
 class InteractionLogAdmin(ModelAdmin):
     list_display = ("user", "message_type_badge", "message_preview", "session_short", "created_at")
-    list_filter = ("message_type", "created_at", "session_id")
+    list_filter = ("message_type", "created_at")
     search_fields = ("message_content", "user__phone_number", "session_id")
     readonly_fields = ("created_at", "updated_at", "conversation_timeline")
     date_hierarchy = "created_at"
     ordering = ("-created_at",)
+    show_full_result_count = False
 
     def session_short(self, obj):
         """Return shortened session ID for display"""
@@ -37,8 +38,12 @@ class InteractionLogAdmin(ModelAdmin):
     message_preview.short_description = "Mensagem"
 
     def conversation_timeline(self, obj):
-        """Exibe toda a conversa do usuario em formato timeline."""
-        logs = InteractionLog.objects.filter(user=obj.user).order_by("created_at")[:100]
+        """Exibe a conversa do usuario em formato timeline (últimas 50 mensagens)."""
+        logs = (
+            InteractionLog.objects.filter(user=obj.user)
+            .select_related("user")
+            .order_by("created_at")[:50]
+        )
 
         html_parts = ['<div style="max-height:500px; overflow-y:auto; padding:10px;">']
         for log in logs:

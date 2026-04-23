@@ -1,6 +1,5 @@
 """Sistema de health check e monitoramento do bot WAHA."""
 
-import time
 from datetime import timedelta
 from typing import ClassVar
 
@@ -28,6 +27,8 @@ class BotHealthMonitor:
 
     def check_bot_status(self):
         """Verifica o status do bot WAHA e registra metricas."""
+        import time
+
         start_time = time.time()
         result = {
             "status": "offline",
@@ -85,53 +86,65 @@ class BotHealthMonitor:
         cache.set("bot_last_status", result, timeout=60)
         return result
 
-    def attempt_reconnect(self) -> bool:
-        """Tenta reconectar a sessao WAHA com backoff limitado."""
+    def attempt_reconnect(self, attempt: int = 1) -> bool:
+        """Tenta reconectar a sessao WAHA. Usa Celery retry com countdown em vez de sleep."""
         from apps.bot.models import BotConfiguration
         from infra.waha.client import WahaClient
 
         waha_settings = BotConfiguration.get_active()
         client = WahaClient(settings=waha_settings)
 
-        for attempt, backoff_seconds in enumerate(self.reconnect_backoff, start=1):
-            try:
-                logger.info(
-                    "waha_reconnect_attempt",
-                    session_name=self.session_name,
-                    attempt=attempt,
-                    max_attempts=len(self.reconnect_backoff),
-                )
-
-                if client.start_session():
-                    logger.info(
-                        "waha_reconnect_success",
-                        session_name=self.session_name,
-                        attempt=attempt,
-                    )
-                    return True
-
-                logger.warning(
-                    "waha_reconnect_attempt_failed",
-                    session_name=self.session_name,
-                    attempt=attempt,
-                    backoff_seconds=backoff_seconds,
-                )
-            except Exception as exc:
-                logger.error(
-                    "waha_reconnect_attempt_exception",
-                    session_name=self.session_name,
-                    attempt=attempt,
-                    error=str(exc),
-                )
-
-            if attempt < len(self.reconnect_backoff):
-                time.sleep(backoff_seconds)
-
-        logger.error(
-            "waha_reconnect_all_attempts_failed",
+        logger.info(
+            "waha_reconnect_attempt",
             session_name=self.session_name,
-            total_attempts=len(self.reconnect_backoff),
+            attempt=attempt,
+            max_attempts=len(self.reconnect_backoff),
         )
+
+        try:
+            if client.start_session():
+                logger.info(
+                    "waha_reconnect_success",
+                    session_name=self.session_name,
+                    attempt=attempt,
+                )
+                return True
+        except Exception as exc:
+            logger.error(
+                "waha_reconnect_attempt_exception",
+                session_name=self.session_name,
+                attempt=attempt,
+                error=str(exc),
+            )
+
+        logger.warning(
+            "waha_reconnect_attempt_failed",
+            session_name=self.session_name,
+            attempt=attempt,
+        )
+
+        # Schedule next attempt via Celery task with countdown instead of blocking sleep
+        if attempt < len(self.reconnect_backoff):
+            from apps.bot.tasks import attempt_waha_reconnect
+
+            countdown = self.reconnect_backoff[attempt - 1]
+            attempt_waha_reconnect.apply_async(
+                kwargs={"attempt": attempt + 1},
+                countdown=countdown,
+            )
+            logger.info(
+                "waha_reconnect_scheduled",
+                session_name=self.session_name,
+                next_attempt=attempt + 1,
+                countdown_seconds=countdown,
+            )
+        else:
+            logger.error(
+                "waha_reconnect_all_attempts_failed",
+                session_name=self.session_name,
+                total_attempts=len(self.reconnect_backoff),
+            )
+
         return False
 
     def check_and_reconnect(self) -> dict:
@@ -160,7 +173,7 @@ class BotHealthMonitor:
                 current_status=current_result["status"],
             )
 
-            reconnect_success = self.attempt_reconnect()
+            reconnect_success = self.attempt_reconnect(attempt=1)
             send_offline_alert_email(
                 session_name=self.session_name,
                 current_status=current_result["status"],

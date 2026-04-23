@@ -12,6 +12,7 @@ class BotHealthCheckAdmin(ModelAdmin):
     readonly_fields = ("created_at", "updated_at")
     date_hierarchy = "created_at"
     ordering = ("-created_at",)
+    show_full_result_count = False
 
     def status_badge(self, obj):
         colors = {"online": "#28a745", "offline": "#dc3545", "error": "#ffc107"}

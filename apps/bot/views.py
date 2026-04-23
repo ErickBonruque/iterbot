@@ -5,7 +5,6 @@ from django.http import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 
 from apps.bot.messages import BOT_MESSAGES
-from apps.bot.services import BotService
 
 logger = structlog.get_logger(__name__)
 
@@ -40,15 +39,8 @@ def webhook(request):
         logger.info("webhook_ignored_from_me", chat_id=chat_id)
         return HttpResponse("OK", status=200)
 
-    try:
-        bot = BotService()
-        bot.process_message(chat_id, body, from_me)
-        logger.info("webhook_message_processed", chat_id=chat_id)
-        return HttpResponse("OK", status=200)
-    except Exception as exc:
-        logger.exception(
-            "webhook_processing_failed",
-            error=str(exc),
-            chat_id=chat_id,
-        )
-        return HttpResponse(BOT_MESSAGES.system.webhook_error.text, status=500)
+    from apps.bot.tasks import process_webhook_message
+
+    process_webhook_message.delay(chat_id, body)
+    logger.info("webhook_message_enqueued", chat_id=chat_id)
+    return HttpResponse("OK", status=200)

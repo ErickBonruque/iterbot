@@ -25,6 +25,17 @@ class TestBeatScheduleRegistration:
         assert hasattr(schedule, "_orig_minute")
         assert str(schedule._orig_minute) == "*/5"
 
+    def test_clean_old_health_checks_schedule_is_daily(self):
+        from django.conf import settings
+
+        entry = settings.CELERY_BEAT_SCHEDULE["clean-old-health-checks"]
+        schedule = entry["schedule"]
+        # daily = no day_of_week restriction (runs every day)
+        assert str(schedule._orig_hour) == "2"
+        assert str(schedule._orig_minute) == "0"
+        # daily schedule has no day_of_week filter — uses default "*"
+        assert str(schedule._orig_day_of_week) == "*"
+
 
 class TestCheckWahaHealthTask:
     @patch("apps.bot.health.BotHealthMonitor")
@@ -47,11 +58,54 @@ class TestCheckWahaHealthTask:
 
 
 class TestHealthMonitorReconnectFlow:
-    @patch("apps.bot.health.time.sleep")
+    @patch("apps.bot.tasks.attempt_waha_reconnect")
     @patch("infra.waha.client.WahaClient")
     @patch("apps.bot.models.BotConfiguration")
-    def test_attempt_reconnect_uses_expected_backoff(
-        self, mock_config, mock_client_cls, mock_sleep
+    def test_attempt_reconnect_schedules_celery_retry_instead_of_sleep(
+        self, mock_config, mock_client_cls, mock_reconnect_task
+    ):
+        """Verifica que attempt_reconnect usa Celery countdown em vez de time.sleep."""
+        from apps.bot.health import BotHealthMonitor
+
+        mock_config.get_active.return_value = MagicMock()
+        mock_client = MagicMock()
+        mock_client.start_session.return_value = False
+        mock_client_cls.return_value = mock_client
+
+        monitor = BotHealthMonitor()
+        result = monitor.attempt_reconnect(attempt=1)
+
+        assert result is False
+        # Deve agendar próxima tentativa via Celery, não bloquear com sleep
+        mock_reconnect_task.apply_async.assert_called_once_with(
+            kwargs={"attempt": 2},
+            countdown=30,
+        )
+
+    @patch("apps.bot.tasks.attempt_waha_reconnect")
+    @patch("infra.waha.client.WahaClient")
+    @patch("apps.bot.models.BotConfiguration")
+    def test_attempt_reconnect_returns_true_on_success(
+        self, mock_config, mock_client_cls, mock_reconnect_task
+    ):
+        from apps.bot.health import BotHealthMonitor
+
+        mock_config.get_active.return_value = MagicMock()
+        mock_client = MagicMock()
+        mock_client.start_session.return_value = True
+        mock_client_cls.return_value = mock_client
+
+        monitor = BotHealthMonitor()
+        result = monitor.attempt_reconnect(attempt=1)
+
+        assert result is True
+        mock_reconnect_task.apply_async.assert_not_called()
+
+    @patch("apps.bot.tasks.attempt_waha_reconnect")
+    @patch("infra.waha.client.WahaClient")
+    @patch("apps.bot.models.BotConfiguration")
+    def test_attempt_reconnect_last_attempt_does_not_schedule_more(
+        self, mock_config, mock_client_cls, mock_reconnect_task
     ):
         from apps.bot.health import BotHealthMonitor
 
@@ -61,12 +115,11 @@ class TestHealthMonitorReconnectFlow:
         mock_client_cls.return_value = mock_client
 
         monitor = BotHealthMonitor()
-        result = monitor.attempt_reconnect()
+        # attempt=3 is the last one (reconnect_backoff has 3 entries)
+        result = monitor.attempt_reconnect(attempt=3)
 
         assert result is False
-        assert mock_client.start_session.call_count == 3
-        mock_sleep.assert_any_call(30)
-        mock_sleep.assert_any_call(60)
+        mock_reconnect_task.apply_async.assert_not_called()
 
     @patch("apps.bot.email_service.send_offline_alert_email")
     @patch("apps.bot.health.BotHealthMonitor.attempt_reconnect", return_value=False)

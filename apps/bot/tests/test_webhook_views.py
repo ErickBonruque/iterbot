@@ -16,8 +16,8 @@ class WebhookViewTests(TestCase):
             },
         }
 
-    @patch("apps.bot.views.BotService")
-    def test_valid_message_calls_process_and_returns_200(self, mock_bot_service):
+    @patch("apps.bot.tasks.process_webhook_message.delay")
+    def test_valid_message_enqueues_task_and_returns_200(self, mock_delay):
         response = self.client.post(
             "/webhook/",
             data=json.dumps(self.valid_payload),
@@ -25,12 +25,10 @@ class WebhookViewTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 200)
-        mock_bot_service.return_value.process_message.assert_called_once_with(
-            "5511999999999@c.us", "oi", False
-        )
+        mock_delay.assert_called_once_with("5511999999999@c.us", "oi")
 
-    @patch("apps.bot.views.BotService")
-    def test_from_me_is_ignored_with_200(self, mock_bot_service):
+    @patch("apps.bot.tasks.process_webhook_message.delay")
+    def test_from_me_is_ignored_with_200(self, mock_delay):
         payload = dict(self.valid_payload)
         payload["payload"] = dict(payload["payload"])
         payload["payload"]["fromMe"] = True
@@ -42,7 +40,7 @@ class WebhookViewTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 200)
-        mock_bot_service.return_value.process_message.assert_not_called()
+        mock_delay.assert_not_called()
 
     def test_invalid_json_returns_400(self):
         response = self.client.post(
@@ -80,18 +78,6 @@ class WebhookViewTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 400)
-
-    @patch("apps.bot.views.BotService")
-    def test_internal_error_returns_500(self, mock_bot_service):
-        mock_bot_service.return_value.process_message.side_effect = RuntimeError("boom")
-
-        response = self.client.post(
-            "/webhook/",
-            data=json.dumps(self.valid_payload),
-            content_type="application/json",
-        )
-
-        self.assertEqual(response.status_code, 500)
 
     def test_get_request_returns_405(self):
         response = self.client.get("/webhook/")

@@ -13,6 +13,26 @@ class CeleryEmailConfirmationDispatcher:
         send_confirmation_email.delay(user_id)
 
 
+@shared_task(bind=True, max_retries=3, default_retry_delay=30)
+def process_webhook_message(self, chat_id: str, body: str) -> dict:
+    """Processa mensagem recebida pelo webhook de forma assíncrona."""
+    try:
+        from apps.bot.services import BotService
+
+        bot = BotService()
+        bot.process_message(chat_id, body, False)
+        logger.info("webhook_message_processed", chat_id=chat_id)
+        return {"status": "processed", "chat_id": chat_id}
+    except Exception as exc:
+        logger.error(
+            "webhook_message_processing_failed",
+            chat_id=chat_id,
+            error=str(exc),
+            exc_info=True,
+        )
+        raise self.retry(exc=exc) from exc
+
+
 @shared_task(bind=True, max_retries=0)
 def check_waha_health(self) -> dict:
     """Check WAHA health and delegate reconnect policy to health monitor."""
@@ -28,6 +48,25 @@ def check_waha_health(self) -> dict:
             exc_info=True,
         )
         return {"status": "error", "error": str(exc)}
+
+
+@shared_task(bind=True, max_retries=0)
+def attempt_waha_reconnect(self, attempt: int = 1) -> dict:
+    """Executa uma tentativa de reconexão WAHA agendada com countdown (sem sleep bloqueante)."""
+    try:
+        from apps.bot.health import BotHealthMonitor
+
+        monitor = BotHealthMonitor()
+        success = monitor.attempt_reconnect(attempt=attempt)
+        return {"attempt": attempt, "success": success}
+    except Exception as exc:
+        logger.error(
+            "attempt_waha_reconnect_task_failed",
+            attempt=attempt,
+            error=str(exc),
+            exc_info=True,
+        )
+        return {"attempt": attempt, "success": False, "error": str(exc)}
 
 
 @shared_task(bind=True, max_retries=0)
