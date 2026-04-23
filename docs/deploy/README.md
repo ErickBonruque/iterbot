@@ -7,6 +7,7 @@ Guias de deploy e configuracao de infraestrutura.
 | Arquivo | Descricao |
 |---------|-----------|
 | [DEPLOY_GUIDE.md](DEPLOY_GUIDE.md) | Guia completo de deploy |
+| [EMAIL_RUNBOOK.md](EMAIL_RUNBOOK.md) | Runbook operacional do email Resend (rotacao, revogacao, troubleshooting) |
 | [BACKUP_S3.md](BACKUP_S3.md) | Backup para S3 |
 | [SECURITY_GROUPS.md](SECURITY_GROUPS.md) | Grupos de seguranca AWS |
 | [SES_SANDBOX_EXIT.md](SES_SANDBOX_EXIT.md) | Sair do sandbox SES |
