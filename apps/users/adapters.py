@@ -1,4 +1,3 @@
-
 from allauth.account.adapter import DefaultAccountAdapter
 
 from apps.bot.email_service import send_transactional_email

@@ -109,16 +109,20 @@ class AuthFlowTestCase(TestCase):
         )
         user.emailaddress_set.create(email=self.valid_email, verified=True, primary=True)
 
-        with patch(
-            "apps.users.adapters.DefaultAccountAdapter.render_mail",
-            return_value=SimpleNamespace(subject="Reset subject", body="Reset body"),
-        ), patch(
-            "apps.users.adapters.build_email_idempotency_key",
-            return_value="reset-idempotency-key",
-        ) as key_spy, patch(
-            "apps.users.adapters.send_transactional_email",
-            return_value={"status": "sent"},
-        ) as send_spy:
+        with (
+            patch(
+                "apps.users.adapters.DefaultAccountAdapter.render_mail",
+                return_value=SimpleNamespace(subject="Reset subject", body="Reset body"),
+            ),
+            patch(
+                "apps.users.adapters.build_email_idempotency_key",
+                return_value="reset-idempotency-key",
+            ) as key_spy,
+            patch(
+                "apps.users.adapters.send_transactional_email",
+                return_value={"status": "sent"},
+            ) as send_spy,
+        ):
             response = self.client.post(
                 reverse("account_reset_password"),
                 {"email": self.valid_email},

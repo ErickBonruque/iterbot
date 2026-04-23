@@ -13,13 +13,16 @@ class PasswordResetAdapterTests(SimpleTestCase):
         context = {"key": "reset-token-123", "uid": "uid-456"}
         rendered_message = SimpleNamespace(subject="Reset subject", body="Reset body")
 
-        with patch(
-            "apps.users.adapters.DefaultAccountAdapter.render_mail",
-            return_value=rendered_message,
-        ) as render_mail_spy, patch(
-            "apps.users.adapters.send_transactional_email",
-            return_value={"status": "sent", "provider": "resend"},
-        ) as send_spy:
+        with (
+            patch(
+                "apps.users.adapters.DefaultAccountAdapter.render_mail",
+                return_value=rendered_message,
+            ) as render_mail_spy,
+            patch(
+                "apps.users.adapters.send_transactional_email",
+                return_value={"status": "sent", "provider": "resend"},
+            ) as send_spy,
+        ):
             result = adapter.send_mail(
                 "account/email/password_reset_key",
                 "aluno@utfpr.edu.br",
@@ -49,12 +52,15 @@ class PasswordResetAdapterTests(SimpleTestCase):
         adapter = UTFPRAccountAdapter()
         context = {"anything": "kept"}
 
-        with patch(
-            "apps.users.adapters.DefaultAccountAdapter.send_mail",
-            return_value="legacy-path",
-        ) as legacy_send_spy, patch(
-            "apps.users.adapters.send_transactional_email",
-        ) as send_spy:
+        with (
+            patch(
+                "apps.users.adapters.DefaultAccountAdapter.send_mail",
+                return_value="legacy-path",
+            ) as legacy_send_spy,
+            patch(
+                "apps.users.adapters.send_transactional_email",
+            ) as send_spy,
+        ):
             result = adapter.send_mail(
                 "account/email/email_confirmation_signup",
                 "aluno@utfpr.edu.br",

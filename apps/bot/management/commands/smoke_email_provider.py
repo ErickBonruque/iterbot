@@ -10,7 +10,9 @@ class Command(BaseCommand):
     help = "Valida wiring e contrato do provider de email sem chamada externa obrigatoria"
 
     def add_arguments(self, parser):
-        parser.add_argument("--dry-run", action="store_true", help="Executa smoke com provider fake")
+        parser.add_argument(
+            "--dry-run", action="store_true", help="Executa smoke com provider fake"
+        )
 
     def handle(self, *args, **options):
         expected_keys = {"status", "provider", "message_id", "error_code"}

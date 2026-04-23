@@ -22,7 +22,9 @@ class ConversationStateMigrationTests(TransactionTestCase):
         user_unknown = UserProfile.objects.create(phone_number="551100000003@c.us")
         user_none = UserProfile.objects.create(phone_number="551100000004@c.us")
 
-        ConversationState.objects.create(user_id=user_valid.id, current_action="login_step_password")
+        ConversationState.objects.create(
+            user_id=user_valid.id, current_action="login_step_password"
+        )
         ConversationState.objects.create(user_id=user_legacy.id, current_action="waiting_ra")
         ConversationState.objects.create(user_id=user_unknown.id, current_action="totally_invalid")
         ConversationState.objects.create(user_id=user_none.id, current_action=None)
@@ -31,8 +33,7 @@ class ConversationStateMigrationTests(TransactionTestCase):
         new_conversation_state = new_apps.get_model("bot", "ConversationState")
 
         by_user = {
-            row.user_id: row.current_action
-            for row in new_conversation_state.objects.order_by("id")
+            row.user_id: row.current_action for row in new_conversation_state.objects.order_by("id")
         }
 
         self.assertEqual(by_user[user_valid.id], "login_step_password")

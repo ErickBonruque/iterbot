@@ -1,4 +1,3 @@
-
 """Contratos de provider para envio de email transacional."""
 
 from dataclasses import asdict, dataclass
