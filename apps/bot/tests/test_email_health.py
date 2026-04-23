@@ -1,6 +1,5 @@
 """Tests for email health check functionality."""
 
-import socket
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -98,7 +97,7 @@ class TestCheckSmtpHealth:
         assert "error" in result
         assert result["key_status"] == "configured"
 
-    @patch("infra.email.health.socket.create_connection", side_effect=socket.timeout("timed out"))
+    @patch("infra.email.health.socket.create_connection", side_effect=TimeoutError("timed out"))
     @override_settings(EMAIL_HOST="smtp.example.com", EMAIL_PORT=587, EMAIL_HOST_USER="")
     def test_smtp_unhealthy_timeout(self, mock_conn):
         """SMTP provider returns unhealthy when TCP connection times out."""

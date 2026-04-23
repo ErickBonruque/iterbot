@@ -89,7 +89,7 @@ def _check_smtp_health() -> dict[str, str]:
     try:
         with socket.create_connection((host, port), timeout=5):
             return {"status": "healthy", "provider": "smtp"}
-    except (socket.timeout, OSError, ConnectionError) as exc:
+    except (TimeoutError, OSError, ConnectionError) as exc:
         key_status = (
             "configured" if getattr(django_settings, "EMAIL_HOST_USER", "") else "not_configured"
         )

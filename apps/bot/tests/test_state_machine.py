@@ -2,7 +2,6 @@ from django.test import TestCase
 
 from apps.bot.state_machine import (
     CANONICAL_STATES,
-    ConversationFlowStateMachine,
     ROUTE_AUTH,
     ROUTE_COMPANY,
     ROUTE_IDLE,
@@ -15,6 +14,7 @@ from apps.bot.state_machine import (
     STATE_LOGIN_STEP_RA,
     STATE_LOGIN_STEP_WAITING_CONFIRMATION,
     STATE_TERM_SELECTION,
+    ConversationFlowStateMachine,
     has_active_flow,
     is_waiting_confirmation,
     normalize_current_action,

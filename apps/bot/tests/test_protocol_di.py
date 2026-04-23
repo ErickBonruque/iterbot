@@ -3,7 +3,7 @@ from django.test import TestCase
 from apps.bot.services import BotService
 from apps.courses.models import Course, SearchTerm
 from apps.users.models import UserProfile
-from infra.waha.protocols import (
+from infra.waha.protocols import (  # noqa: TC001
     Authenticator,
     EmailConfirmationDispatcher,
     JobSearcher,
