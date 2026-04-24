@@ -76,11 +76,16 @@ jobs:
           aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Deploy via SSM
+        env:
+          BREVO_API_KEY: ${{ secrets.BREVO_API_KEY }}
         run: |
+          # BREVO_API_KEY trafegada como base64 pra evitar problemas de quoting com SSM.
+          # Se o secret do GH nao estiver setado, o arquivo no EC2 nao e sobrescrito.
+          BREVO_B64=$(printf %s "${BREVO_API_KEY:-}" | base64 -w0)
           COMMAND_ID=$(aws ssm send-command \
             --instance-ids ***REMOVED*** \
             --document-name "AWS-RunShellScript" \
-            --parameters 'commands=["sudo -u ubuntu bash -euo pipefail -c \"cd /home/ubuntu/iterbot && git fetch origin master && git reset --hard origin/master && mkdir -p secrets/users && if [ ! -f secrets/users/admin-users.txt ] || [ ! -f secrets/users/waha-users.txt ]; then set -a && . ./.env && set +a && bash ./deployment/scripts/setup-htpasswd.sh; fi && bash ./deployment/scripts/update_env_production.sh && set -a && . ./.env && set +a && mkdir -p secrets && printf %s \"$AWS_ACCESS_KEY_ID\" > secrets/aws_access_key_id.txt && printf %s \"$AWS_SECRET_ACCESS_KEY\" > secrets/aws_secret_access_key.txt && docker container prune -f && docker compose -f docker-compose.yml -f docker-compose.prod.yml up --build -d --remove-orphans && docker image prune -f && bash ./deployment/scripts/smoke-check.sh && echo Deploy concluido em $(date -Iseconds)\""]' \
+            --parameters "commands=[\"sudo -u ubuntu bash -c 'cd /home/ubuntu/iterbot && git fetch origin master && git reset --hard origin/master && env BREVO_API_KEY_B64=${BREVO_B64} bash ./deployment/scripts/ec2_deploy.sh'\"]" \
             --comment "Deploy from GitHub Actions run ${{ github.run_id }}" \
             --query 'Command.CommandId' \
             --output text)

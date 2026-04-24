@@ -31,8 +31,9 @@ set_env() {
 # Dominio atual da EC2 (sslip.io baseado no IP publico)
 DOMAIN_VALUE="${DEPLOY_DOMAIN:-98-81-236-180.sslip.io}"
 
-set_env EMAIL_PROVIDER "ses"
-set_env DEFAULT_FROM_EMAIL "***REMOVED***"
+set_env EMAIL_PROVIDER "brevo"
+set_env EMAIL_FALLBACK_PROVIDER "console"
+set_env DEFAULT_FROM_EMAIL "bonruque@alunos.utfpr.edu.br"
 set_env DOMAIN "$DOMAIN_VALUE"
 set_env PORTAL_BASE_URL "https://${DOMAIN_VALUE}"
 # Inclui localhost/127.0.0.1 para permitir o healthcheck do container
