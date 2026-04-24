@@ -41,11 +41,29 @@ class DjangoSendMailProvider:
                 fail_silently=False,
             )
             return EmailSendResult(status="sent", provider=self._provider_name)
-        except Exception:
+        except Exception as exc:
+            # Extrai codigo de erro do boto3 ClientError (SES) sem vazar PII
+            # Ex.: MessageRejected, MailFromDomainNotVerified, SendingPausedException
+            error_code = "send_mail_failed"
+            aws_code = (
+                getattr(exc, "response", {}).get("Error", {}).get("Code")
+                if hasattr(exc, "response")
+                else None
+            )
+            if aws_code:
+                error_code = f"ses_{aws_code}"
+            logger.error(
+                "django_send_mail_failed",
+                provider=self._provider_name,
+                exc_type=exc.__class__.__name__,
+                aws_error_code=aws_code,
+                from_email_domain=from_email.split("@", 1)[-1] if "@" in from_email else None,
+                recipient_count=len(recipient_list),
+            )
             return EmailSendResult(
                 status="error",
                 provider=self._provider_name,
-                error_code="send_mail_failed",
+                error_code=error_code,
             )
 
 

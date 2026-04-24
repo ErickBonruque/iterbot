@@ -305,7 +305,7 @@ Os valores padrão são definidos em `config/env.py` com resolução em cascata:
 | `EMAIL_USE_TLS` | `True` | `bool` |
 | `EMAIL_HOST_USER` | `""` (string vazia) | `str` |
 | `EMAIL_HOST_PASSWORD` | `""` (string vazia) | `str` |
-| `DEFAULT_FROM_EMAIL` | `"bonrqueruck@gmail.com"` | `str` |
+| `DEFAULT_FROM_EMAIL` | `"***REMOVED***"` | `str` |
 | `EMAIL_PROVIDER` | `"console"` | `str` |
 | `EMAIL_FALLBACK_PROVIDER` | `""` (string vazia) | `str` |
 | `RESEND_API_KEY` | `""` (string vazia) | `str` |

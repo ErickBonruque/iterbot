@@ -19,7 +19,7 @@ from infra.email.idempotency import build_email_idempotency_key
 logger = structlog.get_logger(__name__)
 
 # E-mail de alerta fixo - nao configuravel via admin nesta milestone (D-05)
-ALERT_EMAIL = "bonrqueruck@gmail.com"
+ALERT_EMAIL = "***REMOVED***"
 ALERT_SUBJECT = BOT_MESSAGES.tasks.alert_subject_offline.text
 
 
