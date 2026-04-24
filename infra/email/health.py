@@ -2,6 +2,7 @@
 
 import socket
 
+import requests
 import structlog
 
 logger = structlog.get_logger(__name__)
@@ -21,8 +22,8 @@ def check_email_provider_health(
     """Check health of a specific email provider.
 
     Args:
-        provider_name: The email provider name (e.g. 'resend', 'smtp', 'ses', 'console').
-        api_key: Optional API key for providers that need one (e.g. Resend).
+        provider_name: The email provider name (e.g. 'resend', 'brevo', 'smtp', 'ses', 'console').
+        api_key: Optional API key for providers that need one (e.g. Resend, Brevo).
 
     Returns:
         Dict with 'status', 'provider', and optionally 'error' or 'note' keys.
@@ -31,6 +32,8 @@ def check_email_provider_health(
 
     if resolved == "resend":
         return _check_resend_health(api_key)
+    if resolved == "brevo":
+        return _check_brevo_health(api_key)
     if resolved in {"smtp", "ses"}:
         return _check_smtp_health()
     if resolved == "console":
@@ -72,6 +75,41 @@ def _check_resend_health(api_key: str | None) -> dict[str, str]:
         }
 
 
+def _check_brevo_health(api_key: str | None) -> dict[str, str]:
+    """Verifica conectividade com API Brevo e validade da chave via /v3/account.
+
+    Endpoint leve (GET) que valida tanto a chave quanto a conexao sem enviar
+    e-mail. Qualquer 2xx = healthy; 401/403 = chave invalida; outros = unhealthy.
+    """
+    if not api_key:
+        return {
+            "status": "unhealthy",
+            "provider": "brevo",
+            "error": "API key not configured",
+        }
+
+    try:
+        response = requests.get(
+            "https://api.brevo.com/v3/account",
+            headers={"api-key": api_key, "accept": "application/json"},
+            timeout=5,
+        )
+        if 200 <= response.status_code < 300:
+            return {"status": "healthy", "provider": "brevo"}
+        return {
+            "status": "unhealthy",
+            "provider": "brevo",
+            "error": f"http_{response.status_code}",
+        }
+    except Exception as exc:
+        # T-42-01: nao expor excecao crua (pode conter a chave)
+        return {
+            "status": "unhealthy",
+            "provider": "brevo",
+            "error": f"{type(exc).__name__}: API connectivity check failed",
+        }
+
+
 def _check_smtp_health() -> dict[str, str]:
     """Verify SMTP/SES connectivity via TCP connection to configured host:port."""
     from django.conf import settings as django_settings
@@ -110,16 +148,24 @@ def check_email_health() -> dict:
     try:
         email_settings = _get_email_settings()
         provider_name = email_settings.provider
-        api_key = email_settings.resend_api_key
 
-        primary = check_email_provider_health(provider_name, api_key=api_key)
+        def _api_key_for(name: str) -> str | None:
+            resolved = name.strip().lower()
+            if resolved == "resend":
+                return email_settings.resend_api_key
+            if resolved == "brevo":
+                return getattr(email_settings, "brevo_api_key", "")
+            return None
+
+        primary = check_email_provider_health(
+            provider_name, api_key=_api_key_for(provider_name)
+        )
 
         fallback_provider = getattr(email_settings, "fallback_provider", "")
         if fallback_provider:
-            fallback_api_key = None
-            if fallback_provider == "resend":
-                fallback_api_key = email_settings.resend_api_key
-            fallback = check_email_provider_health(fallback_provider, api_key=fallback_api_key)
+            fallback = check_email_provider_health(
+                fallback_provider, api_key=_api_key_for(fallback_provider)
+            )
             return {"email": {"primary": primary, "fallback": fallback}}
 
         return {"email": primary}

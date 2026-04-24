@@ -70,6 +70,35 @@ class TestCheckResendHealth:
         assert "error" in result
 
 
+class TestCheckBrevoHealth:
+    """Tests for check_email_provider_health with Brevo provider."""
+
+    def test_brevo_healthy_when_api_returns_200(self, mocker):
+        mock_resp = MagicMock(status_code=200)
+        mocker.patch("infra.email.health.requests.get", return_value=mock_resp)
+        result = check_email_provider_health("brevo", api_key="xkeysib-fake")
+        assert result == {"status": "healthy", "provider": "brevo"}
+
+    def test_brevo_unhealthy_when_api_returns_401(self, mocker):
+        mock_resp = MagicMock(status_code=401)
+        mocker.patch("infra.email.health.requests.get", return_value=mock_resp)
+        result = check_email_provider_health("brevo", api_key="xkeysib-fake")
+        assert result["status"] == "unhealthy"
+        assert result["provider"] == "brevo"
+        assert result["error"] == "http_401"
+
+    def test_brevo_unhealthy_without_api_key(self):
+        result = check_email_provider_health("brevo", api_key=None)
+        assert result["status"] == "unhealthy"
+        assert result["error"] == "API key not configured"
+
+    def test_brevo_unhealthy_on_network_error(self, mocker):
+        mocker.patch("infra.email.health.requests.get", side_effect=ConnectionError("down"))
+        result = check_email_provider_health("brevo", api_key="xkeysib-fake")
+        assert result["status"] == "unhealthy"
+        assert "API connectivity check failed" in result["error"]
+
+
 class TestCheckSmtpHealth:
     """Tests for check_email_provider_health with smtp/ses providers."""
 
