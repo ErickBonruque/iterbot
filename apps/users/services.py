@@ -1,12 +1,13 @@
 import uuid
 from datetime import timedelta
 
+import structlog
 from django.utils import timezone
 
 from apps.users.models import UserProfile
 from infra.waha.protocols import EmailConfirmationDispatcher
 
-logger = __import__("logging").getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 class UTFPRAuthService:
