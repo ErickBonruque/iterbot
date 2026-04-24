@@ -35,6 +35,8 @@ set_env EMAIL_PROVIDER "ses"
 set_env DEFAULT_FROM_EMAIL "***REMOVED***"
 set_env DOMAIN "$DOMAIN_VALUE"
 set_env PORTAL_BASE_URL "https://${DOMAIN_VALUE}"
-set_env ALLOWED_HOSTS "${DOMAIN_VALUE},www.${DOMAIN_VALUE},waha.${DOMAIN_VALUE},backend"
+# Inclui localhost/127.0.0.1 para permitir o healthcheck do container
+# (curl -f http://localhost:8000/health/) sob DEBUG=False.
+set_env ALLOWED_HOSTS "${DOMAIN_VALUE},www.${DOMAIN_VALUE},waha.${DOMAIN_VALUE},backend,localhost,127.0.0.1"
 
 echo "[update_env_production] .env normalizado para dominio ${DOMAIN_VALUE}"
