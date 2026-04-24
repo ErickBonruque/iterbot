@@ -157,9 +157,7 @@ def check_email_health() -> dict:
                 return getattr(email_settings, "brevo_api_key", "")
             return None
 
-        primary = check_email_provider_health(
-            provider_name, api_key=_api_key_for(provider_name)
-        )
+        primary = check_email_provider_health(provider_name, api_key=_api_key_for(provider_name))
 
         fallback_provider = getattr(email_settings, "fallback_provider", "")
         if fallback_provider:
