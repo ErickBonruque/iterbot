@@ -325,7 +325,11 @@ def send_confirmation_email_to_user(user_id: int) -> dict:
     if not user.email:
         return {"status": "error", "reason": "no_email", "user_id": user_id}
 
-    base_url = getattr(django_settings, "PORTAL_BASE_URL", "https://3-86-57-105.sslip.io")
+    # PORTAL_BASE_URL e obrigatoria em producao (validada em production.py).
+    # Em dev/testes usamos localhost como fallback quando nao configurada.
+    base_url = (getattr(django_settings, "PORTAL_BASE_URL", "") or "http://localhost:8000").rstrip(
+        "/"
+    )
     confirm_url = f"{base_url}/confirmar-email/{user.email_confirmation_token}"
 
     body_lines = [
