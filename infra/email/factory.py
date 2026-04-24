@@ -80,12 +80,28 @@ def _build_resend_provider() -> EmailProvider:
     return ResendEmailProvider(api_key=resend_api_key)
 
 
+def _build_brevo_provider() -> EmailProvider:
+    brevo_api_key = settings.email.brevo_api_key
+    if not brevo_api_key:
+        raise EmailProviderConfigurationError("BREVO_API_KEY ausente para provider brevo")
+
+    try:
+        from infra.email.providers.brevo_provider import BrevoEmailProvider
+    except ModuleNotFoundError as exc:
+        raise EmailProviderConfigurationError("Dependencia brevo nao instalada") from exc
+
+    return BrevoEmailProvider(api_key=brevo_api_key)
+
+
 def get_email_provider(provider_name: str | None = None) -> EmailProvider:
     """Resolve provider exclusivamente por EMAIL_PROVIDER, sem fallback implicito."""
     resolved_provider = (provider_name or settings.email.provider).strip().lower()
 
     if resolved_provider == "resend":
         return _build_resend_provider()
+
+    if resolved_provider == "brevo":
+        return _build_brevo_provider()
 
     if resolved_provider in {"ses", "smtp", "console"}:
         return DjangoSendMailProvider(provider_name=resolved_provider)

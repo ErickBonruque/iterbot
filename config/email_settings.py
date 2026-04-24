@@ -6,7 +6,7 @@ from config._helpers import _get_secret_or_env, env
 
 _logger = structlog.get_logger(__name__)
 
-_KNOWN_PROVIDERS = {"resend", "ses", "smtp", "console"}
+_KNOWN_PROVIDERS = {"resend", "ses", "smtp", "console", "brevo"}
 
 
 @dataclass
@@ -20,6 +20,7 @@ class EmailSettings:
     password: str
     from_email: str
     resend_api_key: str
+    brevo_api_key: str
     fallback_provider: str
 
     def __init__(self) -> None:
@@ -33,6 +34,7 @@ class EmailSettings:
         self.password = _get_secret_or_env("email_password", "EMAIL_HOST_PASSWORD", "")
         self.from_email = env("DEFAULT_FROM_EMAIL")
         self.resend_api_key = _get_secret_or_env("resend_api_key", "RESEND_API_KEY", "")
+        self.brevo_api_key = _get_secret_or_env("brevo_api_key", "BREVO_API_KEY", "")
         self.fallback_provider = env("EMAIL_FALLBACK_PROVIDER")
         # WR-01: validate fallback provider at startup so misconfigs surface early
         if (

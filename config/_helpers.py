@@ -31,6 +31,7 @@ env = environ.Env(
     EMAIL_PROVIDER=(str, "console"),
     EMAIL_FALLBACK_PROVIDER=(str, ""),
     RESEND_API_KEY=(str, ""),
+    BREVO_API_KEY=(str, ""),
     AWS_ACCESS_KEY_ID=(str, ""),
     AWS_SECRET_ACCESS_KEY=(str, ""),
     AWS_DEFAULT_REGION=(str, "us-east-1"),

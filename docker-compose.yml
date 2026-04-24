@@ -134,6 +134,7 @@ services:
       - postgres_password
       - aws_access_key_id
       - aws_secret_access_key
+      - brevo_api_key
     depends_on:
       db:
         condition: service_healthy
@@ -223,6 +224,8 @@ secrets:
     file: ./secrets/aws_access_key_id.txt
   aws_secret_access_key:
     file: ./secrets/aws_secret_access_key.txt
+  brevo_api_key:
+    file: ./secrets/brevo_api_key.txt
 
 # ============================================================================
 # Volumes - Data Persistence
