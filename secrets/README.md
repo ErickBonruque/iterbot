@@ -12,6 +12,7 @@ cp postgres_password.txt.example postgres_password.txt
 cp waha_api_key.txt.example waha_api_key.txt
 cp waha_dashboard_password.txt.example waha_dashboard_password.txt
 cp waha_swagger_password.txt.example waha_swagger_password.txt
+cp brevo_api_key.txt.example brevo_api_key.txt
 ```
 
 Em seguida, edite cada arquivo e substitua os valores de exemplo por valores reais e seguros.

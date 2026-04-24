@@ -52,3 +52,6 @@ htmlcov/
 coverage.xml
 coverage.lcov
 .claude/worktrees/
+
+# Playground dos agentes (faxina) — diário interno, não versionar
+.planning/faxina/
