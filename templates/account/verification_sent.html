@@ -15,10 +15,16 @@
                     <strong>Cadastro iniciado com sucesso!</strong>
                 </div>
 
+                {% with pending_email=request.session.pending_verification_email %}
+                {% if pending_email %}
                 <p>Enviamos um link de confirmação para:</p>
                 <p class="text-center">
-                    <strong>{{ email }}</strong>
+                    <strong>{{ pending_email }}</strong>
                 </p>
+                {% else %}
+                <p>Enviamos um link de confirmação para o e-mail informado no cadastro.</p>
+                {% endif %}
+                {% endwith %}
 
                 <p class="mt-4">
                     Acesse sua caixa de entrada e clique no link para ativar sua conta.

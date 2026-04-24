@@ -87,6 +87,10 @@ class CompanySignupForm(SignupForm):
             contato_cargo=self.cleaned_data["contato_cargo"],
             status=CompanyStatus.PENDING,
         )
+        # Armazena o e-mail em sessao para exibir na tela de verificacao
+        # (allauth.EmailVerificationSentView nao adiciona o email no contexto
+        # por padrao, entao guardamos aqui para o template ler).
+        request.session["pending_verification_email"] = user.email
         return user
 
 
