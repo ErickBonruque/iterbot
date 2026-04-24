@@ -69,6 +69,8 @@ services:
       - django_secret_key
       - email_password
       - postgres_password
+      - aws_access_key_id
+      - aws_secret_access_key
     depends_on:
       db:
         condition: service_healthy
@@ -95,6 +97,8 @@ services:
       - django_secret_key
       - email_password
       - postgres_password
+      - aws_access_key_id
+      - aws_secret_access_key
     depends_on:
       db:
         condition: service_healthy

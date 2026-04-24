@@ -253,6 +253,20 @@ if [ "$DOMAIN" != "localhost" ]; then
         fail
     fi
 
+    # Check email provider is not "console" in production
+    EMAIL_PROVIDER=$(${DOCKER_BIN} exec iterbot_backend python -c "from config.env import settings; print(settings.email.provider)" 2>/dev/null || echo "")
+    printf "  %-50s " "Email provider is not 'console'"
+    if [ -n "$EMAIL_PROVIDER" ] && [ "$EMAIL_PROVIDER" != "console" ]; then
+        echo "[OK] (${EMAIL_PROVIDER})"
+        pass
+    elif [ "$EMAIL_PROVIDER" = "console" ]; then
+        echo "[FAIL] (EMAIL_PROVIDER=console — emails go to logs only!)"
+        fail
+    else
+        echo "[WARN] (could not determine EMAIL_PROVIDER)"
+        skip
+    fi
+
     CERT_VALID=$(echo | openssl s_client -connect "${DOMAIN}:443" -servername "$DOMAIN" 2>/dev/null | openssl x509 -noout -dates 2>/dev/null || echo "")
     printf "  %-50s " "TLS certificate is valid"
     if [ -n "$CERT_VALID" ]; then

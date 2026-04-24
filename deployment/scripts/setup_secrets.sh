@@ -91,6 +91,8 @@ create_secret "waha_api_key.txt" generate_password
 create_secret "waha_dashboard_password.txt" generate_password
 create_secret "waha_swagger_password.txt" generate_password
 create_secret "email_password.txt" generate_password
+create_secret "aws_access_key_id.txt" generate_password
+create_secret "aws_secret_access_key.txt" generate_password
 
 echo ""
 echo -e "${BLUE}============================================${NC}"
@@ -136,6 +138,8 @@ echo ""
 echo -e "${YELLOW}Nota: Em producao (EC2), use secrets diferentes dos valores locais.${NC}"
 echo -e "${YELLOW}ATENCAO: secrets/email_password.txt gerado por este script e placeholder.${NC}"
 echo -e "${YELLOW}Substitua pelo SMTP password real do AWS SES antes de subir em producao.${NC}"
+echo -e "${YELLOW}ATENCAO: secrets/aws_access_key_id.txt e aws_secret_access_key.txt sao placeholders.${NC}"
+echo -e "${YELLOW}Substitua pelas credenciais AWS SES reais antes de subir em producao.${NC}"
 echo ""
 echo -e "${GREEN}Ready to start! Run: docker compose up -d${NC}"
 echo ""

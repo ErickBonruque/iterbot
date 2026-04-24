@@ -80,7 +80,7 @@ jobs:
           COMMAND_ID=$(aws ssm send-command \
             --instance-ids ***REMOVED*** \
             --document-name "AWS-RunShellScript" \
-            --parameters 'commands=["sudo -u ubuntu bash -euo pipefail -c \"cd /home/ubuntu/iterbot && git fetch origin master && git reset --hard origin/master && mkdir -p secrets/users && if [ ! -f secrets/users/admin-users.txt ] || [ ! -f secrets/users/waha-users.txt ]; then set -a && . ./.env && set +a && bash ./deployment/scripts/setup-htpasswd.sh; fi && docker container prune -f && docker compose -f docker-compose.yml -f docker-compose.prod.yml up --build -d --remove-orphans && docker image prune -f && set -a && . ./.env && set +a && bash ./deployment/scripts/smoke-check.sh && echo Deploy concluido em $(date -Iseconds)\""]' \
+            --parameters 'commands=["sudo -u ubuntu bash -euo pipefail -c \"cd /home/ubuntu/iterbot && git fetch origin master && git reset --hard origin/master && mkdir -p secrets/users && if [ ! -f secrets/users/admin-users.txt ] || [ ! -f secrets/users/waha-users.txt ]; then set -a && . ./.env && set +a && bash ./deployment/scripts/setup-htpasswd.sh; fi && if [ ! -f secrets/aws_access_key_id.txt ]; then bash ./deployment/scripts/setup_secrets.sh; fi && docker container prune -f && docker compose -f docker-compose.yml -f docker-compose.prod.yml up --build -d --remove-orphans && docker image prune -f && set -a && . ./.env && set +a && bash ./deployment/scripts/smoke-check.sh && echo Deploy concluido em $(date -Iseconds)\""]' \
             --comment "Deploy from GitHub Actions run ${{ github.run_id }}" \
             --query 'Command.CommandId' \
             --output text)

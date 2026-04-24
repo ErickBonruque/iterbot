@@ -140,8 +140,12 @@ check_file "./secrets/waha_dashboard_password.txt" true
 check_file "./secrets/waha_swagger_password.txt" true
 if [ "$EC2_MODE" = true ]; then
     check_file "./secrets/email_password.txt" true
+    check_file "./secrets/aws_access_key_id.txt" true
+    check_file "./secrets/aws_secret_access_key.txt" true
 else
     check_file "./secrets/email_password.txt" false
+    check_file "./secrets/aws_access_key_id.txt" false
+    check_file "./secrets/aws_secret_access_key.txt" false
 fi
 echo ""
 
