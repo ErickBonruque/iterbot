@@ -122,6 +122,22 @@ echo "  Domain: ${DOMAIN}"
 echo "============================================"
 echo ""
 
+# Aguarda Traefik aceitar conexoes (ate 30s) para evitar race condition
+# imediatamente apos 'docker compose up -d' no deploy.
+printf "Aguardando Traefik aceitar conexoes"
+for i in $(seq 1 15); do
+    if curl -k -s -o /dev/null --max-time 2 "http://localhost/" 2>/dev/null; then
+        printf " [OK]\n"
+        break
+    fi
+    printf "."
+    sleep 2
+    if [ "$i" = "15" ]; then
+        printf " [TIMEOUT apos 30s — seguindo mesmo assim]\n"
+    fi
+done
+echo ""
+
 echo "[DEPL-01] Servicos Docker"
 check_service "traefik running" traefik
 check_service "backend running" backend
