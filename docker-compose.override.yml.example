@@ -1,0 +1,29 @@
+# ============================================================================
+# Docker Compose Override - Desenvolvimento local (OPCIONAL)
+# ============================================================================
+# Copie este arquivo para `docker-compose.override.yml` (gitignored) caso
+# precise expor portas localmente para debug direto.
+#
+# cp docker-compose.override.yml.example docker-compose.override.yml
+#
+# O Compose carrega automaticamente `docker-compose.override.yml` quando
+# voce roda `docker compose up` sem flags `-f`. Em producao usamos
+# explicitamente `-f docker-compose.yml -f docker-compose.prod.yml`,
+# entao este override NAO afeta deploy.
+# ============================================================================
+
+services:
+  traefik:
+    ports:
+      # Dashboard do Traefik (so localhost, nao publica)
+      - "127.0.0.1:8080:8080"
+
+  backend:
+    ports:
+      # Django dev: so localhost
+      - "127.0.0.1:8000:8000"
+
+  waha:
+    ports:
+      # WAHA dev: so localhost
+      - "127.0.0.1:3000:3000"

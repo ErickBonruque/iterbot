@@ -37,7 +37,8 @@ services:
     ports:
       - "80:80"
       - "443:443"
-      - "8080:8080"  # Traefik dashboard
+      # Dashboard (8080) desabilitado por padrao — habilite localmente via
+      # docker-compose.override.yml se precisar.
     volumes:
       - ./infra/traefik/traefik.yml:/etc/traefik/traefik.yml:ro
       - ./infra/traefik/dynamic:/etc/traefik/dynamic:ro
@@ -109,8 +110,8 @@ services:
     container_name: iterbot_backend
     restart: unless-stopped
     command: /start.sh
-    ports:
-      - "8000:8000"
+    # Sem porta publica: acesso ao backend e somente via Traefik (rede interna).
+    # Para debug local, use docker-compose.override.yml expondo 127.0.0.1:8000:8000.
     labels:
       - "traefik.enable=true"
       # HTTP → redireciona para HTTPS
@@ -150,9 +151,9 @@ services:
   # ==========================================================================
   # WAHA - WhatsApp HTTP API
   # ==========================================================================
-  # Exposed both directly (port 3000) and via Traefik (waha.${DOMAIN}) to keep
-  # the dashboard usable behind HTTPS and custom domains without breaking
-  # authentication.
+  # Acesso apenas via Traefik (waha.${DOMAIN}) com HTTPS + BasicAuth.
+  # Nao exponha a porta 3000 publicamente — se precisar em dev, use
+  # docker-compose.override.yml com bind 127.0.0.1:3000:3000.
   # ==========================================================================
   waha:
     image: devlikeapro/waha
@@ -180,8 +181,6 @@ services:
       # Logging
       - WAHA_LOG_LEVEL=info
       - WAHA_LOG_FORMAT=PRETTY
-    ports:
-      - "3000:3000"  # Direct access - no Traefik proxy
     volumes:
       - waha_sessions:/app/.sessions
     networks:

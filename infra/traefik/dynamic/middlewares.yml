@@ -1,6 +1,6 @@
 http:
   middlewares:
-    # Security headers
+    # Security headers aplicados em todas as rotas publicas
     security-headers:
       headers:
         frameDeny: true
@@ -11,13 +11,40 @@ http:
         stsPreload: true
         stsSeconds: 31536000
         customFrameOptionsValue: "SAMEORIGIN"
+        referrerPolicy: "strict-origin-when-cross-origin"
 
-    # Rate limiting
+    # Rate limit geral (trafego publico normal)
+    # 100 req/s com burst 50 por IP de origem.
     rate-limit:
       rateLimit:
         average: 100
         burst: 50
         period: 1s
+        sourceCriterion:
+          ipStrategy:
+            depth: 1
+
+    # Rate limit agressivo para rotas de login (anti brute-force)
+    # 5 tentativas/minuto por IP, burst 10. Qualquer excesso -> 429.
+    login-rate-limit:
+      rateLimit:
+        average: 5
+        burst: 10
+        period: 1m
+        sourceCriterion:
+          ipStrategy:
+            depth: 1
+
+    # Rate limit para admin/portal (acesso humano, nao automatizado)
+    # 30 req/min por IP, burst 60.
+    admin-rate-limit:
+      rateLimit:
+        average: 30
+        burst: 60
+        period: 1m
+        sourceCriterion:
+          ipStrategy:
+            depth: 1
 
     # BasicAuth for WAHA Dashboard
     waha-auth:
@@ -30,3 +57,14 @@ http:
       basicauth:
         usersFile: /etc/traefik/users/admin-users.txt
         realm: "IterBot Admin"
+
+    # IP whitelist opcional para admin/portal.
+    # Para ativar, adicione "admin-ip-whitelist@file" aos middlewares do
+    # router admin-secure (em docker-compose.prod.yml) e edite a lista
+    # abaixo com seus IPs/CIDRs autorizados. Padrao abaixo aceita qualquer
+    # IP (efeito nulo) para nao travar acesso ate configurar.
+    admin-ip-whitelist:
+      ipAllowList:
+        sourceRange:
+          - "0.0.0.0/0"   # TROCAR: coloque seu IP (ex: "200.20.30.40/32")
+                          # ou rede (ex: "200.20.30.0/24") para restringir.

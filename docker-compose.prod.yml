@@ -10,10 +10,8 @@ services:
   traefik:
     command:
       - "--configFile=/etc/traefik/traefik.yml"
-    ports:
-      - "80:80"
-      - "443:443"
-      # Porta 8080 removida em producao (dashboard desabilitado)
+    # Portas publicas herdadas do base (80, 443). Dashboard 8080 intencionalmente
+    # ausente do base — em prod nao ha dashboard exposto.
     volumes:
       - ./infra/traefik/traefik.prod.yml:/etc/traefik/traefik.yml:ro
       - ./infra/traefik/dynamic:/etc/traefik/dynamic:ro
@@ -22,7 +20,8 @@ services:
       - traefik_certs:/letsencrypt
 
   backend:
-    ports: []  # Remove porta 8000 exposta (Traefik roteia via rede interna)
+    # Backend nao expoe portas publicamente em producao — herdado do base (ja sem ports).
+    # Traefik roteia via rede interna Docker (172.20.0.0/16).
     labels:
       - "traefik.enable=true"
       # Declara service explicitamente para evitar ambiguidade com múltiplos services
@@ -32,10 +31,20 @@ services:
       # Routers COM tls=true precisam de certResolver proprio (fallback do entrypoint
       # nao se aplica quando tls esta explicitamente habilitado no router).
       - "traefik.http.routers.backend-secure.tls.certresolver=letsencrypt"
-      # Router dedicado para admin e portal — BasicAuth obrigatorio, prioridade alta
+      # Aplica rate-limit geral e security-headers no backend publico
+      - "traefik.http.routers.backend-secure.middlewares=security-headers@file,rate-limit@file"
+      # Router dedicado para rotas de login — rate-limit agressivo contra brute force
+      - "traefik.http.routers.login-secure.rule=Host(`${DOMAIN}`) && (PathPrefix(`/accounts/login`) || PathPrefix(`/empresas/login`) || PathPrefix(`/accounts/password/reset`))"
+      - "traefik.http.routers.login-secure.entrypoints=websecure"
+      - "traefik.http.routers.login-secure.tls=true"
+      - "traefik.http.routers.login-secure.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.login-secure.middlewares=security-headers@file,login-rate-limit@file"
+      - "traefik.http.routers.login-secure.priority=90"
+      - "traefik.http.routers.login-secure.service=backend"
+      # Router dedicado para admin e portal — BasicAuth + rate-limit restrito
       - "traefik.http.routers.admin-secure.rule=Host(`${DOMAIN}`) && (PathPrefix(`/admin`) || PathPrefix(`/portal`))"
       - "traefik.http.routers.admin-secure.entrypoints=websecure"
-      - "traefik.http.routers.admin-secure.middlewares=admin-auth@file"
+      - "traefik.http.routers.admin-secure.middlewares=admin-auth@file,security-headers@file,admin-rate-limit@file"
       - "traefik.http.routers.admin-secure.priority=100"
       - "traefik.http.routers.admin-secure.service=backend"
       - "traefik.http.services.backend.loadbalancer.server.port=8000"
@@ -43,7 +52,8 @@ services:
       - DJANGO_SETTINGS_MODULE=waha_bot.settings.production
 
   waha:
-    ports: []  # Remove porta 3000 exposta (acesso via Traefik apenas)
+    # WAHA nao expoe porta 3000 em producao — heranca do base (ja sem ports).
+    # Acesso unico via Traefik em waha.${DOMAIN} com BasicAuth + TLS.
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.waha.rule=Host(`waha.${DOMAIN}`)"
