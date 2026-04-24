@@ -261,7 +261,7 @@ class JobSearchHandler(BaseHandler):
         for job in jobs:
             title = job.get("title", "Vaga")
             company = job.get("company", "Empresa")
-            url = job.get("url", "#")
+            url = job.get("job_url") or job.get("job_url_direct") or "#"
             lines.append(f"\n💼 *{title}*\n🏢 {company}\n🔗 {url}")
 
         self.send_msg(user, chat_id, "\n".join(lines))
