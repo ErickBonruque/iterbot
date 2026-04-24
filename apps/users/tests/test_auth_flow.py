@@ -2,7 +2,6 @@ from types import SimpleNamespace
 from unittest.mock import ANY, patch
 
 from django.contrib.auth.models import User
-from django.core import mail
 from django.test import TestCase
 from django.urls import reverse
 
@@ -51,18 +50,27 @@ class AuthFlowTestCase(TestCase):
         self.assertContains(response, "Apenas e-mails @alunos.utfpr.edu.br são aceitos")
 
     def test_email_confirmation_sent(self):
-        self.client.post(
-            reverse("account_signup"),
-            {
-                "email": self.valid_email,
-                "password1": self.password,
-                "password2": self.password,
-            },
-        )
+        # O UTFPRAccountAdapter roteia todos os emails allauth via
+        # send_transactional_email (Brevo/Resend/SES), entao o outbox Django
+        # nao e mais populado. Verificamos a chamada ao sender transacional.
+        with patch(
+            "apps.users.adapters.send_transactional_email",
+            return_value={"status": "sent", "provider": "brevo"},
+        ) as send_spy:
+            self.client.post(
+                reverse("account_signup"),
+                {
+                    "email": self.valid_email,
+                    "password1": self.password,
+                    "password2": self.password,
+                },
+            )
 
-        self.assertEqual(len(mail.outbox), 1)
-        self.assertIn("Confirme seu cadastro", mail.outbox[0].subject)
-        self.assertIn(self.valid_email, mail.outbox[0].to)
+        send_spy.assert_called_once()
+        call_kwargs = send_spy.call_args.kwargs
+        self.assertIn("Confirme seu cadastro", call_kwargs["subject"])
+        self.assertEqual(call_kwargs["recipient_list"], [self.valid_email])
+        self.assertEqual(call_kwargs["event_type"], "email_confirmation")
 
     def test_login_success(self):
         user = User.objects.create_user(
@@ -140,10 +148,17 @@ class AuthFlowTestCase(TestCase):
             message="Reset body",
             recipient_list=[self.valid_email],
             idempotency_key="reset-idempotency-key",
+            event_type="password_reset",
         )
 
     def test_password_reset_unknown_email_keeps_generic_response(self):
-        with patch("apps.users.adapters.send_transactional_email") as send_spy:
+        # allauth envia um e-mail "unknown account" como hint anti-enumeracao;
+        # aceitamos que o sender transacional seja chamado, mas a resposta
+        # HTTP deve continuar generica (302 para a tela padrao).
+        with patch(
+            "apps.users.adapters.send_transactional_email",
+            return_value={"status": "sent", "provider": "brevo"},
+        ):
             response = self.client.post(
                 reverse("account_reset_password"),
                 {"email": "missing@alunos.utfpr.edu.br"},
@@ -155,4 +170,3 @@ class AuthFlowTestCase(TestCase):
             reverse("account_reset_password_done"),
             fetch_redirect_response=False,
         )
-        send_spy.assert_not_called()

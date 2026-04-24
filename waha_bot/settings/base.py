@@ -140,21 +140,33 @@ ACCOUNT_EMAIL_CONFIRMATION_ANONYMOUS_REDIRECT_URL = "/accounts/email-confirmed/"
 # Portal de Empresas (usado pelo bot para enviar links)
 PORTAL_BASE_URL = settings.django.portal_base_url
 
-# Email Configuration (dev usa console, prod usa SES via AWS)
-if settings.aws.access_key_id and settings.aws.secret_access_key:
-    # Use AWS SES when AWS credentials are available
-    EMAIL_BACKEND = "django_ses.SESBackend"
+# Email Configuration
+# ---------------------------------------------------------------------------
+# Toda a entrega transacional real passa por `infra/email/factory.py`, roteada
+# pelo `EMAIL_PROVIDER` (Brevo por padrao). O adapter do allauth
+# (`apps/users/adapters.py`) intercepta 100% dos e-mails do allauth e usa o
+# mesmo factory — ou seja, Django `EMAIL_BACKEND` abaixo raramente e atingido.
+#
+# Mantemos `EMAIL_BACKEND` configuravel para cenarios de fallback (ex.:
+# `mail_admins`, `send_mail` direto em futuros codigos). O valor vem do env
+# `EMAIL_BACKEND`, default console.
+#
+# Se `EMAIL_PROVIDER=ses` for usado explicitamente, o factory usa o backend
+# Django (DjangoSendMailProvider); nesse caso configure
+# `EMAIL_BACKEND=django_ses.SESBackend` no .env explicitamente.
+EMAIL_BACKEND = settings.email.backend
+EMAIL_HOST = settings.email.host
+EMAIL_PORT = settings.email.port
+EMAIL_USE_TLS = settings.email.use_tls
+EMAIL_HOST_USER = settings.email.user
+EMAIL_HOST_PASSWORD = settings.email.password
+
+# Se o operador configurou EMAIL_BACKEND=django_ses.SESBackend, populamos as
+# credenciais que o django-ses espera (caminho opcional, nao e o default).
+if EMAIL_BACKEND == "django_ses.SESBackend":
     AWS_SES_REGION_NAME = settings.aws.default_region
     AWS_ACCESS_KEY_ID = settings.aws.access_key_id
     AWS_SECRET_ACCESS_KEY = settings.aws.secret_access_key
-else:
-    # Fallback to console (dev) or SMTP (prod with SMTP credentials)
-    EMAIL_BACKEND = settings.email.backend
-    EMAIL_HOST = settings.email.host
-    EMAIL_PORT = settings.email.port
-    EMAIL_USE_TLS = settings.email.use_tls
-    EMAIL_HOST_USER = settings.email.user
-    EMAIL_HOST_PASSWORD = settings.email.password
 
 DEFAULT_FROM_EMAIL = settings.email.from_email
 

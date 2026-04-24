@@ -102,8 +102,9 @@ A configuração é centralizada no módulo `config/env.py`, que define dataclas
 | `EMAIL_PROVIDER` | Não | Provider principal de email: `resend`, `ses`, `smtp`, `console`. Padrão: `console`. | — |
 | `EMAIL_FALLBACK_PROVIDER` | Não | Provider de fallback para envio de email quando o provider principal falha. Valores: `resend`, `ses`, `smtp`, `console`. Vazio = sem fallback (comportamento padrão). | — |
 | `RESEND_API_KEY` | Não | Chave de API do Resend. | `resend_api_key` |
+| `BREVO_API_KEY` | Condicional | Chave de API do Brevo (Sendinblue). Obrigatória quando `EMAIL_PROVIDER=brevo`. | `brevo_api_key` |
 
-> **Nota:** Quando `AWS_ACCESS_KEY_ID` e `AWS_SECRET_ACCESS_KEY` estão configurados, o backend de email muda automaticamente para `django_ses.SESBackend` (AWS SES), ignorando as configurações SMTP.
+> **Nota:** A partir da migração Brevo (abr/2026), `EMAIL_BACKEND` **não muda mais automaticamente** com base em credenciais AWS. Toda entrega transacional passa por `EMAIL_PROVIDER` (Brevo por padrão) via `infra/email/factory.py`, incluindo e-mails do allauth (interceptados por `UTFPRAccountAdapter`). Para usar SES como Django backend, configure `EMAIL_BACKEND=django_ses.SESBackend` explicitamente.
 
 > **Nota:** Quando `EMAIL_FALLBACK_PROVIDER` está configurado, o sistema tenta automaticamente o provider de fallback se o primary falhar. O health check em `/health/` verifica ambos os providers.
 
