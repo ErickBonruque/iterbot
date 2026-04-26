@@ -41,11 +41,89 @@ class SearchTerm(TimeStampedModel):
     Ex: Curso 'Engenharia de Software' -> Termos 'Python', 'Django', 'Estágio TI'.
     """
 
+    JOB_TYPE_CHOICES = [
+        ("fulltime", "Tempo Integral"),
+        ("parttime", "Meio Período"),
+        ("internship", "Estágio"),
+        ("contract", "Contrato"),
+        ("temporary", "Temporário"),
+        ("other", "Outro"),
+    ]
+    COUNTRY_CHOICES = [
+        ("Brazil", "Brasil"),
+        ("USA", "Estados Unidos"),
+        ("Argentina", "Argentina"),
+        ("Canada", "Canadá"),
+        ("Portugal", "Portugal"),
+        ("UK", "Reino Unido"),
+        ("Australia", "Austrália"),
+        ("Germany", "Alemanha"),
+        ("France", "França"),
+        ("Spain", "Espanha"),
+        ("Mexico", "México"),
+        ("Chile", "Chile"),
+    ]
+
     course = models.ForeignKey(Course, related_name="search_terms", on_delete=models.CASCADE)
     term = models.CharField(max_length=100, help_text="Termo de busca para vagas")
     is_default = models.BooleanField(default=True, help_text="Termo padrão/ativo")
     priority = models.IntegerField(
         default=0, help_text="Prioridade na busca (maior = mais importante)"
+    )
+
+    site_name = models.CharField(
+        max_length=100,
+        default="linkedin,indeed,glassdoor",
+        help_text="Sites de busca separados por vírgula: linkedin, indeed, glassdoor, zip_recruiter, google",
+    )
+    location = models.CharField(
+        max_length=100,
+        default="Curitiba, PR",
+        help_text="Localização geográfica da busca",
+    )
+    distance = models.IntegerField(
+        blank=True,
+        null=True,
+        help_text="Distância em milhas do local de busca (padrão jobspy: 50)",
+    )
+    job_type = models.CharField(
+        max_length=20,
+        blank=True,
+        null=True,
+        choices=JOB_TYPE_CHOICES,
+        help_text="Tipo de vaga",
+    )
+    is_remote = models.BooleanField(
+        default=False,
+        help_text="Filtrar apenas vagas remotas",
+    )
+    results_wanted = models.IntegerField(
+        default=10,
+        help_text="Número máximo de vagas por termo de busca",
+    )
+    hours_old = models.IntegerField(
+        default=72,
+        help_text="Considerar vagas publicadas nas últimas N horas",
+    )
+    country_indeed = models.CharField(
+        max_length=50,
+        default="Brazil",
+        choices=COUNTRY_CHOICES,
+        help_text="País para busca no Indeed e Glassdoor",
+    )
+    linkedin_fetch_description = models.BooleanField(
+        default=False,
+        help_text="Buscar descrição completa no LinkedIn (aumenta o tempo de busca)",
+    )
+    linkedin_company_ids = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        help_text="IDs de empresas no LinkedIn separados por vírgula (ex: 123456,789012)",
+    )
+    offset = models.IntegerField(
+        default=0,
+        help_text="Offset para paginação dos resultados de busca",
     )
 
     class Meta:
