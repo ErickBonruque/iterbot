@@ -1,18 +1,10 @@
-import signal
+from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
 from typing import Any
 
 import structlog
 from jobspy import scrape_jobs
 
 logger = structlog.get_logger(__name__)
-
-
-class _SearchTimeoutError(Exception):
-    pass
-
-
-def _timeout_handler(signum, frame):
-    raise _SearchTimeoutError("Busca excedeu o tempo limite")
 
 
 class JobSearchService:
@@ -66,36 +58,40 @@ class JobSearchService:
         timeout_seconds = timeout or self.SEARCH_TIMEOUT_SECONDS
         results = []
         for term in terms:
+            # Usamos ThreadPoolExecutor por termo para garantir que future.result(timeout)
+            # devolva o controle mesmo que `scrape_jobs` fique preso em chamadas C
+            # bloqueantes (curl_cffi/urllib3) que ignoram signal.SIGALRM. A thread
+            # daemon pode continuar rodando em background, mas a task Celery termina
+            # e o worker fica livre para processar as próximas mensagens do bot.
+            executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="jobspy-search")
             try:
-                old_handler = signal.signal(signal.SIGALRM, _timeout_handler)
-                signal.alarm(timeout_seconds)
+                future = executor.submit(
+                    scrape_jobs,
+                    site_name=site_name or ["linkedin", "indeed", "glassdoor"],
+                    search_term=term,
+                    location=location,
+                    results_wanted=limit,
+                    hours_old=hours_old,
+                    country_indeed=country_indeed,
+                    distance=distance,
+                    job_type=job_type or None,
+                    is_remote=is_remote,
+                    linkedin_fetch_description=linkedin_fetch_description,
+                    linkedin_company_ids=linkedin_company_ids,
+                    offset=offset,
+                )
                 try:
-                    jobs_df = scrape_jobs(
-                        site_name=site_name or ["linkedin", "indeed", "glassdoor"],
-                        search_term=term,
+                    jobs_df = future.result(timeout=timeout_seconds)
+                except FuturesTimeoutError:
+                    logger.warning(
+                        "jobspy_search_timeout",
+                        term=term,
                         location=location,
-                        results_wanted=limit,
-                        hours_old=hours_old,
-                        country_indeed=country_indeed,
-                        distance=distance,
-                        job_type=job_type or None,
-                        is_remote=is_remote,
-                        linkedin_fetch_description=linkedin_fetch_description,
-                        linkedin_company_ids=linkedin_company_ids,
-                        offset=offset,
+                        timeout_seconds=timeout_seconds,
                     )
-                finally:
-                    signal.alarm(0)
-                    signal.signal(signal.SIGALRM, old_handler)
+                    continue
                 results.extend(jobs_df.to_dict("records"))
                 logger.info("jobspy_search_success", term=term, count=len(jobs_df))
-            except _SearchTimeoutError:
-                logger.warning(
-                    "jobspy_search_timeout",
-                    term=term,
-                    location=location,
-                    timeout_seconds=timeout_seconds,
-                )
             except Exception as exc:
                 logger.warning(
                     "jobspy_search_failed",
@@ -103,4 +99,9 @@ class JobSearchService:
                     location=location,
                     error=str(exc),
                 )
+            finally:
+                # wait=False: não bloqueia o desligamento do executor; thread
+                # eventualmente termina sozinha (ou é descartada no shutdown do
+                # processo Celery). Disponível em Python 3.9+.
+                executor.shutdown(wait=False, cancel_futures=True)
         return results
