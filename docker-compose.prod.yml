@@ -18,6 +18,11 @@ services:
       - ./secrets/users:/etc/traefik/users:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - traefik_certs:/letsencrypt
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   backend:
     # Backend nao expoe portas publicamente em producao — herdado do base (ja sem ports).
@@ -50,6 +55,11 @@ services:
       - "traefik.http.services.backend.loadbalancer.server.port=8000"
     environment:
       - DJANGO_SETTINGS_MODULE=waha_bot.settings.production
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   waha:
     # WAHA nao expoe porta 3000 em producao — heranca do base (ja sem ports).
@@ -62,6 +72,11 @@ services:
       - "traefik.http.routers.waha.tls.certresolver=letsencrypt"
       - "traefik.http.routers.waha.middlewares=security-headers@file,waha-auth@file"
       - "traefik.http.services.waha.loadbalancer.server.port=3000"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   # ==========================================================================
   # Celery Worker - Executa tasks do beat (review semanal, health check)
@@ -91,6 +106,11 @@ services:
       - web
     labels:
       - "traefik.enable=false"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   # ==========================================================================
   # Celery Beat - Scheduler que dispara tasks periodicamente
@@ -122,6 +142,11 @@ services:
       - web
     labels:
       - "traefik.enable=false"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
 # ============================================================================
 # Volumes - Production-only volumes
