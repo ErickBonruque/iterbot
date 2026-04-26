@@ -219,14 +219,8 @@ UNFOLD = {
     "SITE_TITLE": "IterBot Admin",
     "SITE_HEADER": "IterBot UTFPR",
     "SITE_URL": "/",
-    "SITE_LOGO": {
-        "light": lambda request: static("img/admin/iterbot-logo-light.svg"),
-        "dark": lambda request: static("img/admin/iterbot-logo-dark.svg"),
-    },
-    "SITE_ICON": {
-        "light": lambda request: static("img/admin/iterbot-icon-light.svg"),
-        "dark": lambda request: static("img/admin/iterbot-icon-dark.svg"),
-    },
+    "SITE_LOGO": lambda request: static("img/logo-icon.png"),
+    "SITE_ICON": lambda request: static("img/logo-icon.png"),
     "SHOW_HISTORY": True,
     "SHOW_VIEW_ON_SITE": True,
     "SEARCH_MODELS": ["auth.User", "jobs.Company", "jobs.Job"],

@@ -1,0 +1,74 @@
+{% extends "admin/change_list.html" %}
+{% load i18n static %}
+
+{% block content %}
+<div style="margin-bottom: 2rem;">
+
+    <!-- Cards de resumo -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
+        <div class="cv-admin-metric-card">
+            <p class="cv-admin-metric-label">Total de Registros</p>
+            <p class="cv-admin-metric-value">{{ total_registros|default:"0" }}</p>
+        </div>
+        <div class="cv-admin-metric-card">
+            <p class="cv-admin-metric-label">Métricas Distintas</p>
+            <p class="cv-admin-metric-value">{{ metricas_distintas|default:"0" }}</p>
+        </div>
+        <div class="cv-admin-metric-card">
+            <p class="cv-admin-metric-label">Última Atualização</p>
+            <p class="cv-admin-metric-value" style="font-size: 1rem;">
+                {% if ultima_atualizacao %}
+                    {{ ultima_atualizacao|date:"d/m/Y H:i" }}
+                {% else %}
+                    —
+                {% endif %}
+            </p>
+        </div>
+    </div>
+
+    <!-- Tabela de métricas por nome -->
+    {% if summary %}
+    <div class="cv-admin-panel" style="margin-bottom: 2rem;">
+        <h2 class="cv-admin-panel-title">Resumo por Métrica</h2>
+        <table class="cv-admin-table" style="width: 100%;">
+            <thead>
+                <tr>
+                    <th>{% trans "Métrica" %}</th>
+                    <th style="text-align:right;">{% trans "Valor Atual" %}</th>
+                    <th style="text-align:right;">{% trans "Média" %}</th>
+                    <th style="text-align:right;">{% trans "Mínimo" %}</th>
+                    <th style="text-align:right;">{% trans "Máximo" %}</th>
+                    <th style="text-align:right;">{% trans "Registros" %}</th>
+                    <th>{% trans "Última leitura" %}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in summary %}
+                <tr>
+                    <td><strong>{{ row.metric_name }}</strong></td>
+                    <td style="text-align:right;">
+                        {% if row.valor_atual is not None %}{{ row.valor_atual|floatformat:2 }}{% else %}—{% endif %}
+                    </td>
+                    <td style="text-align:right;">{{ row.media|floatformat:2 }}</td>
+                    <td style="text-align:right;">{{ row.minimo|floatformat:2 }}</td>
+                    <td style="text-align:right;">{{ row.maximo|floatformat:2 }}</td>
+                    <td style="text-align:right;">{{ row.total }}</td>
+                    <td>{{ row.ultima_leitura|date:"d/m/Y H:i" }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="cv-admin-panel">
+        <p style="color: #6c757d; text-align: center; padding: 2rem;">
+            Nenhuma métrica registrada ainda.
+        </p>
+    </div>
+    {% endif %}
+
+</div>
+
+{# Lista paginada padrão (somente leitura, sem botão Adicionar) #}
+{{ block.super }}
+{% endblock %}
