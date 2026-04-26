@@ -62,8 +62,6 @@ class TestSearchTermLinkedinCompanyIds:
 @pytest.mark.django_db
 class TestSearchTermNullableFields:
     def test_searchterm_nullable_fields(self, course):
-        st = SearchTerm.objects.create(
-            course=course, term="python", distance=None
-        )
+        st = SearchTerm.objects.create(course=course, term="python", distance=None)
         st.refresh_from_db()
         assert st.distance is None

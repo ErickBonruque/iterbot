@@ -87,9 +87,7 @@ class SearchTermAdmin(ModelAdmin):
         if obj.linkedin_company_ids:
             try:
                 company_ids = [
-                    int(i.strip())
-                    for i in obj.linkedin_company_ids.split(",")
-                    if i.strip()
+                    int(i.strip()) for i in obj.linkedin_company_ids.split(",") if i.strip()
                 ]
             except ValueError:
                 company_ids = None
