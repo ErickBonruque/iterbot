@@ -1,6 +1,8 @@
+import json
 import time
 from unittest.mock import patch
 
+import numpy as np
 import pandas as pd
 import pytest
 
@@ -104,3 +106,32 @@ class TestJobSearchServiceTimeout:
 
         assert len(result) == 1
         assert result[0]["title"] == "Python Developer"
+
+
+@pytest.mark.django_db
+class TestJobSearchServiceJsonSafe:
+    @patch("infra.jobspy.service.scrape_jobs")
+    def test_search_results_are_json_serializable(self, mock_scrape, service):
+        # Regressão: results são gravados em request.session no admin
+        # (SearchTermAdmin.test_search). Django usa JSONSerializer por padrão,
+        # então Timestamp, NaN e numpy scalars vindos de scrape_jobs precisam
+        # estar normalizados antes de retornarem do service.
+        mock_scrape.return_value = pd.DataFrame(
+            {
+                "title": ["Python Dev"],
+                "company": ["Acme"],
+                "date_posted": [pd.Timestamp("2026-04-26")],
+                "salary": [np.nan],
+                "applicants": [np.int64(42)],
+            }
+        )
+
+        result = service.search(terms=["python"])
+
+        # Deve ser serializável sem default=str
+        json.dumps(result)
+
+        record = result[0]
+        assert isinstance(record["date_posted"], str)
+        assert record["salary"] is None
+        assert isinstance(record["applicants"], int)

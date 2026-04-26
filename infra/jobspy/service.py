@@ -1,3 +1,4 @@
+import json
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
 from typing import Any
 
@@ -5,6 +6,22 @@ import structlog
 from jobspy import scrape_jobs
 
 logger = structlog.get_logger(__name__)
+
+
+def _records_from_dataframe(jobs_df) -> list[dict[str, Any]]:
+    """Converte DataFrame em lista de dicts JSON-serializáveis.
+
+    `jobs_df.to_dict("records")` preserva tipos pandas/numpy (Timestamp, NaN,
+    int64, etc.) que não são compatíveis com `json.dumps` — quebra ao gravar
+    em `request.session` (Django usa JSONSerializer por padrão desde 4.1) e
+    em qualquer outra serialização downstream.
+
+    Roteamos via `to_json(orient="records", date_format="iso")` que cuida da
+    conversão (Timestamp → ISO string, NaN → null, numpy → tipos nativos).
+    """
+    if jobs_df is None or jobs_df.empty:
+        return []
+    return json.loads(jobs_df.to_json(orient="records", date_format="iso"))
 
 
 class JobSearchService:
@@ -90,7 +107,7 @@ class JobSearchService:
                         timeout_seconds=timeout_seconds,
                     )
                     continue
-                results.extend(jobs_df.to_dict("records"))
+                results.extend(_records_from_dataframe(jobs_df))
                 logger.info("jobspy_search_success", term=term, count=len(jobs_df))
             except Exception as exc:
                 logger.warning(
