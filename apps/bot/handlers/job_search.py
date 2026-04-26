@@ -234,11 +234,19 @@ class JobSearchHandler(BaseHandler):
 
         try:
             jobs = self.job_service.search(terms, limit=5)
-        except Exception as exc:  # pragma: no cover
+        except Exception as exc:
             logger.error(
                 "job_search_failed", user_id=user.id, terms=terms, error=str(exc), exc_info=True
             )
-            jobs = []
+            self.send_msg(
+                user,
+                chat_id,
+                self.resolve_message(
+                    BOT_MESSAGES.search.search_error.key,
+                    BOT_MESSAGES.search.search_error.text,
+                ),
+            )
+            return
 
         if not jobs:
             self.send_msg(

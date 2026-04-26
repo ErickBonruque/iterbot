@@ -1,3 +1,4 @@
+import signal
 from typing import Any
 
 import structlog
@@ -6,12 +7,22 @@ from jobspy import scrape_jobs
 logger = structlog.get_logger(__name__)
 
 
+class _SearchTimeoutError(Exception):
+    pass
+
+
+def _timeout_handler(signum, frame):
+    raise _SearchTimeoutError("Busca excedeu o tempo limite")
+
+
 class JobSearchService:
     """Busca vagas em LinkedIn, Indeed e Glassdoor via python-jobspy.
 
     Attributes:
         None: This class is stateless; all config is passed to search().
     """
+
+    SEARCH_TIMEOUT_SECONDS = 30
 
     def search(
         self,
@@ -27,6 +38,7 @@ class JobSearchService:
         linkedin_fetch_description: bool = False,
         linkedin_company_ids: list[int] | None = None,
         offset: int = 0,
+        timeout: int | None = None,
     ) -> list[dict[str, Any]]:
         """Busca vagas para os termos fornecidos em multiplas plataformas.
 
@@ -43,6 +55,7 @@ class JobSearchService:
             linkedin_fetch_description: Buscar descricao completa no LinkedIn.
             linkedin_company_ids: Lista de IDs de empresas no LinkedIn.
             offset: Offset para paginacao dos resultados.
+            timeout: Tempo maximo em segundos para busca de cada termo (default: SEARCH_TIMEOUT_SECONDS).
 
         Returns:
             Lista de dicts com campos: title, company, location, job_type, job_url, date_posted.
@@ -50,25 +63,39 @@ class JobSearchService:
         Raises:
             Exception: Logged and swallowed; search continues to next term.
         """
+        timeout_seconds = timeout or self.SEARCH_TIMEOUT_SECONDS
         results = []
         for term in terms:
             try:
-                jobs_df = scrape_jobs(
-                    site_name=site_name or ["linkedin", "indeed", "glassdoor"],
-                    search_term=term,
-                    location=location,
-                    results_wanted=limit,
-                    hours_old=hours_old,
-                    country_indeed=country_indeed,
-                    distance=distance,
-                    job_type=job_type or None,
-                    is_remote=is_remote,
-                    linkedin_fetch_description=linkedin_fetch_description,
-                    linkedin_company_ids=linkedin_company_ids,
-                    offset=offset,
-                )
+                old_handler = signal.signal(signal.SIGALRM, _timeout_handler)
+                signal.alarm(timeout_seconds)
+                try:
+                    jobs_df = scrape_jobs(
+                        site_name=site_name or ["linkedin", "indeed", "glassdoor"],
+                        search_term=term,
+                        location=location,
+                        results_wanted=limit,
+                        hours_old=hours_old,
+                        country_indeed=country_indeed,
+                        distance=distance,
+                        job_type=job_type or None,
+                        is_remote=is_remote,
+                        linkedin_fetch_description=linkedin_fetch_description,
+                        linkedin_company_ids=linkedin_company_ids,
+                        offset=offset,
+                    )
+                finally:
+                    signal.alarm(0)
+                    signal.signal(signal.SIGALRM, old_handler)
                 results.extend(jobs_df.to_dict("records"))
                 logger.info("jobspy_search_success", term=term, count=len(jobs_df))
+            except _SearchTimeoutError:
+                logger.warning(
+                    "jobspy_search_timeout",
+                    term=term,
+                    location=location,
+                    timeout_seconds=timeout_seconds,
+                )
             except Exception as exc:
                 logger.warning(
                     "jobspy_search_failed",

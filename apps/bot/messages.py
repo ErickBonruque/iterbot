@@ -151,6 +151,14 @@ class SearchMessages:
         "search.searching_jobs",
         "🔎 Buscando vagas para: *{term_name}*... Aguarde.",
     )
+    search_timeout: MessageTemplate = MessageTemplate(
+        "search.search_timeout",
+        "⏰ A busca demorou demais e foi cancelada. Tente novamente mais tarde.\n\nDigite *menu* para voltar ao menu principal.",
+    )
+    search_error: MessageTemplate = MessageTemplate(
+        "search.search_error",
+        "⚠️ Ocorreu um erro ao buscar vagas. Tente novamente mais tarde.\n\nDigite *menu* para voltar ao menu principal.",
+    )
     no_jobs: MessageTemplate = MessageTemplate(
         "search.no_jobs",
         "😔 Nenhuma vaga encontrada no momento para esses termos.",
