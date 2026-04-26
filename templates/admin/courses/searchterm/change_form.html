@@ -1,0 +1,41 @@
+{% extends "admin/change_form.html" %}
+{% load i18n %}
+
+{% block content %}
+    {{ block.super }}
+    {% if job_results %}
+    <div class="cv-admin-panel" style="margin-top: 2rem;">
+        <h2 class="cv-admin-panel-title">
+            {% blocktrans with count=job_results|length %}Resultados da Busca ({{ count }} vaga(s) encontrada(s)){% endblocktrans %}
+        </h2>
+        <table class="cv-admin-table" style="width: 100%;">
+            <thead>
+                <tr>
+                    <th>{% trans "Título" %}</th>
+                    <th>{% trans "Empresa" %}</th>
+                    <th>{% trans "Local" %}</th>
+                    <th>{% trans "Link" %}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for job in job_results %}
+                <tr>
+                    <td>{{ job.title|default:"-" }}</td>
+                    <td>{{ job.company|default:"-" }}</td>
+                    <td>{{ job.location|default:"-" }}</td>
+                    <td>
+                        {% if job.job_url %}
+                        <a href="{{ job.job_url }}" target="_blank" rel="noopener noreferrer">
+                            {% trans "Ver vaga" %}
+                        </a>
+                        {% else %}
+                        -
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+{% endblock %}
