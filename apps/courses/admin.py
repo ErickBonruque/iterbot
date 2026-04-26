@@ -106,47 +106,32 @@ class SearchTermAdmin(ModelAdmin):
                 linkedin_company_ids=company_ids,
                 offset=obj.offset,
             )
-            self._test_search_results = results
+            request.session["job_search_results"] = results
+            if not results:
+                messages.warning(
+                    request, "Nenhuma vaga encontrada com os parâmetros de busca atuais."
+                )
         except Exception as exc:
-            self._test_search_results = []
+            request.session["job_search_results"] = []
             messages.warning(request, f"Erro ao executar busca: {exc}")
 
     def has_test_search_permission(self, request, object_id=None):
         return True
 
+    def changeform_view(self, request, object_id, form_url="", extra_context=None):
+        extra_context = extra_context or {}
+        if "test_search" in request.GET:
+            results = request.session.pop("job_search_results", None)
+            if results is not None:
+                extra_context["job_results"] = results
+        return super().changeform_view(request, object_id, form_url, extra_context)
+
     def response_change(self, request, obj):
         if ACTION_KEY in request.POST:
-            results = getattr(self, "_test_search_results", None)
-            if results is None:
-                return super().response_change(request, obj)
-            if not results:
-                messages.warning(
-                    request, "Nenhuma vaga encontrada com os parâmetros de busca atuais."
-                )
-            from django.template.response import TemplateResponse
+            from django.http import HttpResponseRedirect
+            from django.urls import reverse
 
-            context = self.admin_site.each_context(request)
-            context.update(
-                {
-                    "add": False,
-                    "change": True,
-                    "has_view_permission": self.has_view_permission(request, obj),
-                    "has_change_permission": self.has_change_permission(request, obj),
-                    "has_delete_permission": self.has_delete_permission(request, obj),
-                    "has_add_permission": self.has_add_permission(request),
-                    "has_editable_inline_admin_formsets": False,
-                    "original": obj,
-                    "object_id": str(obj.pk),
-                    "opts": self.model._meta,
-                    "is_popup": False,
-                    "save_as": False,
-                    "show_save": True,
-                    "show_save_and_continue": True,
-                    "show_delete": self.has_delete_permission(request, obj),
-                    "show_save_as_new": False,
-                    "title": f"Alterar {self.model._meta.verbose_name}",
-                    "job_results": results,
-                }
-            )
-            return TemplateResponse(request, self.change_form_template, context)
+            opts = self.model._meta
+            url = reverse(f"admin:{opts.app_label}_{opts.model_name}_change", args=[obj.pk])
+            return HttpResponseRedirect(url + "?test_search=1")
         return super().response_change(request, obj)

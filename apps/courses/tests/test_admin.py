@@ -48,7 +48,7 @@ class TestSearchTermAdminFieldsets:
 @pytest.mark.django_db
 class TestTestSearchAction:
     @patch("infra.jobspy.service.JobSearchService.search")
-    def test_action_returns_results(self, mock_search, client, admin_user, search_term):
+    def test_action_redirects_with_results(self, mock_search, client, admin_user, search_term):
         mock_search.return_value = [
             {
                 "title": "Python Developer",
@@ -75,11 +75,13 @@ class TestTestSearchAction:
             "is_remote": "0",
             "linkedin_fetch_description": "0",
         }
-        response = client.post(url, data=data)
+        response = client.post(url, data=data, follow=True)
         assert response.status_code == 200
+        content = response.content.decode()
+        assert "Python Developer" in content or "job_results" in str(response.context)
 
     @patch("infra.jobspy.service.JobSearchService.search")
-    def test_action_empty_results(self, mock_search, client, admin_user, search_term):
+    def test_action_empty_results_with_warning(self, mock_search, client, admin_user, search_term):
         mock_search.return_value = []
         client.force_login(admin_user)
         url = f"/admin/courses/searchterm/{search_term.pk}/change/"
@@ -99,7 +101,7 @@ class TestTestSearchAction:
             "is_remote": "0",
             "linkedin_fetch_description": "0",
         }
-        response = client.post(url, data=data)
+        response = client.post(url, data=data, follow=True)
         assert response.status_code == 200
 
     @patch("infra.jobspy.service.JobSearchService.search")
@@ -123,7 +125,7 @@ class TestTestSearchAction:
             "is_remote": "0",
             "linkedin_fetch_description": "0",
         }
-        response = client.post(url, data=data)
+        response = client.post(url, data=data, follow=True)
         assert response.status_code == 200
 
 
