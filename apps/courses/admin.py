@@ -1,10 +1,10 @@
 from django.contrib import admin
-from unfold.admin import ModelAdmin
+from unfold.admin import ModelAdmin, TabularInline
 
 from .models import Course, SearchTerm
 
 
-class SearchTermInline(admin.TabularInline):
+class SearchTermInline(TabularInline):
     model = SearchTerm
     extra = 1
     fields = ("term", "is_default", "priority")
