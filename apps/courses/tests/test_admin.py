@@ -1,9 +1,9 @@
-import pytest
-from django.contrib.admin.sites import AdminSite
-from django.test import Client, RequestFactory
 from unittest.mock import patch
 
-from apps.courses.admin import SearchTermAdmin, ACTION_KEY
+import pytest
+from django.test import Client
+
+from apps.courses.admin import ACTION_KEY
 from apps.courses.models import Course, SearchTerm
 
 
@@ -21,8 +21,8 @@ def search_term(course):
 def admin_user(db):
     from django.contrib.auth import get_user_model
 
-    User = get_user_model()
-    return User.objects.create_superuser(
+    user_model = get_user_model()
+    return user_model.objects.create_superuser(
         username="admin", password="pass", email="admin@test.com"
     )
 

@@ -1,10 +1,10 @@
-from django.contrib import admin
-from django.contrib import messages
+from django.contrib import admin, messages
 from unfold.admin import ModelAdmin, TabularInline
 from unfold.decorators import action
 from unfold.enums import ActionVariant
 
 from infra.jobspy.service import JobSearchService
+
 from .models import Course, SearchTerm
 
 ACTION_KEY = "courses_searchterm_test_search"
