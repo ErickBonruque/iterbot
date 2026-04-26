@@ -82,30 +82,8 @@ class SearchTermAdmin(ModelAdmin):
     def test_search(self, request, obj):
         messages.info(request, "Executando busca de vagas... aguarde alguns instantes.")
         service = JobSearchService()
-        site_list = [s.strip() for s in obj.site_name.split(",") if s.strip()]
-        company_ids = None
-        if obj.linkedin_company_ids:
-            try:
-                company_ids = [
-                    int(i.strip()) for i in obj.linkedin_company_ids.split(",") if i.strip()
-                ]
-            except ValueError:
-                company_ids = None
         try:
-            results = service.search(
-                terms=[obj.term],
-                location=obj.location,
-                limit=obj.results_wanted,
-                hours_old=obj.hours_old,
-                site_name=site_list,
-                distance=obj.distance,
-                job_type=obj.job_type or None,
-                is_remote=obj.is_remote,
-                country_indeed=obj.country_indeed,
-                linkedin_fetch_description=obj.linkedin_fetch_description,
-                linkedin_company_ids=company_ids,
-                offset=obj.offset,
-            )
+            results = service.search(terms=[obj.term], **obj.to_search_kwargs())
             request.session["job_search_results"] = results
             if not results:
                 messages.warning(

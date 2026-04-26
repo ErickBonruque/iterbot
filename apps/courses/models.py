@@ -134,3 +134,41 @@ class SearchTerm(TimeStampedModel):
 
     def __str__(self):
         return f"{self.term} ({self.course.name})"
+
+    def to_search_kwargs(self, limit_override: int | None = None) -> dict:
+        """Retorna kwargs completos para `JobSearchService.search()` derivados
+        deste SearchTerm.
+
+        Uso central para garantir que admin e bot apliquem exatamente a mesma
+        configuração (location, hours_old, is_remote, job_type, country_indeed,
+        site_name, linkedin_*) — antes o bot ignorava tudo e usava defaults
+        hardcoded, divergindo da busca executada no "Testar busca" do admin.
+
+        Args:
+            limit_override: Se informado, sobrescreve `results_wanted` (o bot
+                limita em 5 por UX do WhatsApp).
+        """
+        site_list = [s.strip() for s in (self.site_name or "").split(",") if s.strip()]
+
+        company_ids: list[int] | None = None
+        if self.linkedin_company_ids:
+            try:
+                company_ids = [
+                    int(i.strip()) for i in self.linkedin_company_ids.split(",") if i.strip()
+                ]
+            except ValueError:
+                company_ids = None
+
+        return {
+            "location": self.location,
+            "limit": limit_override if limit_override is not None else self.results_wanted,
+            "hours_old": self.hours_old,
+            "site_name": site_list or None,
+            "distance": self.distance,
+            "job_type": self.job_type or None,
+            "is_remote": self.is_remote,
+            "country_indeed": self.country_indeed,
+            "linkedin_fetch_description": self.linkedin_fetch_description,
+            "linkedin_company_ids": company_ids,
+            "offset": self.offset,
+        }

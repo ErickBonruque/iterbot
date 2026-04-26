@@ -89,7 +89,13 @@ class BotServiceFlowTests(TestCase):
         user.refresh_from_db()
         self.assertIsNone(user.conversation_state.current_action)
         self.assertEqual(user.conversation_state.selected_term.term, "Python")
-        self.job_service.search.assert_called_with(["Python"], limit=5)
+        # Bot agora delega kwargs derivados de SearchTerm.to_search_kwargs() e
+        # cap em BOT_RESULTS_PER_TERM=5 por mensagem do WhatsApp.
+        self.assertEqual(self.job_service.search.call_count, 1)
+        _, call_kwargs = self.job_service.search.call_args
+        self.assertEqual(call_kwargs["terms"], ["Python"])
+        self.assertEqual(call_kwargs["limit"], 5)
+        self.assertEqual(call_kwargs["location"], "Curitiba, PR")
         sent_text = self.waha_client.send_message.call_args[0][1]
         self.assertIn("Vagas para Engenharia", sent_text)
         self.assertIn("Python", sent_text)
@@ -151,7 +157,12 @@ class BotServiceFlowTests(TestCase):
         # Há 2 termos default, então opção 3 corresponde a "Buscar Todos"
         self.service.process_message(chat_id, "3", from_me=False)
 
-        self.job_service.search.assert_called_with(["Python", "Django"], limit=5)
+        # Bot agora chama search() uma vez por SearchTerm para respeitar a
+        # configuração individual (location/is_remote/job_type/etc.) — antes
+        # passava todos os termos numa única chamada com defaults hardcoded.
+        self.assertEqual(self.job_service.search.call_count, 2)
+        called_terms = [call.kwargs["terms"] for call in self.job_service.search.call_args_list]
+        self.assertEqual(called_terms, [["Python"], ["Django"]])
 
     def test_company_menu_option_opens_onboarding_submenu(self):
         chat_id = "5511999000111@c.us"

@@ -194,13 +194,13 @@ class JobSearchHandler(BaseHandler):
             return
 
         if idx == len(terms):
-            selected_terms_list = [t.term for t in terms]
+            selected_search_terms = terms
             term_name = "Todos os termos"
         elif 0 <= idx < len(terms):
             term = terms[idx]
             conversation_state.selected_term = term
             conversation_state.save(update_fields=["selected_term", "updated_at"])
-            selected_terms_list = [term.term]
+            selected_search_terms = [term]
             term_name = term.term
         else:
             self.send_msg(
@@ -217,11 +217,26 @@ class JobSearchHandler(BaseHandler):
             conversation_state=conversation_state,
             next_state=STATE_IDLE,
         )
-        self.perform_search(user, chat_id, selected_terms_list, term_name)
+        self.perform_search(user, chat_id, selected_search_terms, term_name)
+
+    # Limite de vagas retornadas por termo ao usuário do WhatsApp (UX: evita
+    # mensagens muito longas mesmo que o SearchTerm.results_wanted seja maior).
+    BOT_RESULTS_PER_TERM = 5
 
     def perform_search(
-        self, user: UserProfile, chat_id: str, terms: list[str], term_name: str
+        self,
+        user: UserProfile,
+        chat_id: str,
+        search_terms: list,
+        term_name: str,
     ) -> None:
+        """Executa a busca respeitando a configuração de cada SearchTerm.
+
+        Antes o bot chamava `job_service.search(terms, limit=5)` e ignorava
+        location/is_remote/job_type/country_indeed/site_name configurados no
+        admin — divergindo do "Testar busca" e retornando 0 vagas quando a
+        config fugia dos defaults (ex.: remoto, país ≠ Brazil, etc.).
+        """
         self.send_msg(
             user,
             chat_id,
@@ -233,10 +248,17 @@ class JobSearchHandler(BaseHandler):
         )
 
         try:
-            jobs = self.job_service.search(terms, limit=5)
+            jobs: list[dict] = []
+            for search_term in search_terms:
+                kwargs = search_term.to_search_kwargs(limit_override=self.BOT_RESULTS_PER_TERM)
+                jobs.extend(self.job_service.search(terms=[search_term.term], **kwargs))
         except Exception as exc:
             logger.error(
-                "job_search_failed", user_id=user.id, terms=terms, error=str(exc), exc_info=True
+                "job_search_failed",
+                user_id=user.id,
+                terms=[st.term for st in search_terms],
+                error=str(exc),
+                exc_info=True,
             )
             self.send_msg(
                 user,

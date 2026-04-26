@@ -25,8 +25,10 @@ class StubJobSearcher:
     def __init__(self) -> None:
         self.calls: list[tuple[list[str], int]] = []
 
-    def search(self, terms: list[str], limit: int = 5):
-        self.calls.append((terms, limit))
+    def search(self, terms: list[str], **kwargs):
+        # limit_override do bot vira kwarg `limit`; default 5 do
+        # SearchTerm.results_wanted quando não sobrescrito.
+        self.calls.append((terms, kwargs.get("limit", 5)))
         return [{"company": "Capy", "title": "Dev", "url": "https://example.com"}]
 
 

@@ -16,8 +16,14 @@ class MessageSender(Protocol):
 class JobSearcher(Protocol):
     """Contract for searching jobs from configured sources."""
 
-    def search(self, terms: list[str], limit: int = 5) -> list[dict[str, Any]]:
-        """Return job results filtered by terms."""
+    def search(self, terms: list[str], **kwargs: Any) -> list[dict[str, Any]]:
+        """Return job results filtered by terms.
+
+        Implementations devem aceitar (e idealmente respeitar) os kwargs
+        produzidos por `SearchTerm.to_search_kwargs()` —
+        location/limit/hours_old/site_name/distance/job_type/is_remote/
+        country_indeed/linkedin_*/offset.
+        """
 
 
 class Authenticator(Protocol):

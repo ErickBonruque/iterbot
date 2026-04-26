@@ -65,3 +65,53 @@ class TestSearchTermNullableFields:
         st = SearchTerm.objects.create(course=course, term="python", distance=None)
         st.refresh_from_db()
         assert st.distance is None
+
+
+@pytest.mark.django_db
+class TestSearchTermToSearchKwargs:
+    def test_to_search_kwargs_propagates_full_config(self, course):
+        # Regressão: bot ignorava location/is_remote/job_type/etc. e usava
+        # defaults do JobSearchService — divergindo do "Testar busca" do admin.
+        st = SearchTerm.objects.create(
+            course=course,
+            term="cientista de dados",
+            site_name="linkedin,indeed",
+            location="Brasil",
+            distance=100,
+            job_type="fulltime",
+            is_remote=True,
+            results_wanted=10,
+            hours_old=168,
+            country_indeed="Brazil",
+            linkedin_fetch_description=True,
+            linkedin_company_ids="123,456",
+            offset=5,
+        )
+
+        kwargs = st.to_search_kwargs()
+
+        assert kwargs == {
+            "location": "Brasil",
+            "limit": 10,
+            "hours_old": 168,
+            "site_name": ["linkedin", "indeed"],
+            "distance": 100,
+            "job_type": "fulltime",
+            "is_remote": True,
+            "country_indeed": "Brazil",
+            "linkedin_fetch_description": True,
+            "linkedin_company_ids": [123, 456],
+            "offset": 5,
+        }
+
+    def test_to_search_kwargs_limit_override(self, course):
+        st = SearchTerm.objects.create(course=course, term="python", results_wanted=20)
+        assert st.to_search_kwargs(limit_override=5)["limit"] == 5
+
+    def test_to_search_kwargs_blank_job_type_becomes_none(self, course):
+        st = SearchTerm.objects.create(course=course, term="python", job_type="")
+        assert st.to_search_kwargs()["job_type"] is None
+
+    def test_to_search_kwargs_invalid_company_ids_returns_none(self, course):
+        st = SearchTerm.objects.create(course=course, term="python", linkedin_company_ids="abc,def")
+        assert st.to_search_kwargs()["linkedin_company_ids"] is None
