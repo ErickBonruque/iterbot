@@ -81,6 +81,47 @@ class LinkUserTests(TestCase):
         self.assertIsNone(result)
 
 
+class ResendConfirmationTests(TestCase):
+    """Garante que resend_confirmation respeita o estado de verificação."""
+
+    def setUp(self):
+        self.dispatcher = _StubDispatcher()
+        self.service = UTFPRAuthService(email_dispatcher=self.dispatcher)
+        self.phone = "5577777777777@c.us"
+
+    def test_resend_skipped_when_already_verified(self):
+        """Usuário verificado não deve gerar novo token nem disparar e-mail."""
+        user = UserProfile.objects.create(
+            phone_number=self.phone,
+            ra="a1234567",
+            email="aluno@alunos.utfpr.edu.br",
+            email_verified=True,
+            is_authenticated_utfpr=True,
+            email_confirmation_token=None,
+        )
+
+        result = self.service.resend_confirmation(self.phone)
+
+        self.assertFalse(result)
+        self.assertEqual(self.dispatcher.calls, [])
+        user.refresh_from_db()
+        self.assertIsNone(user.email_confirmation_token)
+
+    def test_resend_dispatches_for_unverified_user(self):
+        UserProfile.objects.create(
+            phone_number=self.phone,
+            ra="a1234567",
+            email="aluno@alunos.utfpr.edu.br",
+            email_verified=False,
+            is_authenticated_utfpr=False,
+        )
+
+        result = self.service.resend_confirmation(self.phone)
+
+        self.assertTrue(result)
+        self.assertEqual(len(self.dispatcher.calls), 1)
+
+
 class LogoutTests(TestCase):
     def setUp(self):
         self.service = UTFPRAuthService()

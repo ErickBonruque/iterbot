@@ -24,10 +24,17 @@ class AuthenticationHandlerStartLoginTests(TestCase):
         user = UserProfile.objects.get(phone_number=chat_id)
         self.assertEqual(user.conversation_state.current_action, "login_step_ra")
 
-    def test_already_authenticated_user_option_1_shows_already_registered(self):
+    def test_authenticated_user_register_alias_shows_already_registered(self):
+        """O alias textual 'cadastrar' (e 'login'/'entrar') ainda ativa o gate
+        de 'já cadastrado' no start_login_flow para usuário autenticado.
+
+        Observação: a opção numérica '1' no menu autenticado agora é Buscar
+        Vagas (não cadastro), mas as palavras-chave continuam roteando para
+        start_login_flow para preservar UX de usuários que digitarem por nome.
+        """
         chat_id = "5511222222222@c.us"
         self._authenticate_user(chat_id)
-        self.service.process_message(chat_id, "1", from_me=False)
+        self.service.process_message(chat_id, "cadastrar", from_me=False)
         sent_text = self.waha_client.send_message.call_args[0][1]
         self.assertIn("já está cadastrado", sent_text.lower())
 

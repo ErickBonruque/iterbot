@@ -72,7 +72,8 @@ class BotServiceFlowTests(TestCase):
         chat_id = "5511999990000@c.us"
         user = self._authenticate_user(chat_id)
 
-        self.service.process_message(chat_id, "3", from_me=False)  # select course
+        # Menu autenticado: opcao 1 = Buscar Vagas
+        self.service.process_message(chat_id, "1", from_me=False)  # select course
         user.refresh_from_db()
         self.assertEqual(user.conversation_state.current_action, "course_selection")
 
@@ -103,7 +104,7 @@ class BotServiceFlowTests(TestCase):
     def test_option_three_requires_authentication_before_listing_courses(self):
         chat_id = "5511000000000@c.us"
 
-        # Usuário não autenticado tenta acessar opção 3
+        # No menu nao-autenticado, opcao 3 = Buscar Vagas (cai no auth gate).
         self.service.process_message(chat_id, "3", from_me=False)
 
         user = UserProfile.objects.get(phone_number=chat_id)
@@ -121,7 +122,8 @@ class BotServiceFlowTests(TestCase):
         chat_id = "5511999888777@c.us"
         user = self._authenticate_user(chat_id)
 
-        self.service.process_message(chat_id, "3", from_me=False)
+        # Menu autenticado: opcao 1 = Buscar Vagas
+        self.service.process_message(chat_id, "1", from_me=False)
         user.refresh_from_db()
         self.assertEqual(user.conversation_state.current_action, "course_selection")
 
@@ -139,8 +141,8 @@ class BotServiceFlowTests(TestCase):
         chat_id = "5511777666555@c.us"
         user = self._authenticate_user(chat_id)
 
-        # Inicia fluxo de curso
-        self.service.process_message(chat_id, "3", from_me=False)
+        # Inicia fluxo de curso (opcao 1 do menu autenticado = Buscar Vagas)
+        self.service.process_message(chat_id, "1", from_me=False)
         user.refresh_from_db()
         self.assertEqual(user.conversation_state.current_action, "course_selection")
 
@@ -213,19 +215,20 @@ class BotServiceFlowTests(TestCase):
         self.assertIn("Portal de empresas temporariamente indisponivel", sent_text)
         self.assertNotIn("localhost:8000", sent_text)
 
-    def test_student_menu_routes_keep_working_with_company_flow_added(self):
+    def test_authenticated_menu_routes_match_displayed_options(self):
+        """Menu autenticado: 1=Buscar | 2=Review | 3=Logout. Aliases textuais coexistem."""
         chat_id = "5511999000555@c.us"
         user = self._authenticate_user(chat_id)
 
-        self.service.auth_handler.start_login_flow = MagicMock()
         self.service.job_handler.start_course_selection = MagicMock()
         self.service.review_handler.send_review = MagicMock()
+        self.service.auth_handler.handle_logout = MagicMock()
 
         self.service.process_message(chat_id, "1", from_me=False)
-        self.service.auth_handler.start_login_flow.assert_called_once_with(user, chat_id)
-
-        self.service.process_message(chat_id, "3", from_me=False)
         self.service.job_handler.start_course_selection.assert_called_once_with(user, chat_id)
 
-        self.service.process_message(chat_id, "4", from_me=False)
+        self.service.process_message(chat_id, "2", from_me=False)
         self.service.review_handler.send_review.assert_called_once_with(user, chat_id)
+
+        self.service.process_message(chat_id, "3", from_me=False)
+        self.service.auth_handler.handle_logout.assert_called_once_with(user, chat_id)

@@ -312,6 +312,7 @@ class TestJobDeleteView(TestCase):
             telefone="(41) 99999-9999",
             contato_nome="Responsavel",
             contato_cargo="Gerente",
+            status=CompanyStatus.APPROVED,
         )
         self.job = Job.objects.create(
             company=self.company,
@@ -331,6 +332,7 @@ class TestJobDeleteView(TestCase):
             telefone="(41) 88888-8888",
             contato_nome="Outro Responsavel",
             contato_cargo="Outro Gerente",
+            status=CompanyStatus.APPROVED,
         )
         self.other_job = Job.objects.create(
             company=self.other_company,

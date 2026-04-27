@@ -20,23 +20,43 @@ class JobReviewHandlerTests(TestCase):
         return user
 
     def test_authenticated_user_job_review_option_sends_response(self):
-        """Opção '4' (review de vagas) deve enviar resposta ao usuário autenticado."""
+        """Opção '2' (review de vagas) deve enviar resposta ao usuário autenticado."""
         chat_id = "5544111111111@c.us"
         self._authenticate_user(chat_id)
-        # Opção "4" = "Ver Review de Vagas" conforme menu.py
-        self.service.process_message(chat_id, "4", from_me=False)
+        # Opção "2" no menu autenticado = "Ver Review de Vagas".
+        self.service.process_message(chat_id, "2", from_me=False)
         self.assertTrue(self.waha_client.send_message.called)
 
-    def test_unauthenticated_user_job_review_redirects(self):
-        """Usuário não autenticado na opção '4' deve receber redirecionamento."""
+    def test_unauthenticated_user_review_alias_blocked_by_auth_gate(self):
+        """Usuário não autenticado usando alias 'review' deve receber mensagem de auth."""
         chat_id = "5544222222222@c.us"
-        self.service.process_message(chat_id, "4", from_me=False)
-        self.assertTrue(self.waha_client.send_message.called)
+        self.service.process_message(chat_id, "review", from_me=False)
+        sent_text = self.waha_client.send_message.call_args[0][1]
+        self.assertIn("precisa se cadastrar", sent_text)
+
+    def test_unauthenticated_user_with_selected_course_still_blocked(self):
+        """Mesmo com selected_course populado por outro caminho, sem auth o review é bloqueado.
+
+        Regressão: antes do gate explícito em send_review, esse caso vazaria
+        review para um aluno não autenticado se um admin/fixture/refactor
+        setasse selected_course direto.
+        """
+        chat_id = "5544555000111@c.us"
+        course = Course.objects.create(name="Engenharia", is_active=True)
+        user = UserProfile.objects.create(phone_number=chat_id, is_authenticated_utfpr=False)
+        state, _ = ConversationState.objects.get_or_create(user=user)
+        state.selected_course = course
+        state.save(update_fields=["selected_course", "updated_at"])
+
+        self.service.process_message(chat_id, "review", from_me=False)
+
+        sent_text = self.waha_client.send_message.call_args[0][1]
+        self.assertIn("precisa se cadastrar", sent_text)
 
     def test_from_me_true_does_not_process(self):
         chat_id = "5544333333333@c.us"
         self._authenticate_user(chat_id)
-        self.service.process_message(chat_id, "4", from_me=True)
+        self.service.process_message(chat_id, "2", from_me=True)
         self.assertFalse(self.waha_client.send_message.called)
 
 
@@ -59,7 +79,7 @@ class JobReviewHandlerNoCourseTests(TestCase):
         state, _ = ConversationState.objects.get_or_create(user=user)
         state.selected_course = None
         state.save(update_fields=["selected_course", "updated_at"])
-        self.service.process_message(chat_id, "4", from_me=False)
+        self.service.process_message(chat_id, "2", from_me=False)
         sent_text = self.waha_client.send_message.call_args[0][1]
         # Deve mencionar buscar vagas ou curso
         self.assertTrue(
@@ -84,6 +104,6 @@ class JobReviewHandlerNoCourseTests(TestCase):
         state, _ = ConversationState.objects.get_or_create(user=user)
         state.selected_course = course
         state.save(update_fields=["selected_course", "updated_at"])
-        self.service.process_message(chat_id, "4", from_me=False)
+        self.service.process_message(chat_id, "2", from_me=False)
         # Deve ter enviado alguma mensagem (busca em progresso + resultado)
         self.assertTrue(self.waha_client.send_message.called)

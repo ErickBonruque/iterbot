@@ -7,7 +7,7 @@ from django.urls import reverse_lazy
 from django.views.generic import CreateView, UpdateView, View
 
 from apps.companies.forms import CompanyOnlyForm, CompanyProfileForm, CompanySignupForm, JobForm
-from apps.companies.mixins import CompanyRequiredMixin
+from apps.companies.mixins import ApprovedCompanyRequiredMixin
 from apps.companies.services import CompaniesService
 from apps.jobs.models import Company, Job
 
@@ -96,7 +96,7 @@ class CompanyCreateView(LoginRequiredMixin, View):
         return render(request, "companies/company_create.html", {"form": form})
 
 
-class JobCreateView(CompanyRequiredMixin, CreateView):
+class JobCreateView(ApprovedCompanyRequiredMixin, CreateView):
     """View de criacao de vaga."""
 
     model = Job
@@ -111,7 +111,7 @@ class JobCreateView(CompanyRequiredMixin, CreateView):
         return super().form_valid(form)
 
 
-class JobUpdateView(CompanyRequiredMixin, UpdateView):
+class JobUpdateView(ApprovedCompanyRequiredMixin, UpdateView):
     """View de edicao de vaga."""
 
     model = Job
@@ -134,7 +134,7 @@ class JobUpdateView(CompanyRequiredMixin, UpdateView):
         return super().form_valid(form)
 
 
-class JobDeleteView(CompanyRequiredMixin, View):
+class JobDeleteView(ApprovedCompanyRequiredMixin, View):
     """View de remocao de vaga (soft delete)."""
 
     template_name = "companies/job_confirm_delete.html"

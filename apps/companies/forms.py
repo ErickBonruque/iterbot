@@ -2,7 +2,8 @@ from allauth.account.forms import SignupForm
 from django import forms
 from django.core.exceptions import ValidationError
 
-from apps.jobs.models import Company, CompanyStatus, Job
+from apps.companies.services import CompaniesService
+from apps.jobs.models import Company, Job
 from apps.jobs.validators import validate_cnpj
 
 
@@ -75,18 +76,9 @@ class CompanySignupForm(SignupForm):
         return value
 
     def save(self, request):
-        """Cria User (via allauth) e Company vinculada."""
+        """Cria User (via allauth) e Company vinculada via service único."""
         user = super().save(request)
-        Company.objects.create(
-            user=user,
-            cnpj=self.cleaned_data["cnpj"],
-            nome=self.cleaned_data["nome"],
-            email=user.email,
-            telefone=self.cleaned_data["telefone"],
-            contato_nome=self.cleaned_data["contato_nome"],
-            contato_cargo=self.cleaned_data["contato_cargo"],
-            status=CompanyStatus.PENDING,
-        )
+        CompaniesService.create_company_for_user(user, self.cleaned_data)
         # Armazena o e-mail em sessao para exibir na tela de verificacao
         # (allauth.EmailVerificationSentView nao adiciona o email no contexto
         # por padrao, entao guardamos aqui para o template ler).

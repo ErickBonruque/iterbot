@@ -16,6 +16,13 @@ class CompaniesService:
     @staticmethod
     @transaction.atomic
     def create_company_for_user(user, cleaned_data):
+        """Cria uma Company vinculada ao ``user``, sempre com status PENDING.
+
+        Esta é a fonte única para criação de empresas — usada tanto pelo
+        ``CompanySignupForm.save`` (signup novo) quanto pelo ``CompanyCreateView``
+        (usuário existente sem empresa). Manter a lógica em um só lugar evita
+        drift quando novos campos forem adicionados ao modelo.
+        """
         return Company.objects.create(
             user=user,
             cnpj=cleaned_data["cnpj"],

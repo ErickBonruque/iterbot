@@ -93,7 +93,8 @@ class ProtocolDITests(TestCase):
         chat_id = "5511888777666@c.us"
         UserProfile.objects.create(phone_number=chat_id, is_authenticated_utfpr=True)
 
-        self.service.process_message(chat_id, "3", from_me=False)
+        # Menu autenticado: opcao 1 = Buscar Vagas
+        self.service.process_message(chat_id, "1", from_me=False)
         self.service.process_message(chat_id, "1", from_me=False)
         self.service.process_message(chat_id, "1", from_me=False)
 

@@ -118,17 +118,17 @@ class BotService:
         self._handle_main_menu_command(user, chat_id, text)
 
     def _handle_main_menu_command(self, user: UserProfile, chat_id: str, text: str) -> None:
-        if text in {"1", "cadastrar", "login", "entrar"}:
+        # Aliases textuais funcionam igual nos dois menus. Os números são
+        # interpretados de acordo com o menu visível ao usuário, então o
+        # mesmo dígito tem rotas diferentes para aluno autenticado e não.
+        if text in {"cadastrar", "login", "entrar"}:
             self.auth_handler.start_login_flow(user, chat_id)
             return
 
-        if not user.is_authenticated_utfpr and text in {
-            "2",
-            "empresa",
-            "sou empresa",
-            "cadastrar vaga",
-            "publicar vaga",
-        }:
+        if text in {"empresa", "sou empresa", "cadastrar vaga", "publicar vaga"}:
+            if user.is_authenticated_utfpr:
+                self.menu_handler.send_unknown_command(user, chat_id)
+                return
             conversation_state = self._get_conversation_state(user)
             apply_state_transition(
                 conversation_state=conversation_state,
@@ -138,17 +138,46 @@ class BotService:
             self.menu_handler.send_company_onboarding_menu(user, chat_id)
             return
 
-        if text in {"2", "logout", "deslogar"}:
+        if text in {"logout", "deslogar", "sair da conta"}:
             self.auth_handler.handle_logout(user, chat_id)
             return
 
-        if text in {"3", "vagas", "buscar", "cursos"}:
+        if text in {"vagas", "buscar", "cursos"}:
             self.job_handler.start_course_selection(user, chat_id)
             return
 
-        if text in {"4", "review", "vagas da semana"}:
+        if text in {"review", "vagas da semana"}:
             self.review_handler.send_review(user, chat_id)
             return
+
+        if user.is_authenticated_utfpr:
+            # Menu autenticado: 1=Buscar | 2=Review | 3=Logout
+            if text == "1":
+                self.job_handler.start_course_selection(user, chat_id)
+                return
+            if text == "2":
+                self.review_handler.send_review(user, chat_id)
+                return
+            if text == "3":
+                self.auth_handler.handle_logout(user, chat_id)
+                return
+        else:
+            # Menu não autenticado: 1=Cadastro/Login | 2=Empresa | 3=Buscar (gate em start_course_selection)
+            if text == "1":
+                self.auth_handler.start_login_flow(user, chat_id)
+                return
+            if text == "2":
+                conversation_state = self._get_conversation_state(user)
+                apply_state_transition(
+                    conversation_state=conversation_state,
+                    next_state=STATE_COMPANY_ONBOARDING_SELECTION,
+                    clear_flow_data=True,
+                )
+                self.menu_handler.send_company_onboarding_menu(user, chat_id)
+                return
+            if text == "3":
+                self.job_handler.start_course_selection(user, chat_id)
+                return
 
         self.menu_handler.send_unknown_command(user, chat_id)
 

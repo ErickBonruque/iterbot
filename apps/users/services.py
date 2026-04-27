@@ -96,9 +96,21 @@ class UTFPRAuthService:
             return None
 
     def resend_confirmation(self, phone_number: str) -> bool:
-        """Resend confirmation email to user."""
+        """Reenvia e-mail de confirmação ao aluno.
+
+        Curto-circuita se o usuário já está com `email_verified=True`. Sem esse
+        gate, uma chamada acidental (race condition, admin tweak) regeneraria o
+        token e sobrescreveria o ``email_confirmation_token=None`` deixado por
+        ``confirm_email()``, reabrindo o fluxo de verificação para um aluno já
+        autenticado. O dispatcher final ainda tem guard próprio, mas o token
+        ficaria em estado inconsistente.
+        """
         try:
             user = UserProfile.objects.get(phone_number=phone_number)
+            if user.email_verified:
+                logger.info("resend_confirmation_skipped_already_verified", user_id=user.id)
+                return False
+
             token = str(uuid.uuid4())
             user.email_confirmation_token = token
             user.email_confirmation_sent_at = timezone.now()

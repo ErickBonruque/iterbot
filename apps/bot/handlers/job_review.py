@@ -25,6 +25,21 @@ class JobReviewHandler(BaseHandler):
         return conversation_state
 
     def send_review(self, user: UserProfile, chat_id: str) -> None:
+        # Gate de autenticação alinhado com JobSearchHandler.start_course_selection.
+        # Sem esse gate, um aluno não autenticado conseguiria gatilhar o review
+        # caso o selected_course fosse populado por outro caminho (admin/fixture/refactor).
+        if not user.is_authenticated_utfpr:
+            self.send_msg(
+                user,
+                chat_id,
+                self.resolve_message(
+                    BOT_MESSAGES.search.auth_required.key,
+                    BOT_MESSAGES.search.auth_required.text,
+                ),
+            )
+            logger.info("review_blocked_unauthenticated", user_id=user.id)
+            return
+
         selected_course = self._get_conversation_state(user).selected_course
         if not selected_course:
             self.send_msg(
