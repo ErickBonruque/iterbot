@@ -117,69 +117,82 @@ class BotService:
 
         self._handle_main_menu_command(user, chat_id, text)
 
+    # Aliases textuais — independentes do menu visível.
+    _ALIAS_LOGIN = frozenset({"cadastrar", "login", "entrar"})
+    _ALIAS_COMPANY = frozenset({"empresa", "sou empresa", "cadastrar vaga", "publicar vaga"})
+    _ALIAS_LOGOUT = frozenset({"logout", "deslogar", "sair da conta"})
+    _ALIAS_SEARCH = frozenset({"vagas", "buscar", "cursos"})
+    _ALIAS_REVIEW = frozenset({"review", "vagas da semana"})
+
     def _handle_main_menu_command(self, user: UserProfile, chat_id: str, text: str) -> None:
-        # Aliases textuais funcionam igual nos dois menus. Os números são
-        # interpretados de acordo com o menu visível ao usuário, então o
-        # mesmo dígito tem rotas diferentes para aluno autenticado e não.
-        if text in {"cadastrar", "login", "entrar"}:
-            self.auth_handler.start_login_flow(user, chat_id)
-            return
-
-        if text in {"empresa", "sou empresa", "cadastrar vaga", "publicar vaga"}:
-            if user.is_authenticated_utfpr:
-                self.menu_handler.send_unknown_command(user, chat_id)
-                return
-            conversation_state = self._get_conversation_state(user)
-            apply_state_transition(
-                conversation_state=conversation_state,
-                next_state=STATE_COMPANY_ONBOARDING_SELECTION,
-                clear_flow_data=True,
-            )
-            self.menu_handler.send_company_onboarding_menu(user, chat_id)
-            return
-
-        if text in {"logout", "deslogar", "sair da conta"}:
-            self.auth_handler.handle_logout(user, chat_id)
-            return
-
-        if text in {"vagas", "buscar", "cursos"}:
-            self.job_handler.start_course_selection(user, chat_id)
-            return
-
-        if text in {"review", "vagas da semana"}:
-            self.review_handler.send_review(user, chat_id)
+        # Aliases textuais resolvem antes dos números: o mesmo dígito tem
+        # significados diferentes em menu autenticado vs não-autenticado.
+        if self._handle_text_alias(user, chat_id, text):
             return
 
         if user.is_authenticated_utfpr:
-            # Menu autenticado: 1=Buscar | 2=Review | 3=Logout
-            if text == "1":
-                self.job_handler.start_course_selection(user, chat_id)
-                return
-            if text == "2":
-                self.review_handler.send_review(user, chat_id)
-                return
-            if text == "3":
-                self.auth_handler.handle_logout(user, chat_id)
-                return
+            handled = self._handle_numeric_authenticated(user, chat_id, text)
         else:
-            # Menu não autenticado: 1=Cadastro/Login | 2=Empresa | 3=Buscar (gate em start_course_selection)
-            if text == "1":
-                self.auth_handler.start_login_flow(user, chat_id)
-                return
-            if text == "2":
-                conversation_state = self._get_conversation_state(user)
-                apply_state_transition(
-                    conversation_state=conversation_state,
-                    next_state=STATE_COMPANY_ONBOARDING_SELECTION,
-                    clear_flow_data=True,
-                )
-                self.menu_handler.send_company_onboarding_menu(user, chat_id)
-                return
-            if text == "3":
-                self.job_handler.start_course_selection(user, chat_id)
-                return
+            handled = self._handle_numeric_unauthenticated(user, chat_id, text)
 
-        self.menu_handler.send_unknown_command(user, chat_id)
+        if not handled:
+            self.menu_handler.send_unknown_command(user, chat_id)
+
+    def _handle_text_alias(self, user: UserProfile, chat_id: str, text: str) -> bool:
+        if text in self._ALIAS_LOGIN:
+            self.auth_handler.start_login_flow(user, chat_id)
+            return True
+        if text in self._ALIAS_COMPANY:
+            self._start_company_onboarding(user, chat_id)
+            return True
+        if text in self._ALIAS_LOGOUT:
+            self.auth_handler.handle_logout(user, chat_id)
+            return True
+        if text in self._ALIAS_SEARCH:
+            self.job_handler.start_course_selection(user, chat_id)
+            return True
+        if text in self._ALIAS_REVIEW:
+            self.review_handler.send_review(user, chat_id)
+            return True
+        return False
+
+    def _handle_numeric_authenticated(self, user: UserProfile, chat_id: str, text: str) -> bool:
+        # Menu autenticado: 1=Buscar | 2=Review | 3=Logout
+        if text == "1":
+            self.job_handler.start_course_selection(user, chat_id)
+            return True
+        if text == "2":
+            self.review_handler.send_review(user, chat_id)
+            return True
+        if text == "3":
+            self.auth_handler.handle_logout(user, chat_id)
+            return True
+        return False
+
+    def _handle_numeric_unauthenticated(self, user: UserProfile, chat_id: str, text: str) -> bool:
+        # Menu não autenticado: 1=Cadastro/Login | 2=Empresa | 3=Buscar (gate em start_course_selection)
+        if text == "1":
+            self.auth_handler.start_login_flow(user, chat_id)
+            return True
+        if text == "2":
+            self._start_company_onboarding(user, chat_id)
+            return True
+        if text == "3":
+            self.job_handler.start_course_selection(user, chat_id)
+            return True
+        return False
+
+    def _start_company_onboarding(self, user: UserProfile, chat_id: str) -> None:
+        if user.is_authenticated_utfpr:
+            self.menu_handler.send_unknown_command(user, chat_id)
+            return
+        conversation_state = self._get_conversation_state(user)
+        apply_state_transition(
+            conversation_state=conversation_state,
+            next_state=STATE_COMPANY_ONBOARDING_SELECTION,
+            clear_flow_data=True,
+        )
+        self.menu_handler.send_company_onboarding_menu(user, chat_id)
 
     def _handle_pending_action(self, user: UserProfile, chat_id: str, text: str) -> bool:
         if self.auth_handler.handle(user, chat_id, text):
