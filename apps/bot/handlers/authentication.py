@@ -205,6 +205,26 @@ class AuthenticationHandler(BaseHandler):
         linked_user = self.auth_service.link_user(chat_id, ra, password, email)
 
         if linked_user:
+            # Re-login: e-mail já verificado anteriormente — autentica direto sem reenviar link.
+            if linked_user.email_verified and linked_user.is_authenticated_utfpr:
+                apply_state_transition(
+                    conversation_state=conversation_state,
+                    next_state=STATE_IDLE,
+                    clear_flow_data=True,
+                )
+                self.send_msg(
+                    user,
+                    chat_id,
+                    self.resolve_message(
+                        BOT_MESSAGES.auth.login_welcome_back.key,
+                        BOT_MESSAGES.auth.login_welcome_back.text,
+                        email=email,
+                    ),
+                )
+                logger.info("user_relogged_in", user_id=linked_user.id)
+                return True
+
+            # Primeiro cadastro (ou e-mail novo): dispara verificação por link.
             apply_state_transition(
                 conversation_state=conversation_state,
                 next_state=STATE_LOGIN_STEP_WAITING_CONFIRMATION,

@@ -71,6 +71,10 @@ class AuthMessages:
         "auth.logout_success",
         "🔒 Você saiu do sistema. Até logo!",
     )
+    login_welcome_back: MessageTemplate = MessageTemplate(
+        "auth.login_welcome_back",
+        "✅ *Bem-vindo de volta!*\n\nSeu e-mail `{email}` já foi verificado anteriormente, então você está autenticado direto.\n\nDigite *menu* para ver as opções disponíveis.",
+    )
 
 
 @dataclass(frozen=True)
