@@ -13,7 +13,7 @@ class MessageTemplate:
 class AuthMessages:
     login_already_registered: MessageTemplate = MessageTemplate(
         "auth.login_already_registered",
-        "✅ Você já está cadastrado! Selecione a opção 3 para buscar vagas.",
+        "✅ Você já está cadastrado! Selecione a opção 1 para buscar vagas.",
     )
     login_prompt_ra: MessageTemplate = MessageTemplate(
         "auth.login_prompt_ra",
@@ -177,7 +177,7 @@ class SearchMessages:
 class ReviewMessages:
     missing_course: MessageTemplate = MessageTemplate(
         "review.missing_course",
-        "⚠️ Você não tem curso definido.\n\nUse a opção *3 - Buscar Vagas* para selecionar seu curso primeiro.",
+        "⚠️ Você não tem curso definido.\n\nUse a opção *1 - Buscar Vagas* para selecionar seu curso primeiro.",
     )
     searching_review: MessageTemplate = MessageTemplate(
         "review.searching_review",
@@ -189,7 +189,7 @@ class ReviewMessages:
     )
     no_jobs: MessageTemplate = MessageTemplate(
         "review.no_jobs",
-        "😔 Não encontrei vagas para o seu curso no momento.\n\n_Tente novamente em alguns dias ou use a opção *3 - Buscar Vagas* para busca manual._",
+        "😔 Não encontrei vagas para o seu curso no momento.\n\n_Tente novamente em alguns dias ou use a opção *1 - Buscar Vagas* para busca manual._",
     )
     weekly_header: MessageTemplate = MessageTemplate(
         "review.weekly_header",

@@ -131,6 +131,33 @@ class AuthenticationHandler(BaseHandler):
         )
 
         if self.auth_service.authenticate(ra, password):
+            # Re-login direto: se já existe perfil com este phone e e-mail
+            # verificado, pula a etapa de e-mail e a confirmação. Sem esse
+            # short-circuit, o usuário precisaria redigitar o e-mail e o
+            # link_user só decidiria pelo welcome_back depois disso.
+            existing = UserProfile.objects.filter(phone_number=chat_id).first()
+            if existing and existing.email_verified and existing.email:
+                linked_user = self.auth_service.link_user(
+                    chat_id, ra, password, existing.email
+                )
+                if linked_user and linked_user.email_verified and linked_user.is_authenticated_utfpr:
+                    apply_state_transition(
+                        conversation_state=conversation_state,
+                        next_state=STATE_IDLE,
+                        clear_flow_data=True,
+                    )
+                    self.send_msg(
+                        user,
+                        chat_id,
+                        self.resolve_message(
+                            BOT_MESSAGES.auth.login_welcome_back.key,
+                            BOT_MESSAGES.auth.login_welcome_back.text,
+                            email=existing.email,
+                        ),
+                    )
+                    logger.info("user_relogged_in_skipping_email_step", user_id=linked_user.id)
+                    return True
+
             conversation_state.flow_data["temp_password"] = password
             apply_state_transition(
                 conversation_state=conversation_state,

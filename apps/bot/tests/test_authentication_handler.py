@@ -107,6 +107,63 @@ class AuthenticationHandlerLoginPasswordTests(TestCase):
         # Deve ter enviado mensagem (validando/avançando ou erro)
         self.assertTrue(self.waha_client.send_message.called)
 
+    @patch("apps.users.services.UTFPRAuthService.authenticate")
+    def test_verified_user_skips_email_step_after_password(self, mock_authenticate):
+        """Re-login: usuário com email_verified=True pula direto para autenticado.
+
+        Regressão para o bug em que após logout (acidental ou intencional), o
+        bot pedia o e-mail novamente mesmo com perfil já confirmado, forçando
+        o fluxo completo a cada login.
+        """
+        mock_authenticate.return_value = True
+        chat_id = "5511666666666@c.us"
+        UserProfile.objects.create(
+            phone_number=chat_id,
+            ra="a1234567",
+            email="aluno@alunos.utfpr.edu.br",
+            email_verified=True,
+            is_authenticated_utfpr=False,
+        )
+        state, _ = ConversationState.objects.get_or_create(
+            user=UserProfile.objects.get(phone_number=chat_id)
+        )
+        state.current_action = "login_step_password"
+        state.flow_data = {"temp_ra": "a1234567"}
+        state.save(update_fields=["current_action", "flow_data", "updated_at"])
+
+        self.service.process_message(chat_id, "senha123", from_me=False)
+
+        user = UserProfile.objects.get(phone_number=chat_id)
+        self.assertTrue(user.is_authenticated_utfpr)
+        self.assertIsNone(user.conversation_state.current_action)
+        # Nenhuma mensagem deve mencionar "e-mail institucional" (etapa pulada)
+        sent_texts = [call.args[1] for call in self.waha_client.send_message.call_args_list]
+        self.assertFalse(
+            any("e-mail institucional" in text.lower() for text in sent_texts),
+            "Bot não deveria pedir e-mail para usuário já verificado.",
+        )
+
+    @patch("apps.users.services.UTFPRAuthService.authenticate")
+    def test_unverified_user_still_asks_email_after_password(self, mock_authenticate):
+        """Usuário sem email_verified ainda passa pelo fluxo completo de e-mail."""
+        mock_authenticate.return_value = True
+        chat_id = "5511666555444@c.us"
+        UserProfile.objects.create(
+            phone_number=chat_id,
+            email_verified=False,
+        )
+        state, _ = ConversationState.objects.get_or_create(
+            user=UserProfile.objects.get(phone_number=chat_id)
+        )
+        state.current_action = "login_step_password"
+        state.flow_data = {"temp_ra": "a1234567"}
+        state.save(update_fields=["current_action", "flow_data", "updated_at"])
+
+        self.service.process_message(chat_id, "senha123", from_me=False)
+
+        user = UserProfile.objects.get(phone_number=chat_id)
+        self.assertEqual(user.conversation_state.current_action, "login_step_email")
+
     def test_password_step_without_temp_ra_sends_error(self):
         """Step de senha sem RA no flow_data deve enviar mensagem de erro de fluxo."""
         chat_id = "5511888888888@c.us"
