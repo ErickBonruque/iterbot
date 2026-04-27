@@ -137,10 +137,12 @@ class AuthenticationHandler(BaseHandler):
             # link_user só decidiria pelo welcome_back depois disso.
             existing = UserProfile.objects.filter(phone_number=chat_id).first()
             if existing and existing.email_verified and existing.email:
-                linked_user = self.auth_service.link_user(
-                    chat_id, ra, password, existing.email
-                )
-                if linked_user and linked_user.email_verified and linked_user.is_authenticated_utfpr:
+                linked_user = self.auth_service.link_user(chat_id, ra, password, existing.email)
+                if (
+                    linked_user
+                    and linked_user.email_verified
+                    and linked_user.is_authenticated_utfpr
+                ):
                     apply_state_transition(
                         conversation_state=conversation_state,
                         next_state=STATE_IDLE,
