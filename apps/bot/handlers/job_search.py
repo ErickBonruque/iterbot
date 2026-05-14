@@ -94,6 +94,56 @@ class JobSearchHandler(BaseHandler):
         self.send_msg(user, chat_id, msg)
         logger.info("course_selection_started", user_id=user.id, total_courses=len(courses))
 
+    def start_course_change(self, user: UserProfile, chat_id: str) -> None:
+        """Inicia o fluxo de troca de curso preferido via menu principal (D-05/D-06).
+
+        Sempre exibe o menu de seleção, independente de user.course estar preenchido.
+        Após a seleção, handle_course_selection() detectará que não é primeira vez
+        (user.course != None) e salvará silenciosamente (ou enviará course_preference_updated
+        se o curso for diferente).
+        """
+        if not user.is_authenticated_utfpr:
+            self.send_msg(
+                user,
+                chat_id,
+                self.resolve_message(
+                    BOT_MESSAGES.search.auth_required.key,
+                    BOT_MESSAGES.search.auth_required.text,
+                ),
+            )
+            return
+
+        courses = list(Course.objects.filter(is_active=True).order_by("order", "name"))
+        if not courses:
+            self.send_msg(
+                user,
+                chat_id,
+                self.resolve_message(
+                    BOT_MESSAGES.search.no_courses.key,
+                    BOT_MESSAGES.search.no_courses.text,
+                ),
+            )
+            return
+
+        menu_lines = [self._format_course_line(i, c) for i, c in enumerate(courses)]
+        msg = self.resolve_message(
+            BOT_MESSAGES.search.selection_intro.key,
+            BOT_MESSAGES.search.selection_intro.text,
+            courses_menu="\n".join(menu_lines),
+        )
+
+        conversation_state = self._get_conversation_state(user)
+        apply_state_transition(
+            conversation_state=conversation_state,
+            next_state=STATE_COURSE_SELECTION,
+        )
+        self.send_msg(user, chat_id, msg)
+        logger.info(
+            "course_change_started",
+            user_id=user.id,
+            current_course_id=user.course_id,
+        )
+
     def _get_active_courses(self) -> list[Course]:
         return list(Course.objects.filter(is_active=True).order_by("order", "name"))
 
@@ -124,6 +174,7 @@ class JobSearchHandler(BaseHandler):
             return
 
         is_first_time = user.course is None  # detecta ANTES de salvar
+        old_course_id = user.course_id  # None se primeira vez, ID atual se troca
 
         # NOVO: salvar preferência persistente (D-01)
         user.course = courses[idx]
@@ -133,7 +184,7 @@ class JobSearchHandler(BaseHandler):
         conversation_state.selected_course = courses[idx]
         conversation_state.save(update_fields=["selected_course", "updated_at"])
 
-        # NOVO: aviso apenas na 1ª vez (D-02)
+        # NOVO: aviso apenas na 1ª vez (D-02); troca diferente envia course_preference_updated (D-06)
         if is_first_time:
             self.send_msg(
                 user,
@@ -141,6 +192,17 @@ class JobSearchHandler(BaseHandler):
                 self.resolve_message(
                     BOT_MESSAGES.search.course_preference_saved.key,
                     BOT_MESSAGES.search.course_preference_saved.text,
+                    course_name=courses[idx].name,
+                ),
+            )
+        elif old_course_id != courses[idx].id:
+            # Troca para curso diferente (via menu "Trocar Curso") — D-06
+            self.send_msg(
+                user,
+                chat_id,
+                self.resolve_message(
+                    BOT_MESSAGES.search.course_preference_updated.key,
+                    BOT_MESSAGES.search.course_preference_updated.text,
                     course_name=courses[idx].name,
                 ),
             )
