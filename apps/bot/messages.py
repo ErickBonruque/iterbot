@@ -85,7 +85,7 @@ class MenuMessages:
     )
     main_authenticated: MessageTemplate = MessageTemplate(
         "menu.main_authenticated",
-        "{brand_header}\n\n👤 *Usuário*: {ra}\n\n📋 *Menu Principal*:\n1️⃣ Buscar Vagas\n2️⃣ Ver Review de Vagas\n3️⃣ Sair da Conta\n\nDigite o número da opção desejada.",
+        "{brand_header}\n\n👤 *Usuário*: {ra}\n\n📋 *Menu Principal*:\n1️⃣ Buscar Vagas\n2️⃣ Ver Review de Vagas\n3️⃣ Sair da Conta\n4️⃣ Trocar Curso Preferido\n\nDigite o número da opção desejada.",
     )
     main_unauthenticated: MessageTemplate = MessageTemplate(
         "menu.main_unauthenticated",

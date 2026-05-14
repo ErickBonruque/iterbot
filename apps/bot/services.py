@@ -123,6 +123,7 @@ class BotService:
     _ALIAS_LOGOUT = frozenset({"logout", "deslogar", "sair da conta"})
     _ALIAS_SEARCH = frozenset({"vagas", "buscar", "cursos"})
     _ALIAS_REVIEW = frozenset({"review", "vagas da semana"})
+    _ALIAS_CHANGE_COURSE = frozenset({"trocar curso", "mudar curso", "alterar curso"})
 
     def _handle_main_menu_command(self, user: UserProfile, chat_id: str, text: str) -> None:
         # Aliases textuais resolvem antes dos números: o mesmo dígito tem
@@ -154,10 +155,13 @@ class BotService:
         if text in self._ALIAS_REVIEW:
             self.review_handler.send_review(user, chat_id)
             return True
+        if text in self._ALIAS_CHANGE_COURSE:
+            self.job_handler.start_course_change(user, chat_id)
+            return True
         return False
 
     def _handle_numeric_authenticated(self, user: UserProfile, chat_id: str, text: str) -> bool:
-        # Menu autenticado: 1=Buscar | 2=Review | 3=Logout
+        # Menu autenticado: 1=Buscar | 2=Review | 3=Logout | 4=Trocar Curso
         if text == "1":
             self.job_handler.start_course_selection(user, chat_id)
             return True
@@ -166,6 +170,9 @@ class BotService:
             return True
         if text == "3":
             self.auth_handler.handle_logout(user, chat_id)
+            return True
+        if text == "4":
+            self.job_handler.start_course_change(user, chat_id)
             return True
         return False
 
