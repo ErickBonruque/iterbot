@@ -53,9 +53,6 @@ a,
 button,
 input[type="submit"],
 input[type="button"],
-.button,
-.submit-row a,
-.submit-row input,
 select,
 textarea,
 input[type="text"],
@@ -101,9 +98,6 @@ textarea:focus-visible {
         transform: translateY(-2px);
     }
 
-    .button:hover,
-    .submit-row input[type="submit"]:hover,
-    .submit-row .button:hover,
     input[type="submit"]:hover,
     input[type="button"]:hover {
         transform: translateY(-1px);
@@ -342,11 +336,6 @@ table tbody tr:hover {
 
 .cv-admin-status-badge--neutral {
     background: #475569;
-}
-
-.submit-row .button,
-.submit-row input[type="submit"] {
-    margin-right: 8px;
 }
 
 .conversation-timeline {
