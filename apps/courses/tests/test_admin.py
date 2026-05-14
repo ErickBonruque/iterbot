@@ -198,7 +198,7 @@ class TestNoStaleSearchMessage:
         request.session = {}
         request._messages = FallbackStorage(request)
 
-        admin_instance = SearchTermAdmin(SearchTermAdmin, None)
+        admin_instance = SearchTermAdmin(SearchTerm, None)
         admin_instance.test_search(request, search_term)
 
         messages_list = list(request._messages)

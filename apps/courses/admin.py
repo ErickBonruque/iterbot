@@ -80,7 +80,6 @@ class SearchTermAdmin(ModelAdmin):
         variant=ActionVariant.INFO,
     )
     def test_search(self, request, obj):
-        messages.info(request, "Executando busca de vagas... aguarde alguns instantes.")
         service = JobSearchService()
         try:
             results = service.search(terms=[obj.term], **obj.to_search_kwargs())
