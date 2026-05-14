@@ -28,8 +28,18 @@ set_env() {
   fi
 }
 
-# Dominio atual da EC2 (sslip.io baseado no IP publico)
-DOMAIN_VALUE="${DEPLOY_DOMAIN:-98-81-236-180.sslip.io}"
+# Dominio atual da EC2 (sslip.io baseado no IP publico detectado via metadata)
+if [ -z "${DEPLOY_DOMAIN:-}" ]; then
+  PUBLIC_IP=$(curl -sf --max-time 3 http://169.254.169.254/latest/meta-data/public-ipv4 || echo "")
+  if [ -n "$PUBLIC_IP" ]; then
+    DOMAIN_VALUE="${PUBLIC_IP//./-}.sslip.io"
+  else
+    echo "[update_env_production] AVISO: nao foi possivel detectar IP publico, usando valor existente" >&2
+    DOMAIN_VALUE=$(grep "^DOMAIN=" "$ENV_FILE" | cut -d= -f2 || echo "localhost")
+  fi
+else
+  DOMAIN_VALUE="$DEPLOY_DOMAIN"
+fi
 
 set_env EMAIL_PROVIDER "brevo"
 set_env EMAIL_FALLBACK_PROVIDER "console"
