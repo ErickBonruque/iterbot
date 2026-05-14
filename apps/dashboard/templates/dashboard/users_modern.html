@@ -88,7 +88,7 @@
                 </thead>
                 <tbody class="divide-y divide-gray-200">
                     {% for user in users %}
-                    <tr x-show="matchesFilter('{{ user.phone_number }}', '{{ user.ra|default:'' }}')">
+                    <tr x-show="matchesFilter('{{ user.phone_number|escapejs }}', '{{ user.ra|default:''|escapejs }}')">
                         <td class="px-4 py-3 font-mono text-xs text-gray-800">{{ user.phone_number }}</td>
                         <td class="px-4 py-3">
                             {% if user.ra %}
@@ -120,8 +120,8 @@
                                 class="px-3 py-1 text-xs rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100"
                                 @click="openEditModal({
                                     id: {{ user.id }},
-                                    phone_number: '{{ user.phone_number }}',
-                                    ra: '{{ user.ra|default:'' }}',
+                                    phone_number: '{{ user.phone_number|escapejs }}',
+                                    ra: '{{ user.ra|default:''|escapejs }}',
                                     is_authenticated_utfpr: {{ user.is_authenticated_utfpr|yesno:'true,false' }},
                                 })"
                             >
@@ -129,7 +129,7 @@
                             </button>
                             <button
                                 class="px-3 py-1 text-xs rounded-lg border border-red-300 text-red-600 hover:bg-red-50"
-                                @click="deleteUser({{ user.id }}, '{{ user.phone_number }}')"
+                                @click="deleteUser({{ user.id }}, '{{ user.phone_number|escapejs }}')"
                             >
                                 Remover
                             </button>
