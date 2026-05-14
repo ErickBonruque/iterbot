@@ -69,7 +69,10 @@ def interactions_log(request):
     Histórico de interações com filtros.
     """
     # Filtros
-    days = int(request.GET.get("days", 7))
+    try:
+        days = int(request.GET.get("days", 7))
+    except (ValueError, TypeError):
+        days = 7
     message_type = request.GET.get("type", "")
     search = request.GET.get("search", "")
 
