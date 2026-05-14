@@ -36,7 +36,7 @@ class UserProfileAdmin(ModelAdmin):
     ordering = ["-last_activity"]
 
     fieldsets = (
-        ("Dados Pessoais", {"fields": ("user", "phone_number", "email", "ra")}),
+        ("Dados Pessoais", {"fields": ("user", "phone_number", "email", "ra", "course")}),
         (
             "Autenticação UTFPR",
             {"fields": ("is_authenticated_utfpr", "utfpr_password"), "classes": ("wide",)},
