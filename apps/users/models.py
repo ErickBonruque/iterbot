@@ -49,6 +49,14 @@ class UserProfile(TimeStampedModel):
         max_length=512, blank=True, null=True, help_text="Senha do Portal (criptografada)"
     )
     is_authenticated_utfpr = models.BooleanField(default=False)
+    course = models.ForeignKey(
+        "courses.Course",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="preferred_by",
+        help_text="Curso preferido do aluno (salvo automaticamente na 1ª busca)",
+    )
     last_activity = models.DateTimeField(auto_now=True)
 
     def __str__(self):
