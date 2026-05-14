@@ -1,26 +1,36 @@
 {% extends "base.html" %}
 {% load i18n %}
 
-{% block title %}E-mail confirmado - IterBot UTFPR{% endblock %}
+{% block title %}Confirmação de E-mail - IterBot UTFPR{% endblock %}
 
 {% block content %}
 <div class="row justify-content-center">
     <div class="col-md-6 col-lg-5">
         <div class="card">
             <div class="card-header text-center">
-                <h4 class="mb-0">✅ E-mail Confirmado!</h4>
+                <h4 class="mb-0">Erro na Confirmação</h4>
             </div>
             <div class="card-body text-center">
-                <div class="alert alert-success">
-                    <strong>Sua conta foi ativada com sucesso!</strong>
+                <div class="alert alert-danger">
+                    <strong>Não foi possível confirmar seu e-mail.</strong>
                 </div>
 
+                {% if error %}
+                <p class="mb-4">{{ error }}</p>
+                {% else %}
                 <p class="mb-4">
-                    Agora você pode acessar o IterBot UTFPR.
+                    O link de confirmação expirou ou é inválido.
+                </p>
+                {% endif %}
+
+                <p>
+                    Solicite um novo link de confirmação pelo bot do WhatsApp ou tente fazer login novamente.
                 </p>
 
+                <hr class="my-4">
+
                 <div class="d-grid gap-2">
-                    <a href="{% url 'account_login' %}" class="btn btn-primary btn-lg">Fazer Login</a>
+                    <a href="{% url 'account_login' %}" class="btn btn-primary btn-lg">Ir para Login</a>
                 </div>
             </div>
         </div>

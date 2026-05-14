@@ -11,12 +11,13 @@
                 <h4 class="mb-0">🐧 Bem-vindo ao IterBot!</h4>
             </div>
             <div class="card-body text-center">
+                {% if is_authenticated %}
                 <div class="alert alert-success">
                     <strong>Login realizado com sucesso!</strong>
                 </div>
 
                 <p class="mb-4">
-                    Olá, <strong>{{ user.email }}</strong>
+                    Olá, <strong>{{ user_email }}</strong>
                 </p>
 
                 <p>
@@ -26,8 +27,28 @@
                 <hr class="my-4">
 
                 <div class="d-grid gap-2">
+                    {% if has_company %}
+                    <a href="/empresas/perfil/" class="btn btn-primary btn-lg">Acessar Perfil da Empresa</a>
+                    {% else %}
+                    <a href="https://wa.me/5541999999999" class="btn btn-success btn-lg" target="_blank">Conversar no WhatsApp</a>
+                    {% endif %}
                     <a href="{% url 'account_logout' %}" class="btn btn-outline-secondary">Sair</a>
                 </div>
+                {% else %}
+                <div class="alert alert-success">
+                    <strong>Conta confirmada com sucesso!</strong>
+                </div>
+
+                <p class="mb-4">
+                    Seu e-mail foi verificado. Faça login para continuar.
+                </p>
+
+                <hr class="my-4">
+
+                <div class="d-grid gap-2">
+                    <a href="{% url 'account_login' %}" class="btn btn-primary btn-lg">Fazer Login</a>
+                </div>
+                {% endif %}
             </div>
         </div>
     </div>
