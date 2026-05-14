@@ -15,11 +15,17 @@ logger = structlog.get_logger(__name__)
 
 
 class CompanySignupView(SignupView):
-    """View de registro de empresa."""
+    """View de registro de empresa.
+
+    When ACCOUNT_EMAIL_VERIFICATION = "mandatory", allauth redirects
+    to the email verification sent page after signup, not to success_url.
+    The success_url below is only used if email verification is disabled.
+    After email confirmation, ConfirmEmailView auto-logs in the user
+    and redirects to /empresas/perfil/ (company) or /accounts/success/ (student).
+    """
 
     template_name = "companies/signup.html"
     form_class = CompanySignupForm
-    success_url = "/empresas/perfil/"
 
 
 class CompanyLoginView(LoginView):

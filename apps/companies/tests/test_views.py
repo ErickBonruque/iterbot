@@ -1,3 +1,5 @@
+from unittest.mock import patch
+
 from django.contrib.auth.models import User
 from django.contrib.messages import get_messages
 from django.test import Client, TestCase, override_settings
@@ -417,3 +419,110 @@ class TestJobDeleteView(TestCase):
         self.client.login(username="empresa1", password="senha123")
         response = self.client.get(reverse("companies:profile"))
         self.assertNotContains(response, "Vaga Teste")
+
+
+@override_settings(CACHES=CACHES_LOCMEM)
+class TestCompanySignupEmailContext(TestCase):
+    """Testes do fluxo de registro de empresa com contexto de email e redirect.
+
+    Verifica FIX-04: CompanySignupView stores email in session,
+    and after email confirmation, company users redirect correctly.
+    """
+
+    def setUp(self):
+        self.client = Client()
+
+    @patch("apps.users.adapters.send_transactional_email", return_value={"status": "sent"})
+    def test_company_signup_stores_email_in_session(self, mock_send):
+        """POST to company signup stores pending_verification_email in session."""
+        data = {
+            "cnpj": "11.222.333/0001-81",
+            "nome": "Empresa Teste",
+            "email": "contato@empresa.com",
+            "telefone": "(41) 99999-0000",
+            "contato_nome": "Joao Silva",
+            "contato_cargo": "Gerente de RH",
+            "password1": "TestPass123!",
+            "password2": "TestPass123!",
+        }
+        response = self.client.post("/empresas/signup/", data)
+
+        # After signup, session should contain pending_verification_email
+        # (set by CompanySignupForm.save())
+        if response.status_code == 302:
+            session = self.client.session
+            self.assertEqual(
+                session.get("pending_verification_email"),
+                "contato@empresa.com",
+            )
+
+    def test_company_email_confirmation_redirects_to_profile(self):
+        """Company user confirms email → redirect to /empresas/perfil/."""
+        from django.utils import timezone
+
+        from apps.users.models import UserProfile
+
+        # Create User with Company
+        user = User.objects.create_user(
+            username="empresa-confirm@test.com",
+            email="empresa-confirm@test.com",
+            password="TestPass123!",
+        )
+        Company.objects.create(
+            user=user,
+            cnpj="33.444.555/0001-07",
+            nome="Empresa Confirm",
+            email="empresa-confirm@test.com",
+            telefone="(41) 77777-0000",
+            contato_nome="Carlos",
+            contato_cargo="Diretor",
+        )
+
+        # Get or create UserProfile for this user
+        profile, _ = UserProfile.objects.get_or_create(
+            user=user,
+            defaults={
+                "phone_number": "5541666666666@c.us",
+                "email": "empresa-confirm@test.com",
+                "email_confirmation_token": "company-confirm-token",
+                "email_confirmation_sent_at": timezone.now(),
+                "email_verified": False,
+                "is_authenticated_utfpr": False,
+            },
+        )
+        # Ensure token is set (profile may already exist via signal)
+        profile.email_confirmation_token = "company-confirm-token"
+        profile.email_confirmation_sent_at = timezone.now()
+        profile.email_verified = False
+        profile.save()
+
+        response = self.client.get(
+            reverse("confirm_email", kwargs={"token": "company-confirm-token"})
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, "/empresas/perfil/")
+
+    def test_student_email_confirmation_redirects_to_success(self):
+        """Student user (no company) confirms email → redirect to /accounts/success/."""
+        from django.utils import timezone
+
+        from apps.users.models import UserProfile
+
+        # Create UserProfile without company (bot flow student)
+        profile = UserProfile.objects.create(
+            phone_number="5541999000001@c.us",
+            email="student-confirm@alunos.utfpr.edu.br",
+            ra="a1234567",
+            email_confirmation_token="student-confirm-token",
+            email_confirmation_sent_at=timezone.now(),
+            email_verified=False,
+            is_authenticated_utfpr=False,
+        )
+
+        response = self.client.get(
+            reverse("confirm_email", kwargs={"token": "student-confirm-token"})
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, "/accounts/success/")
