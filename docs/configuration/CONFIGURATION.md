@@ -42,6 +42,7 @@ A configuração é centralizada no módulo `config/env.py`, que define dataclas
 | Variável | Obrigatória | Descrição | Docker Secret |
 |---|---|---|---|
 | `DJANGO_SECRET_KEY` | Sim (prod) | Chave secreta para sessões e assinatura criptográfica do Django. Em produção, usar Docker Secret. | `django_secret_key` |
+| `ENCRYPTION_KEY` | Sim (prod) | Chave Fernet dedicada para criptografia de campos sensíveis no banco. Usar Docker Secret. Sem ela, usa `SECRET_KEY` como fallback (menos seguro). | `encryption_key` |
 | `DEBUG` | Não | Modo debug. **Nunca usar `True` em produção.** | — |
 | `ALLOWED_HOSTS` | Não | Hostnames permitidos, separados por vírgula. Ex: `localhost,127.0.0.1,meudominio.com` | — |
 | `DOMAIN` | Não | Domínio principal da aplicação. Usado pelo Traefik para roteamento. | — |
@@ -129,6 +130,7 @@ Os secrets são armazenados no diretório `secrets/` na raiz do projeto:
 ```
 secrets/
 ├── django_secret_key.txt        # Chave secreta do Django
+├── encryption_key.txt            # Chave dedicada de criptografia de campos (Fernet)
 ├── postgres_password.txt         # Senha do PostgreSQL
 ├── waha_api_key.txt              # API key do WAHA
 ├── waha_dashboard_password.txt   # Senha do dashboard WAHA
@@ -160,6 +162,7 @@ openssl rand -base64 32 > secrets/waha_swagger_password.txt
 | Secret | Arquivo | Container |
 |---|---|---|
 | `django_secret_key` | `./secrets/django_secret_key.txt` | backend |
+| `encryption_key` | `./secrets/encryption_key.txt` | backend |
 | `postgres_password` | `./secrets/postgres_password.txt` | db, backend |
 | `waha_api_key` | `./secrets/waha_api_key.txt` | <!-- VERIFY: container mounting varies by deployment --> |
 | `waha_dashboard_password` | `./secrets/waha_dashboard_password.txt` | waha (via env) |
@@ -242,7 +245,20 @@ O módulo `infra/security/` implementa criptografia simétrica (Fernet) para cam
 - **`EncryptedCharField`** — `models.CharField` com criptografia automática
 - **`EncryptedTextField`** — `models.TextField` com criptografia automática
 
-A chave de criptografia é derivada dos primeiros 32 bytes do `DJANGO_SECRET_KEY`, com padding de zeros (`ljust(32, b"0")`) quando a chave é menor que 32 bytes. Modelos que usam campos criptografados (em `apps/bot/models.py`):
+A chave de criptografia é resolvida na seguinte ordem de precedência:
+
+1. **Docker Secret `encryption_key`** (`/run/secrets/encryption_key`) — recomendado em produção
+2. **Variável de ambiente `ENCRYPTION_KEY`**
+3. **Fallback para `DJANGO_SECRET_KEY`** — mantido por retrocompatibilidade, mas gera aviso de log
+
+Quando `ENCRYPTION_KEY` está presente, o sistema usa `MultiFernet` combinando a nova chave com a chave legada derivada de `SECRET_KEY`. Isso garante que dados já criptografados continuem legíveis sem necessidade de migração. Para gerar uma chave:
+
+```bash
+python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+# Salvar o output em secrets/encryption_key.txt
+```
+
+Modelos que usam campos criptografados (em `apps/bot/models.py`):
 
 | Modelo | Campo | Tipo |
 |---|---|---|
@@ -250,7 +266,7 @@ A chave de criptografia é derivada dos primeiros 32 bytes do `DJANGO_SECRET_KEY
 | `BotConfiguration` | `dashboard_password` | `EncryptedCharField` |
 | `BotConfiguration` | `admin_password` | `EncryptedCharField` |
 
-> **Atenção:** Se o `DJANGO_SECRET_KEY` for alterado, os dados criptografados existentes se tornarão ilegíveis. Faça backup antes de rotacionar a chave.
+> **Atenção:** A `ENCRYPTION_KEY` é obrigatória em produção. Sem ela, o sistema usa `SECRET_KEY` como fallback (menos seguro). Se tanto `ENCRYPTION_KEY` quanto `SECRET_KEY` forem rotacionadas ao mesmo tempo sem `MultiFernet`, dados criptografados existentes se tornarão ilegíveis — rotacione uma chave por vez.
 
 ---
 

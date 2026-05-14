@@ -122,8 +122,9 @@ graph TB
 ### 6. Fluxo de resposta da API REST (dashboard)
 
 1. Requisições `/api/*` são roteadas pelo DRF Router para ViewSets (`CourseViewSet`, `UserProfileViewSet`, `SearchTermViewSet`, `InteractionLogViewSet`, `BotStatusViewSet`, `BotConfigurationViewSet`).
-2. `BotStatusViewSet` invoca `BotHealthMonitor` para retornar status atual e métricas agregadas (uptime, tempo de resposta médio, contagem de erros).
-3. Serializers DRF convertem modelos para JSON com campos calculados (ex: `interactions_count`, `search_terms_count`).
+2. Todos os ViewSets exigem `IsAdminUser` — apenas usuários `is_staff=True` têm acesso. Requisições não autenticadas recebem HTTP 403.
+3. `BotStatusViewSet` invoca `BotHealthMonitor` para retornar status atual e métricas agregadas (uptime, tempo de resposta médio, contagem de erros).
+4. Serializers DRF convertem modelos para JSON com campos calculados (ex: `interactions_count`, `search_terms_count`).
 
 ## Abstrações Principais
 
@@ -136,7 +137,7 @@ graph TB
 | 5 | `UTFPRAuthService` | `apps/users/services.py` | Serviço de autenticação de estudantes. Métodos: `authenticate()`, `link_user()`, `confirm_email()`, `resend_confirmation()`, `logout()`. |
 | 6 | `BotHealthMonitor` | `apps/bot/health.py` | Monitor de saúde do WAHA. Verifica status da sessão, calcula uptime/tempo de resposta e gerencia limpeza de registros antigos. |
 | 7 | `TimeStampedModel` | `apps/core/models.py` | Modelo abstrato base com campos `created_at` e `updated_at`. Todos os modelos principais (`UserProfile`, `Company`, `Job`, `BotConfiguration`, etc.) herdam desta classe. |
-| 8 | `EncryptedCharField` / `EncryptedTextField` | `infra/security/fields.py` | Campos de modelo Django que criptografam dados automaticamente no banco usando Fernet (derivado do `SECRET_KEY`). Usado para senhas e credenciais sensíveis. |
+| 8 | `EncryptedCharField` / `EncryptedTextField` | `infra/security/fields.py` | Campos de modelo Django que criptografam dados automaticamente no banco usando Fernet. Chave primária: Docker Secret `encryption_key` / env `ENCRYPTION_KEY`. Usa `MultiFernet` para retrocompatibilidade com dados cifrados pela chave legada (`SECRET_KEY`). |
 | 9 | `AppConfig` | `config/env.py` | Dataclass central de configuração. Agrega `DjangoSettings`, `DatabaseSettings`, `RedisSettings`, `WahaSettings`, credenciais e e-mail. Lê de Docker Secrets → env vars → defaults. |
 | 10 | `CorrelationIdMiddleware` / `StructuredLoggingMiddleware` | `infra/middleware/correlation_id.py`, `infra/middleware/structured_logging.py` | Middlewares de request que adicionam correlation ID e logging estruturado (JSON via structlog) a todas as requisições HTTP. |
 

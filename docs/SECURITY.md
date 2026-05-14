@@ -49,10 +49,13 @@ Em `iterbot_traefik`, apenas `0.0.0.0:80->80/tcp, 0.0.0.0:443->443/tcp`.
 - **WAHA (`waha.${DOMAIN}`)**: BasicAuth no Traefik
   (`waha-auth@file`).
 - Usuarios gerados em `secrets/users/` via `setup-htpasswd.sh`.
+- **API REST (`/api/*`)**: Todos os ViewSets exigem `IsAdminUser`
+  (Django REST Framework). Apenas usuarios com `is_staff=True` tem acesso.
+  Requisicoes nao autenticadas recebem HTTP 403.
 
-### 3. Rate limiting (Traefik)
+### 3. Rate limiting
 
-Definidos em `infra/traefik/dynamic/middlewares.yml`:
+**Traefik** — definidos em `infra/traefik/dynamic/middlewares.yml`:
 
 | Middleware          | Average  | Burst | Alvo                                    |
 |---------------------|----------|-------|-----------------------------------------|
@@ -60,8 +63,14 @@ Definidos em `infra/traefik/dynamic/middlewares.yml`:
 | `login-rate-limit`  | 5/min    | 10    | `/accounts/login`, `/empresas/login`    |
 | `admin-rate-limit`  | 30/min   | 60    | `/admin`, `/portal`                     |
 
-Excedentes recebem HTTP 429. Isso neutraliza brute-force sem fail2ban.
-Rate-limit e por IP de origem (`ipStrategy.depth: 1`).
+Excedentes recebem HTTP 429. Rate-limit e por IP de origem (`ipStrategy.depth: 1`).
+
+**Webhook WhatsApp** — camada adicional no Django (`apps/bot/views.py`):
+
+- Janela: **60 requisicoes por 60 segundos por IP**
+- Implementado via `django.core.cache` (LocMem em dev, Redis em producao)
+- Retorna HTTP 429 quando limite excedido
+- Protege os workers Celery de flood de mensagens
 
 ### 4. Docker secrets
 
@@ -70,7 +79,25 @@ Credenciais AWS/Django/Postgres/email estao em `/run/secrets/*.txt`
 Ver `docker-compose.yml` `secrets:` e `config/_helpers.py`
 `_read_secret_file()`.
 
-### 5. Security headers
+### 5. Criptografia de campos sensiveis
+
+Campos sensiveis no banco (`utfpr_password`, `waha_api_key`, etc.) usam
+`EncryptedCharField` com criptografia Fernet (`infra/security/`).
+
+- **Chave primaria**: Docker Secret `encryption_key` ou variavel de
+  ambiente `ENCRYPTION_KEY`. Gerar com:
+  ```bash
+  python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+  ```
+  Salvar em `secrets/encryption_key.txt` no servidor.
+- **Retrocompatibilidade**: quando `ENCRYPTION_KEY` esta presente, o
+  sistema usa `MultiFernet` — dados cifrados com a chave antiga
+  (`SECRET_KEY`) continuam legiveis automaticamente.
+- **Fallback**: sem `ENCRYPTION_KEY` configurada, o sistema usa
+  `SECRET_KEY` como antes (com aviso de log). Configurar a chave
+  dedicada e obrigatorio em producao.
+
+### 6. Security headers
 
 Aplicados em todas as rotas publicas (`security-headers@file`):
 
@@ -142,3 +169,8 @@ docker compose logs traefik --tail 5000 \
   desnecessarias, adicao de rate-limit stricto em login/admin, criacao
   de middleware ip-whitelist (opcional), documentacao. Commit: ver
   `git log docs/SECURITY.md`.
+- **2026-05-14**: Correcao de 3 falhas criticas — autenticacao `IsAdminUser`
+  em todos os ViewSets da API REST (`/api/*`); rate limiting de 60 req/60s
+  por IP no webhook WhatsApp via `django.core.cache`; chave de criptografia
+  dedicada `ENCRYPTION_KEY` com `MultiFernet` para retrocompatibilidade.
+  Commit: `d3d49b6`.
