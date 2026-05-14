@@ -381,10 +381,11 @@ class JobSearchHandler(BaseHandler):
             return
 
         selected_course = self._get_conversation_state(user).selected_course
+        course_name = selected_course.name if selected_course else "Curso"
         header = self.resolve_message(
             BOT_MESSAGES.search.results_header.key,
             BOT_MESSAGES.search.results_header.text,
-            course_name=selected_course.name,
+            course_name=course_name,
             term_name=term_name,
         )
         lines = [header]
