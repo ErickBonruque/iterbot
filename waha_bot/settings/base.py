@@ -22,6 +22,11 @@ BASE_DIR = Path(__file__).resolve().parent.parent.parent
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = settings.django.secret_key
 
+# Chave dedicada para criptografia de campos sensíveis (EncryptedCharField).
+# Configure via Docker secret "encryption_key" ou variável de ambiente ENCRYPTION_KEY.
+# Se ausente, infra/security/encryption.py usa derivação de SECRET_KEY como fallback.
+ENCRYPTION_KEY = settings.django.encryption_key
+
 # Default seguro — cada ambiente sobrescreve (development.py: True, production.py: False)
 DEBUG = False
 

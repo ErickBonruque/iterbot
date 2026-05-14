@@ -10,7 +10,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.filters import OrderingFilter, SearchFilter
-from rest_framework.permissions import AllowAny  # TODO: Adicionar autenticação em produção
+from rest_framework.permissions import IsAdminUser
 from rest_framework.response import Response
 
 from apps.bot.health import BotHealthMonitor
@@ -43,7 +43,7 @@ class CourseViewSet(viewsets.ModelViewSet):
     """
 
     queryset = Course.objects.all()
-    permission_classes = [AllowAny]  # TODO: Adicionar autenticação
+    permission_classes = [IsAdminUser]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ["is_active", "code"]
     search_fields = ["name", "code", "description"]
@@ -82,7 +82,7 @@ class CourseViewSet(viewsets.ModelViewSet):
 
 class UserProfileViewSet(viewsets.ModelViewSet):
     queryset = UserProfile.objects.select_related("conversation_state__selected_course").all()
-    permission_classes = [AllowAny]
+    permission_classes = [IsAdminUser]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ["is_authenticated_utfpr", "conversation_state__selected_course"]
     search_fields = ["phone_number", "ra"]
@@ -102,7 +102,7 @@ class SearchTermViewSet(viewsets.ModelViewSet):
 
     queryset = SearchTerm.objects.all()
     serializer_class = SearchTermSerializer
-    permission_classes = [AllowAny]
+    permission_classes = [IsAdminUser]
     filter_backends = [DjangoFilterBackend, OrderingFilter]
     filterset_fields = ["course", "is_default"]
     ordering_fields = ["priority", "term", "created_at"]
@@ -153,7 +153,7 @@ class InteractionLogViewSet(viewsets.ReadOnlyModelViewSet):
 
     queryset = InteractionLog.objects.select_related("user")
     serializer_class = InteractionLogSerializer
-    permission_classes = [AllowAny]
+    permission_classes = [IsAdminUser]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ["user", "message_type", "session_id"]
     search_fields = ["message_content", "user__phone_number", "user__ra"]
@@ -205,7 +205,7 @@ class BotStatusViewSet(viewsets.ViewSet):
     ViewSet para monitoramento do status do bot.
     """
 
-    permission_classes = [AllowAny]
+    permission_classes = [IsAdminUser]
 
     def list(self, request):
         """Obter status atual do bot."""
@@ -258,7 +258,7 @@ class BotConfigurationViewSet(viewsets.ModelViewSet):
 
     queryset = BotConfiguration.objects.all().order_by("-created_at")
     serializer_class = BotConfigurationSerializer
-    permission_classes = [AllowAny]  # TODO: proteger com autenticação no futuro
+    permission_classes = [IsAdminUser]
 
     def create(self, request, *args, **kwargs):
         BotConfiguration.objects.all().delete()

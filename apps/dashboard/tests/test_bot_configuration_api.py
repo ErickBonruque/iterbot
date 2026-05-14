@@ -9,6 +9,13 @@ from config.env import settings
 class BotConfigurationApiTests(TestCase):
     def setUp(self):
         self.client = APIClient()
+        User = get_user_model()
+        self.admin = User.objects.create_superuser(
+            username="testadmin",
+            email="testadmin@example.com",
+            password="testpass123",
+        )
+        self.client.force_authenticate(user=self.admin)
 
     def test_active_endpoint_returns_defaults(self):
         response = self.client.get("/api/bot/configuration/active/")
@@ -74,3 +81,9 @@ class BotConfigurationApiTests(TestCase):
         self.assertTrue(admin.is_staff)
         self.assertTrue(admin.is_superuser)
         self.assertTrue(admin.check_password("super-pass"))
+
+    def test_unauthenticated_request_returns_403(self):
+        """Endpoint deve rejeitar requisições sem autenticação."""
+        unauthenticated_client = APIClient()
+        response = unauthenticated_client.get("/api/bot/configuration/active/")
+        self.assertIn(response.status_code, [401, 403])

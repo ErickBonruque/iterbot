@@ -9,6 +9,7 @@ class DjangoSettings:
     debug: bool
     allowed_hosts: list[str]
     portal_base_url: str
+    encryption_key: str
 
     def __init__(self) -> None:
         self.secret_key = _get_secret_or_env(
@@ -22,6 +23,10 @@ class DjangoSettings:
             allowed_hosts_iterable = allowed_hosts_raw
         self.allowed_hosts = [h.strip() for h in allowed_hosts_iterable if h and h.strip()]
         self.portal_base_url = env("PORTAL_BASE_URL")
+        # Chave dedicada para criptografia de campos sensíveis.
+        # Lida de Docker secret "encryption_key" ou variável ENCRYPTION_KEY.
+        # Se ausente, encryption.py fará fallback para SECRET_KEY (retrocompat).
+        self.encryption_key = _get_secret_or_env("encryption_key", "ENCRYPTION_KEY", "")
 
 
 @dataclass
