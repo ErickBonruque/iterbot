@@ -54,6 +54,20 @@ class JobSearchHandler(BaseHandler):
             )
             return
 
+        # NOVO: skip silencioso quando preferência já salva (PERF-02 / D-03)
+        if user.course is not None:
+            conversation_state = self._get_conversation_state(user)
+            if conversation_state.selected_course_id != user.course_id:
+                conversation_state.selected_course = user.course
+                conversation_state.save(update_fields=["selected_course", "updated_at"])
+            logger.info(
+                "course_selection_skipped",
+                user_id=user.id,
+                course_id=user.course_id,
+            )
+            self.start_term_selection(user, chat_id)
+            return
+
         courses = list(Course.objects.filter(is_active=True).order_by("order", "name"))
         if not courses:
             self.send_msg(
@@ -109,9 +123,33 @@ class JobSearchHandler(BaseHandler):
             )
             return
 
+        is_first_time = user.course is None  # detecta ANTES de salvar
+
+        # NOVO: salvar preferência persistente (D-01)
+        user.course = courses[idx]
+        user.save(update_fields=["course"])  # atômico, só o campo necessário
+
         conversation_state = self._get_conversation_state(user)
         conversation_state.selected_course = courses[idx]
         conversation_state.save(update_fields=["selected_course", "updated_at"])
+
+        # NOVO: aviso apenas na 1ª vez (D-02)
+        if is_first_time:
+            self.send_msg(
+                user,
+                chat_id,
+                self.resolve_message(
+                    BOT_MESSAGES.search.course_preference_saved.key,
+                    BOT_MESSAGES.search.course_preference_saved.text,
+                    course_name=courses[idx].name,
+                ),
+            )
+        logger.info(
+            "course_preference_saved",
+            user_id=user.id,
+            course_id=courses[idx].id,
+            is_first_time=is_first_time,
+        )
         self.start_term_selection(user, chat_id)
 
     def start_term_selection(self, user: UserProfile, chat_id: str) -> None:

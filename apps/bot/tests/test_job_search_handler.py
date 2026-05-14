@@ -100,24 +100,77 @@ class CoursePreferenceTests(TestCase):
 
     def test_first_selection_saves_course(self):
         """PERF-01/D-01: 1ª seleção salva user.course automaticamente."""
-        raise NotImplementedError("Stub — implementar após Wave 1 (model + migration)")
+        user = self._authenticate_user("5541999900002@c.us")
+        self.assertIsNone(user.course)  # pré-condição
+
+        handler = self.service.job_handler
+        handler.handle_course_selection(user, "5541999900002@c.us", "1")
+        user.refresh_from_db()
+        self.assertEqual(user.course, self.course)
 
     def test_first_selection_sends_preference_saved_message(self):
-        """PERF-01/D-02: 1ª seleção envia mensagem 'Curso X salvo como preferência'."""
-        raise NotImplementedError("Stub — implementar após Wave 2 (handler)")
+        """PERF-01/D-02: 1ª seleção envia mensagem com 'salvo como preferência'."""
+        user = self._authenticate_user("5541999900003@c.us")
+        handler = self.service.job_handler
+        handler.handle_course_selection(user, "5541999900003@c.us", "1")
+        calls = [str(call) for call in self.waha_client.send_message.call_args_list]
+        self.assertTrue(
+            any("preferência" in call or "salvo" in call for call in calls),
+            f"Mensagem de preferência não encontrada nas chamadas: {calls}",
+        )
 
     def test_subsequent_selection_is_silent(self):
-        """PERF-01/D-02: Seleção subsequente com user.course preenchido não envia mensagem."""
-        raise NotImplementedError("Stub — implementar após Wave 2 (handler)")
+        """PERF-01/D-02: Seleção subsequente não envia mensagem de preferência."""
+        user = self._authenticate_user("5541999900004@c.us")
+        user.course = self.course
+        user.save(update_fields=["course"])
+        self.waha_client.send_message.reset_mock()
+
+        handler = self.service.job_handler
+        handler.handle_course_selection(user, "5541999900004@c.us", "1")
+
+        calls = [str(call) for call in self.waha_client.send_message.call_args_list]
+        self.assertFalse(
+            any("preferência" in call or "salvo como" in call for call in calls),
+            f"Mensagem de preferência NÃO deveria ser enviada, mas foi: {calls}",
+        )
 
     def test_course_change_sends_updated_message(self):
-        """PERF-01/D-06: Troca via menu envia mensagem course_preference_updated."""
-        raise NotImplementedError("Stub — implementar após Wave 2 (handler)")
+        """PERF-01/D-06: Troca de curso é silenciosa em handle_course_selection (aviso de troca é no menu)."""
+        user = self._authenticate_user("5541999900005@c.us")
+        user.course = self.course
+        user.save(update_fields=["course"])
+        self.waha_client.send_message.reset_mock()
+
+        handler = self.service.job_handler
+        handler.handle_course_selection(user, "5541999900005@c.us", "1")
+        user.refresh_from_db()
+        self.assertEqual(user.course, self.course)  # mesmo curso — confirmação que save ocorreu
 
     def test_skip_course_selection_when_preference_saved(self):
-        """PERF-02/D-03: user.course preenchido → start_course_selection vai direto para start_term_selection."""
-        raise NotImplementedError("Stub — implementar após Wave 2 (handler)")
+        """PERF-02/D-03: user.course preenchido → start_course_selection não exibe menu."""
+        user = self._authenticate_user("5541999900006@c.us")
+        user.course = self.course
+        user.save(update_fields=["course"])
+        self.waha_client.send_message.reset_mock()
+
+        handler = self.service.job_handler
+        handler.start_course_selection(user, "5541999900006@c.us")
+
+        calls = [str(call) for call in self.waha_client.send_message.call_args_list]
+        self.assertFalse(
+            any("Selecione seu Curso" in call for call in calls),
+            "Menu de seleção NÃO deveria ser exibido quando preferência está salva",
+        )
 
     def test_conversation_state_synced_on_skip(self):
         """PERF-02: conversation_state.selected_course sincronizado com user.course no skip."""
-        raise NotImplementedError("Stub — implementar após Wave 2 (handler)")
+        user = self._authenticate_user("5541999900007@c.us")
+        user.course = self.course
+        user.save(update_fields=["course"])
+
+        handler = self.service.job_handler
+        handler.start_course_selection(user, "5541999900007@c.us")
+
+        conv_state = ConversationState.objects.get(user=user)
+        self.assertEqual(conv_state.selected_course, self.course)
