@@ -68,9 +68,9 @@ class TestSearchWithConfig:
         assert kwargs2["is_remote"] is False
         assert kwargs2["job_type"] == "fulltime"
 
-        # Verify terms=[single term] for each call
-        assert call_args_list[0][0][0] == ["python"]
-        assert call_args_list[1][0][0] == ["django"]
+        # Verify terms=[single term] for each call (terms is keyword arg)
+        assert call_args_list[0][1]["terms"] == ["python"]
+        assert call_args_list[1][1]["terms"] == ["django"]
 
     def test_aggregates_results(self, course, mock_searcher):
         """Multiple SearchTerms produce combined results."""

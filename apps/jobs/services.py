@@ -65,21 +65,49 @@ def get_local_jobs_for_course(course) -> list[dict[str, Any]]:
     return local_jobs
 
 
-def get_online_jobs_for_course(course, job_searcher: JobSearcher) -> list[dict[str, Any]]:
-    """Search online jobs via JobSpy using default course terms."""
-    terms = list(
-        course.search_terms.filter(is_default=True)
-        .order_by("-priority")
-        .values_list("term", flat=True)
+def search_with_config(
+    course, job_searcher: JobSearcher, limit_per_term: int = 10
+) -> list[dict[str, Any]]:
+    """Search online jobs using each SearchTerm's own configuration.
+
+    This is the SSoT (Single Source of Truth) for online job search.
+    Each SearchTerm's to_search_kwargs() is used individually, so
+    location, is_remote, job_type, country_indeed, etc. are respected
+    per-term — matching the "Testar busca" admin behavior exactly.
+    """
+    search_terms = list(
+        course.search_terms.filter(is_default=True).order_by("-priority")
     )
-    if not terms:
+    if not search_terms:
         logger.warning(
             "no_search_terms_for_course",
             course_id=course.id,
             course_name=course.name,
         )
         return []
-    return job_searcher.search(terms, limit=10)
+
+    results: list[dict[str, Any]] = []
+    for term in search_terms:
+        kwargs = term.to_search_kwargs(limit_override=limit_per_term)
+        try:
+            term_results = job_searcher.search(terms=[term.term], **kwargs)
+            results.extend(term_results)
+        except Exception:
+            logger.warning(
+                "search_with_config_term_failed",
+                term=term.term,
+                course_id=course.id,
+                exc_info=True,
+            )
+    return results
+
+
+def get_online_jobs_for_course(course, job_searcher: JobSearcher) -> list[dict[str, Any]]:
+    """Search online jobs via JobSpy using default course terms.
+
+    Delegates to search_with_config for SSoT search behavior.
+    """
+    return search_with_config(course, job_searcher, limit_per_term=10)
 
 
 def deduplicate_jobs(jobs: list[dict[str, Any]]) -> list[dict[str, Any]]:
