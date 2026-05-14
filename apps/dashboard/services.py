@@ -105,17 +105,36 @@ class DashboardService:
         }
 
     @staticmethod
-    def get_users_context():
-        users_qs = UserProfile.objects.select_related(
-            "conversation_state__selected_course"
-        ).order_by("-last_activity")
-        total_users = users_qs.count()
-        authenticated_users = users_qs.filter(is_authenticated_utfpr=True).count()
-        unauthenticated_users = total_users - authenticated_users
+    def get_users_context(course_filter: str = ""):
+        users_qs = UserProfile.objects.select_related("course").order_by("-last_activity")
+
+        if course_filter == "none":
+            users_qs = users_qs.filter(course__isnull=True)
+        elif course_filter:
+            try:
+                course_id = int(course_filter)
+                users_qs = users_qs.filter(course_id=course_id)
+            except ValueError:
+                pass  # ignora filtro inválido — proteção contra query param manipulation (T-46-01)
+
+        total_users = UserProfile.objects.count()
+        authenticated_users = UserProfile.objects.filter(is_authenticated_utfpr=True).count()
+        users_with_course = UserProfile.objects.filter(course__isnull=False).count()
+        active_courses_count = (
+            UserProfile.objects.filter(course__isnull=False)
+            .values("course_id")
+            .distinct()
+            .count()
+        )
+        courses_for_filter = Course.objects.filter(is_active=True).order_by("order", "name")
 
         return {
             "users": users_qs,
             "total_users": total_users,
             "authenticated_users": authenticated_users,
-            "unauthenticated_users": unauthenticated_users,
+            "unauthenticated_users": total_users - authenticated_users,
+            "users_with_course": users_with_course,
+            "active_courses_count": active_courses_count,
+            "courses_for_filter": courses_for_filter,
+            "selected_course_filter": course_filter,
         }
