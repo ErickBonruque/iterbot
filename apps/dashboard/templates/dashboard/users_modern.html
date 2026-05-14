@@ -24,7 +24,7 @@
     </div>
 
     <!-- Cards de estatísticas -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
         <div class="bg-white rounded-lg shadow p-6">
             <p class="text-sm text-gray-600 font-medium">Total de alunos</p>
             <p class="text-3xl font-bold text-gray-900 mt-2">{{ total_users }}</p>
@@ -37,18 +37,41 @@
             <p class="text-sm text-gray-600 font-medium">Não autenticados</p>
             <p class="text-3xl font-bold text-yellow-700 mt-2">{{ unauthenticated_users }}</p>
         </div>
+        <div class="bg-white rounded-lg shadow p-6">
+            <p class="text-sm text-gray-600 font-medium">Alunos com curso</p>
+            <p class="text-3xl font-bold text-blue-700 mt-2">{{ users_with_course }}</p>
+            <p class="text-xs text-gray-500 mt-1">{{ active_courses_count }} cursos ativos</p>
+        </div>
     </div>
 
     <!-- Tabela de alunos -->
     <div class="bg-white rounded-lg shadow">
-        <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+        <div class="px-6 py-4 border-b border-gray-200 flex flex-wrap items-center justify-between gap-2">
             <h3 class="text-lg font-semibold text-gray-900">Lista de alunos ({{ users|length }})</h3>
-            <input
-                type="text"
-                placeholder="Filtrar por telefone ou RA..."
-                class="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                x-model="search"
-            >
+            <div class="flex flex-wrap items-center gap-2">
+                <input
+                    type="text"
+                    placeholder="Filtrar por telefone ou RA..."
+                    class="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    x-model="search"
+                >
+                <form method="get" class="flex items-center space-x-2">
+                    <select name="course"
+                        onchange="this.form.submit()"
+                        class="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <option value="">Todos os cursos</option>
+                        <option value="none" {% if selected_course_filter == "none" %}selected{% endif %}>
+                            Sem curso definido
+                        </option>
+                        {% for course in courses_for_filter %}
+                        <option value="{{ course.pk }}"
+                            {% if selected_course_filter == course.pk|stringformat:"s" %}selected{% endif %}>
+                            {{ course.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </form>
+            </div>
         </div>
         <div class="overflow-x-auto">
             <table class="min-w-full divide-y divide-gray-200 text-sm">
@@ -56,7 +79,7 @@
                     <tr>
                         <th class="px-4 py-3 text-left font-medium text-gray-500">Telefone</th>
                         <th class="px-4 py-3 text-left font-medium text-gray-500">RA</th>
-                        <th class="px-4 py-3 text-left font-medium text-gray-500">Curso</th>
+                        <th class="px-4 py-3 text-left font-medium text-gray-500">Curso Preferido</th>
                         <th class="px-4 py-3 text-left font-medium text-gray-500">Autenticado</th>
                         <th class="px-4 py-3 text-left font-medium text-gray-500">Interações</th>
                         <th class="px-4 py-3 text-left font-medium text-gray-500">Última atividade</th>
@@ -75,10 +98,12 @@
                             {% endif %}
                         </td>
                         <td class="px-4 py-3 text-gray-700">
-                            {% if user.conversation_state and user.conversation_state.selected_course %}
-                                {{ user.conversation_state.selected_course.name }}
+                            {% if user.course %}
+                            <span class="px-2 py-1 text-xs rounded-full bg-blue-50 text-blue-700">
+                                {{ user.course.name }}
+                            </span>
                             {% else %}
-                                <span class="text-xs text-gray-400">Sem curso</span>
+                            <span class="text-xs text-gray-400">—</span>
                             {% endif %}
                         </td>
                         <td class="px-4 py-3">

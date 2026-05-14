@@ -79,6 +79,6 @@ def interactions_log(request):
 
 
 def users_list(request):
-    context = DashboardService.get_users_context()
-
+    course_filter = request.GET.get("course", "")
+    context = DashboardService.get_users_context(course_filter=course_filter)
     return render(request, "dashboard/users_modern.html", context)
