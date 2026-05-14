@@ -55,3 +55,4 @@ coverage.lcov
 
 # Playground dos agentes (faxina) — diário interno, não versionar
 .planning/faxina/
+.claude/settings.json
