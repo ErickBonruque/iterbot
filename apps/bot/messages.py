@@ -171,6 +171,14 @@ class SearchMessages:
         "search.results_header",
         "🚀 *Vagas para {course_name}* (termo: *{term_name}*)",
     )
+    course_preference_saved: MessageTemplate = MessageTemplate(
+        "search.course_preference_saved",
+        "✅ Curso *{course_name}* salvo como preferência. Na próxima busca vou pular esta etapa.",
+    )
+    course_preference_updated: MessageTemplate = MessageTemplate(
+        "search.course_preference_updated",
+        "✅ Preferência atualizada para *{course_name}*.",
+    )
 
 
 @dataclass(frozen=True)
