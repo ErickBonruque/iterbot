@@ -1,11 +1,12 @@
 from datetime import timedelta
 
-from django.db.models import Q
+from django.db.models import Count, Max, Q, Sum
 from django.utils import timezone
 
 from apps.bot.health import BotHealthMonitor
 from apps.bot.models import BotConfiguration, BotHealthCheck, InteractionLog
 from apps.courses.models import Course
+from apps.jobs.models import JobSearchLog
 from apps.users.models import UserProfile
 
 
@@ -137,4 +138,57 @@ class DashboardService:
             "active_courses_count": active_courses_count,
             "courses_for_filter": courses_for_filter,
             "selected_course_filter": course_filter,
+        }
+
+    @staticmethod
+    def get_search_metrics_context(days: int = 30) -> dict:
+        """
+        Métricas de busca (METR-01).
+        Retorna total de buscas, vagas encontradas, taxa de sucesso,
+        vagas por termo (gráfico de barras), e termos mais usados (tabela).
+        """
+        since = timezone.now() - timedelta(days=days)
+        logs_qs = JobSearchLog.objects.filter(created_at__gte=since)
+
+        total_searches = logs_qs.count()
+        total_jobs_found = logs_qs.aggregate(total=Sum("results_count"))["total"] or 0
+        successful_searches = logs_qs.filter(results_count__gt=0).count()
+        search_success_rate = successful_searches / total_searches if total_searches > 0 else 0.0
+
+        # Vagas encontradas por termo (para gráfico de barras — D-10)
+        jobs_per_term = list(
+            logs_qs.values("search_term")
+            .annotate(
+                total_results=Sum("results_count"),
+                total_searches=Count("id"),
+            )
+            .order_by("-total_results")
+        )
+
+        # Termos mais usados (tabela com detalhes — D-11)
+        top_terms = list(
+            logs_qs.values("search_term")
+            .annotate(
+                total_searches=Count("id"),
+                total_results=Sum("results_count"),
+                last_search=Max("created_at"),
+            )
+            .order_by("-total_searches")
+        )
+        # Enriquecer com nome do curso via SearchTerm
+        from apps.courses.models import SearchTerm
+
+        term_to_course = {
+            st.term: st.course.name
+            for st in SearchTerm.objects.select_related("course").all()
+        }
+        for term_data in top_terms:
+            term_data["course_name"] = term_to_course.get(term_data["search_term"], "—")
+
+        return {
+            "total_searches": total_searches,
+            "total_jobs_found": total_jobs_found,
+            "search_success_rate": search_success_rate,
+            "jobs_per_term": jobs_per_term,
+            "top_terms": top_terms,
         }
