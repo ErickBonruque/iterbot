@@ -1,6 +1,6 @@
 from datetime import timedelta
 
-from django.db.models import Count, Max, Q, Sum
+from django.db.models import Count, F, Max, Q, Sum
 from django.utils import timezone
 
 from apps.bot.health import BotHealthMonitor
@@ -191,4 +191,87 @@ class DashboardService:
             "search_success_rate": search_success_rate,
             "jobs_per_term": jobs_per_term,
             "top_terms": top_terms,
+        }
+
+    @staticmethod
+    def get_user_metrics_context(days: int = 30) -> dict:
+        """
+        Métricas de usuários (METR-02, D-02).
+        Distribuição por curso, engajamento, ativos vs inativos.
+        """
+        since = timezone.now() - timedelta(days=days)
+
+        total_users = UserProfile.objects.count()
+
+        # Distribuição por curso (D-12) — inclui "Sem curso definido"
+        from django.db.models import Case, Value, CharField, When
+
+        course_dist = (
+            UserProfile.objects.values(
+                course_name=Case(
+                    When(course__isnull=False, then=F("course__name")),
+                    default=Value("Sem curso definido"),
+                    output_field=CharField(),
+                )
+            )
+            .annotate(count=Count("id"))
+            .order_by("-count")
+        )
+        user_distribution = list(course_dist)
+
+        users_with_course = UserProfile.objects.filter(course__isnull=False).count()
+
+        # Engajamento (D-13): interações no período / total de usuários
+        period_interactions = InteractionLog.objects.filter(created_at__gte=since).count()
+        avg_engagement = period_interactions / total_users if total_users > 0 else 0.0
+
+        # Ativos vs Inativos (D-14)
+        active_users = UserProfile.objects.filter(last_activity__gte=since).count()
+        inactive_users = total_users - active_users
+
+        return {
+            "user_distribution": user_distribution,
+            "total_users": total_users,
+            "users_with_course": users_with_course,
+            "avg_engagement": round(avg_engagement, 2),
+            "active_users_count": active_users,
+            "inactive_users_count": inactive_users,
+        }
+
+    @staticmethod
+    def get_auth_funnel_context(days: int = 30) -> dict:
+        """
+        Funil de autenticação (METR-03, D-15, D-16).
+        Cadastros -> Confirmações de email -> Usuários ativos autenticados.
+        """
+        since = timezone.now() - timedelta(days=days)
+
+        # Etapa 1: Cadastros iniciados (todos os UserProfile)
+        signups_count = UserProfile.objects.count()
+        # Etapa 2: Confirmações de email concluídas
+        email_verified_count = UserProfile.objects.filter(email_verified=True).count()
+        # Etapa 3: Usuários autenticados ativos no período
+        active_authenticated = UserProfile.objects.filter(
+            is_authenticated_utfpr=True,
+            last_activity__gte=since,
+        ).count()
+
+        # Taxas de conversão (D-16)
+        signup_to_email_rate = (
+            email_verified_count / signups_count if signups_count > 0 else 0.0
+        )
+        email_to_active_rate = (
+            active_authenticated / email_verified_count if email_verified_count > 0 else 0.0
+        )
+        overall_conversion_rate = (
+            active_authenticated / signups_count if signups_count > 0 else 0.0
+        )
+
+        return {
+            "signups_count": signups_count,
+            "email_verified_count": email_verified_count,
+            "active_authenticated_users": active_authenticated,
+            "signup_to_email_rate": round(signup_to_email_rate, 3),
+            "email_to_active_rate": round(email_to_active_rate, 3),
+            "overall_conversion_rate": round(overall_conversion_rate, 3),
         }
