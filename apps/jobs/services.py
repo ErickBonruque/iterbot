@@ -9,7 +9,7 @@ from django.db.models import Q
 
 from apps.bot.messages import BOT_MESSAGES
 from apps.core.portal_links import build_portal_url
-from apps.jobs.models import Job, JobStatus
+from apps.jobs.models import Job, JobSearchLog, JobStatus
 from apps.users.models import UserProfile
 from infra.waha.protocols import JobSearcher, MessageSender
 
@@ -196,6 +196,15 @@ def send_weekly_reviews(
 
             msg = format_review_message(selected_course.name, jobs)
             message_sender.send_message(user.phone_number, msg)
+            JobSearchLog.objects.create(
+                user=None,
+                search_term=selected_course.name,
+                location=None,
+                job_type=None,
+                results_count=len(jobs),
+                filters={},
+                results_preview=jobs[:5],
+            )
             stats["sent"] += 1
 
             logger.info(

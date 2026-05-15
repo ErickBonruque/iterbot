@@ -3,6 +3,7 @@ from unfold.admin import ModelAdmin, TabularInline
 from unfold.decorators import action
 from unfold.enums import ActionVariant
 
+from apps.jobs.models import JobSearchLog
 from infra.jobspy.service import JobSearchService
 
 from .models import Course, SearchTerm
@@ -83,6 +84,15 @@ class SearchTermAdmin(ModelAdmin):
         service = JobSearchService()
         try:
             results = service.search(terms=[obj.term], **obj.to_search_kwargs())
+            JobSearchLog.objects.create(
+                user=None,
+                search_term=obj.term,
+                location=getattr(obj, "location", None),
+                job_type=getattr(obj, "job_type", None),
+                results_count=len(results),
+                filters=obj.to_search_kwargs(),
+                results_preview=results[:5],
+            )
             request.session["job_search_results"] = results
             if not results:
                 messages.warning(
