@@ -15,6 +15,14 @@ class TestDashboardViews(TestCase):
     def setUp(self):
         self.client = Client()
 
+        self.staff_user = User.objects.create_user(
+            username="admin",
+            email="admin@test.com",
+            password="admin123",
+            is_staff=True,
+        )
+        self.client.login(username="admin", password="admin123")
+
         self.course = Course.objects.create(name="Engenharia de Software", is_active=True)
         SearchTerm.objects.create(course=self.course, term="python")
 
