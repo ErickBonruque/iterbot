@@ -11,4 +11,5 @@ urlpatterns = [
     path("interactions/", views.interactions_log, name="interactions_log"),
     path("users/", views.users_list, name="users_list"),
     path("metrics/", views.business_metrics, name="business_metrics"),
+    path("metrics/technical/", views.technical_metrics, name="technical_metrics"),
 ]

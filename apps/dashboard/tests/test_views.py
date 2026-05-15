@@ -164,3 +164,26 @@ class TestDashboardViews(TestCase):
         response = self.client.get(reverse("business_metrics"), {"days": "999"})
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.context["days"], 365)
+
+    def test_technical_metrics_returns_200(self):
+        response = self.client.get(reverse("technical_metrics"))
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "dashboard/technical_metrics.html")
+
+    def test_technical_metrics_period_hours(self):
+        response = self.client.get(reverse("technical_metrics"), {"hours": 1})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["period_hours"], 1)
+
+    def test_technical_metrics_invalid_hours_fallback(self):
+        response = self.client.get(reverse("technical_metrics"), {"hours": "abc"})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["period_hours"], 24)
+
+        response = self.client.get(reverse("technical_metrics"), {"hours": "-1"})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["period_hours"], 24)
+
+        response = self.client.get(reverse("technical_metrics"), {"hours": "999"})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["period_hours"], 720)

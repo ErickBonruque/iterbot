@@ -105,3 +105,22 @@ def business_metrics(request):
     context = DashboardService.get_business_metrics_context(days=days)
 
     return render(request, "dashboard/business_metrics.html", context)
+
+
+def technical_metrics(request):
+    """
+    Página de métricas técnicas (METR-04, METR-05, METR-06).
+    Exibe API latency, Celery health e WAHA uptime com período selecionável.
+    """
+    try:
+        hours = int(request.GET.get("hours", 24))
+    except (ValueError, TypeError):
+        hours = 24
+    if hours < 1:
+        hours = 24
+    elif hours > 720:
+        hours = 720
+
+    context = DashboardService.get_technical_metrics_context(hours=hours)
+
+    return render(request, "dashboard/technical_metrics.html", context)
