@@ -275,3 +275,37 @@ class DashboardService:
             "email_to_active_rate": round(email_to_active_rate, 3),
             "overall_conversion_rate": round(overall_conversion_rate, 3),
         }
+
+    @staticmethod
+    def get_business_metrics_context(days: int = 30) -> dict:
+        """
+        Métricas de negócio completas (METR-01, METR-02, METR-03).
+        Orchestrator que une search, user, e auth funnel metrics.
+        Período padrão: 30 dias (D-07).
+        """
+        since = timezone.now() - timedelta(days=days)
+        has_search_data = JobSearchLog.objects.filter(created_at__gte=since).exists()
+
+        context = {
+            "has_search_data": has_search_data,
+            "days": days,
+        }
+
+        # Só calcula métricas detalhadas se houver dados (D-20)
+        if has_search_data:
+            context.update(DashboardService.get_search_metrics_context(days=days))
+        else:
+            # Retorna estrutura vazia para evitar erros no template
+            context.update({
+                "total_searches": 0,
+                "total_jobs_found": 0,
+                "search_success_rate": 0.0,
+                "jobs_per_term": [],
+                "top_terms": [],
+            })
+
+        # User metrics e auth funnel são independentes de JobSearchLog
+        context.update(DashboardService.get_user_metrics_context(days=days))
+        context.update(DashboardService.get_auth_funnel_context(days=days))
+
+        return context
