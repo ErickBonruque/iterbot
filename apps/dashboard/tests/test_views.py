@@ -6,6 +6,7 @@ from django.urls import reverse
 
 from apps.bot.models import BotHealthCheck, InteractionLog
 from apps.courses.models import Course, SearchTerm
+from apps.jobs.models import JobSearchLog
 from apps.users.models import UserProfile
 
 
@@ -115,3 +116,51 @@ class TestDashboardViews(TestCase):
         response = self.client.get(reverse("users_list"))
 
         self.assertEqual(response.status_code, 200)
+
+    def test_business_metrics_returns_200(self):
+        """GET /dashboard/metrics/ retorna 200 sem JobSearchLog"""
+        response = self.client.get(reverse("business_metrics"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "dashboard/business_metrics.html")
+        self.assertFalse(response.context["has_search_data"])
+        self.assertEqual(response.context["days"], 30)
+
+    def test_business_metrics_with_search_data(self):
+        """GET /dashboard/metrics/ com JobSearchLog populado"""
+        JobSearchLog.objects.create(
+            user=self.user,
+            search_term="python",
+            results_count=5,
+        )
+        response = self.client.get(reverse("business_metrics"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.context["has_search_data"])
+        self.assertGreater(response.context["total_searches"], 0)
+        self.assertGreater(response.context["total_jobs_found"], 0)
+
+    def test_business_metrics_period_filter(self):
+        """Period pills alteram o parâmetro days"""
+        for days in [7, 30, 90]:
+            response = self.client.get(reverse("business_metrics"), {"days": days})
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.context["days"], days)
+
+    def test_business_metrics_invalid_days_fallback(self):
+        """Dias inválidos são tratados graciosamente (T-47-03-01)"""
+        # ValueError → fallback 30
+        response = self.client.get(reverse("business_metrics"), {"days": "abc"})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["days"], 30)
+        # Abaixo de 1 → clamp 30
+        response = self.client.get(reverse("business_metrics"), {"days": "-1"})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["days"], 30)
+        response = self.client.get(reverse("business_metrics"), {"days": "0"})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["days"], 30)
+        # Acima de 365 → clamp 365
+        response = self.client.get(reverse("business_metrics"), {"days": "999"})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["days"], 365)
