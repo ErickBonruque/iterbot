@@ -12,8 +12,10 @@ class JobSearchLog(TimeStampedModel):
     user = models.ForeignKey(
         UserProfile,
         on_delete=models.CASCADE,
+        null=True,
+        blank=True,
         related_name="job_searches",
-        help_text="Usuário que realizou a busca",
+        help_text="Usuário que realizou a busca (null para buscas admin/weekly review)",
     )
     search_term = models.CharField(max_length=255, help_text="Termo de busca utilizado")
     location = models.CharField(
@@ -39,4 +41,5 @@ class JobSearchLog(TimeStampedModel):
         ]
 
     def __str__(self):
-        return f"{self.user.phone_number}: {self.search_term} ({self.results_count} resultados)"
+        user_info = self.user.phone_number if self.user else "admin"
+        return f"{user_info}: {self.search_term} ({self.results_count} resultados)"
