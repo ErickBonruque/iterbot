@@ -1,5 +1,6 @@
 """Middleware for structured logging of requests and responses."""
 
+import random
 import time
 from collections.abc import Callable
 
@@ -41,6 +42,25 @@ class StructuredLoggingMiddleware:
             status_code=response.status_code,
             duration_ms=round(duration_ms, 2),
         )
+
+        if random.random() < 0.1:
+            try:
+                from apps.bot.models import BotMetrics
+
+                BotMetrics.objects.create(
+                    metric_name="api.latency_ms",
+                    value=round(duration_ms, 2),
+                    metadata={
+                        "method": request.method,
+                        "path": request.path,
+                        "status_code": response.status_code,
+                    },
+                )
+            except Exception:
+                logger.warning(
+                    "failed_to_persist_latency_metric",
+                    duration_ms=duration_ms,
+                )
 
         return response
 

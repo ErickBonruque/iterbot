@@ -76,7 +76,7 @@ def clean_old_health_checks(self) -> dict:
         from apps.bot.health import BotHealthMonitor
 
         monitor = BotHealthMonitor()
-        deleted_count = monitor.clean_old_health_checks(days=7)
+        deleted_count = monitor.clean_old_health_checks(days=90)
         logger.info(
             "health_checks_cleanup_completed",
             deleted_count=deleted_count,

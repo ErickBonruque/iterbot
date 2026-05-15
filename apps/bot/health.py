@@ -242,7 +242,7 @@ class BotHealthMonitor:
 
         return {"success": True, "message": "Bot esta operacional", "details": status}
 
-    def clean_old_health_checks(self, days=7):
+    def clean_old_health_checks(self, days=90):
         """Remove registros de health check antigos."""
         cutoff = timezone.now() - timedelta(days=days)
         deleted_count = BotHealthCheck.objects.filter(created_at__lt=cutoff).delete()[0]
