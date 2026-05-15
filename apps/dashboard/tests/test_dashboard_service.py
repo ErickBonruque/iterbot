@@ -162,3 +162,87 @@ class BusinessMetricsTests(TestCase):
         # Both should have data (created in setUp which uses timezone.now())
         self.assertIsInstance(ctx_7d["days"], int)
         self.assertEqual(ctx_30d["days"], 30)
+
+
+class TechnicalMetricsTests(TestCase):
+    """Testes para métricas técnicas (METR-04, METR-05, METR-06)."""
+
+    def setUp(self):
+        from apps.bot.models import BotHealthCheck, BotMetrics
+
+        BotMetrics.objects.create(
+            metric_name="api.latency_ms",
+            value=150.5,
+        )
+        BotMetrics.objects.create(
+            metric_name="api.latency_ms",
+            value=200.3,
+        )
+        BotMetrics.objects.create(
+            metric_name="celery.task_failure",
+            value=1,
+            metadata={"task_name": "test_task"},
+        )
+        BotHealthCheck.objects.create(
+            status="online",
+            response_time=120.0,
+            session_status="WORKING",
+        )
+        BotHealthCheck.objects.create(
+            status="error",
+            response_time=None,
+            error_message="Timeout",
+        )
+
+    def test_technical_metrics_returns_all_sections(self):
+        ctx = DashboardService.get_technical_metrics_context(hours=24)
+        self.assertIn("avg_api_latency_ms", ctx)
+        self.assertIn("celery_available", ctx)
+        self.assertIn("has_waha_data", ctx)
+
+    def test_api_latency_context(self):
+        ctx = DashboardService.get_api_latency_context(hours=24)
+        self.assertTrue(ctx["has_latency_data"])
+        self.assertGreater(ctx["avg_api_latency_ms"], 0)
+        self.assertEqual(ctx["total_api_samples"], 2)
+        self.assertIn("latency_timeseries", ctx)
+
+    def test_no_latency_data_empty_state(self):
+        from apps.bot.models import BotMetrics
+
+        BotMetrics.objects.filter(metric_name="api.latency_ms").delete()
+        ctx = DashboardService.get_api_latency_context(hours=24)
+        self.assertFalse(ctx["has_latency_data"])
+
+    def test_celery_context_structure(self):
+        ctx = DashboardService.get_celery_context()
+        self.assertIn("celery_available", ctx)
+        if ctx["celery_available"]:
+            self.assertIn("workers", ctx)
+            self.assertIn("queue_depth", ctx)
+            self.assertIn("task_failure_count", ctx)
+            self.assertGreaterEqual(ctx["task_failure_count"], 1)
+
+    def test_waha_uptime_context(self):
+        ctx = DashboardService.get_waha_uptime_context(hours=24)
+        self.assertTrue(ctx["has_waha_data"])
+        self.assertIn("waha_history", ctx)
+        self.assertIn("waha_current_status", ctx)
+        self.assertIn("waha_degradation", ctx)
+
+    def test_waha_uptime_degradation_detection(self):
+        ctx = DashboardService.get_waha_uptime_context(hours=24)
+        self.assertTrue(ctx["waha_degradation"]["has_degradation"])
+
+    def test_empty_waha_no_data(self):
+        from apps.bot.models import BotHealthCheck
+
+        BotHealthCheck.objects.all().delete()
+        ctx = DashboardService.get_waha_uptime_context(hours=24)
+        self.assertFalse(ctx["has_waha_data"])
+
+    def test_period_hours_in_context(self):
+        ctx = DashboardService.get_technical_metrics_context(hours=1)
+        self.assertEqual(ctx["period_hours"], 1)
+        ctx = DashboardService.get_technical_metrics_context(hours=168)
+        self.assertEqual(ctx["period_hours"], 168)

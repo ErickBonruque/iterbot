@@ -1,10 +1,13 @@
 from datetime import timedelta
 
-from django.db.models import Count, F, Max, Q, Sum
+import redis
+from django.db.models import Avg, Count, F, Max, Q, Sum
+from django.db.models.functions import TruncHour
 from django.utils import timezone
 
 from apps.bot.health import BotHealthMonitor
-from apps.bot.models import BotConfiguration, BotHealthCheck, InteractionLog
+from apps.bot.models import BotConfiguration, BotHealthCheck, BotMetrics, InteractionLog
+from config.env import settings
 from apps.courses.models import Course
 from apps.jobs.models import JobSearchLog
 from apps.users.models import UserProfile
@@ -308,4 +311,203 @@ class DashboardService:
         context.update(DashboardService.get_user_metrics_context(days=days))
         context.update(DashboardService.get_auth_funnel_context(days=days))
 
+        return context
+
+    @staticmethod
+    def get_api_latency_context(hours: int = 24) -> dict:
+        since = timezone.now() - timedelta(hours=hours)
+
+        latency_qs = BotMetrics.objects.filter(
+            metric_name="api.latency_ms", created_at__gte=since
+        )
+        total_samples = latency_qs.count()
+        has_latency_data = total_samples > 0
+        avg_api_latency_ms = latency_qs.aggregate(avg=Avg("value"))["avg"] or 0.0
+
+        latency_timeseries = list(
+            latency_qs
+            .annotate(hour=TruncHour("created_at"))
+            .values("hour")
+            .annotate(
+                avg_latency_ms=Avg("value"),
+                sample_count=Count("id"),
+            )
+            .order_by("hour")
+        )
+
+        bot_logs = InteractionLog.objects.filter(
+            created_at__gte=since,
+            metadata__has_key="processing_time_ms",
+        )
+        bot_processing_avg = bot_logs.aggregate(
+            avg=Avg("metadata__processing_time_ms")
+        )["avg"] or 0.0
+
+        waha_latency = BotHealthCheck.objects.filter(
+            created_at__gte=since,
+            response_time__isnull=False,
+        ).aggregate(avg=Avg("response_time"))["avg"] or 0.0
+
+        return {
+            "has_latency_data": has_latency_data,
+            "total_api_samples": total_samples,
+            "avg_api_latency_ms": round(avg_api_latency_ms, 2),
+            "bot_processing_time_ms": round(bot_processing_avg, 2),
+            "waha_latency_ms": round(waha_latency, 2),
+            "latency_timeseries": [
+                {
+                    "hour": entry["hour"].isoformat() if entry["hour"] else "",
+                    "avg_latency_ms": round(entry["avg_latency_ms"], 2),
+                    "sample_count": entry["sample_count"],
+                }
+                for entry in latency_timeseries
+            ],
+        }
+
+    @staticmethod
+    def get_celery_context() -> dict:
+        from django.core.cache import cache
+
+        cached = cache.get("celery_health_context")
+        if cached:
+            return cached
+
+        from waha_bot.celery import app as celery_app
+
+        inspect = celery_app.control.inspect(timeout=1.0)
+
+        try:
+            active = inspect.active() or {}
+            reserved = inspect.reserved() or {}
+            stats = inspect.stats() or {}
+            celery_available = bool(stats)
+        except Exception:
+            return {"celery_available": False}
+
+        workers = {}
+        total_active_tasks = 0
+        total_reserved = 0
+        total_processed = 0
+
+        for worker_name in stats:
+            worker_stats = stats[worker_name]
+            worker_active = len(active.get(worker_name, []))
+            worker_reserved = len(reserved.get(worker_name, []))
+            worker_processed = (
+                worker_stats.get("total", {})
+                .get("tasks", {})
+                .get("all", 0)
+            )
+            workers[worker_name] = {
+                "status": "online",
+                "active_tasks": worker_active,
+                "reserved_tasks": worker_reserved,
+                "total_processed": worker_processed,
+            }
+            total_active_tasks += worker_active
+            total_reserved += worker_reserved
+            total_processed += worker_processed
+
+        try:
+            r = redis.from_url(settings.redis.url)
+            queue_depth = r.llen("celery")
+        except Exception:
+            queue_depth = -1
+
+        since_24h = timezone.now() - timedelta(hours=24)
+        task_failure_count = BotMetrics.objects.filter(
+            metric_name="celery.task_failure",
+            created_at__gte=since_24h,
+        ).count()
+
+        result = {
+            "celery_available": True,
+            "workers": workers,
+            "total_workers": len(workers),
+            "total_active_tasks": total_active_tasks,
+            "queue_depth": queue_depth,
+            "total_reserved": total_reserved,
+            "total_processed": total_processed,
+            "task_failure_count": task_failure_count,
+        }
+
+        cache.set("celery_health_context", result, timeout=30)
+        return result
+
+    @staticmethod
+    def get_waha_uptime_context(hours: int = 24) -> dict:
+        since = timezone.now() - timedelta(hours=hours)
+        checks = BotHealthCheck.objects.filter(created_at__gte=since)
+
+        total_checks = checks.count()
+        has_waha_data = total_checks > 0
+
+        if not has_waha_data:
+            return {
+                "has_waha_data": False,
+                "waha_history": [],
+                "waha_current_status": {"status": "unknown", "session_status": "unknown", "latency_ms": None},
+                "waha_degradation": {"has_degradation": False, "degraded_hours": 0, "total_hours": 0, "degradation_pct": 0},
+                "period_hours": hours,
+            }
+
+        from django.db import models
+
+        hourly = (
+            checks
+            .annotate(hour=TruncHour("created_at"))
+            .values("hour")
+            .annotate(
+                total=Count("id"),
+                online=Count("id", filter=models.Q(status="online")),
+                avg_latency=Avg("response_time"),
+            )
+            .order_by("hour")
+        )
+
+        history = []
+        degraded_count = 0
+        for entry in hourly:
+            uptime_pct = (entry["online"] / entry["total"]) * 100 if entry["total"] > 0 else 0
+            is_degraded = uptime_pct < 90
+            if is_degraded:
+                degraded_count += 1
+            history.append({
+                "time": entry["hour"].isoformat() if entry["hour"] else "",
+                "uptime_pct": round(uptime_pct, 1),
+                "avg_latency_ms": round(entry["avg_latency"], 1) if entry["avg_latency"] else 0,
+                "total_checks": entry["total"],
+                "is_degraded": is_degraded,
+            })
+
+        latest_check = checks.order_by("-created_at").first()
+        online_count = checks.filter(status="online").count()
+        overall_uptime_pct = (online_count / total_checks) * 100 if total_checks > 0 else 0
+
+        return {
+            "has_waha_data": True,
+            "waha_history": history,
+            "overall_uptime_pct": round(overall_uptime_pct, 1),
+            "waha_current_status": {
+                "status": latest_check.status if latest_check else "unknown",
+                "session_status": latest_check.session_status if latest_check else "unknown",
+                "latency_ms": round(latest_check.response_time, 1) if latest_check and latest_check.response_time else None,
+            },
+            "waha_degradation": {
+                "has_degradation": degraded_count > 0,
+                "degraded_hours": degraded_count,
+                "total_hours": len(history),
+                "degradation_pct": round((degraded_count / len(history)) * 100, 1) if history else 0,
+            },
+            "period_hours": hours,
+        }
+
+    @staticmethod
+    def get_technical_metrics_context(hours: int = 24) -> dict:
+        context = {
+            "period_hours": hours,
+        }
+        context.update(DashboardService.get_api_latency_context(hours=hours))
+        context.update(DashboardService.get_celery_context())
+        context.update(DashboardService.get_waha_uptime_context(hours=hours))
         return context
