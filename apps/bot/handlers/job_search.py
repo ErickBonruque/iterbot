@@ -10,6 +10,7 @@ from apps.bot.state_machine import (
     normalize_current_action,
 )
 from apps.courses.models import Course
+from apps.jobs.models import JobSearchLog
 from apps.users.models import UserProfile
 from infra.waha.protocols import JobSearcher, MessageSender
 
@@ -351,7 +352,17 @@ class JobSearchHandler(BaseHandler):
             jobs: list[dict] = []
             for search_term in search_terms:
                 kwargs = search_term.to_search_kwargs(limit_override=self.BOT_RESULTS_PER_TERM)
-                jobs.extend(self.job_service.search(terms=[search_term.term], **kwargs))
+                term_results = self.job_service.search(terms=[search_term.term], **kwargs)
+                jobs.extend(term_results)
+                JobSearchLog.objects.create(
+                    user=user,
+                    search_term=search_term.term,
+                    location=search_term.location,
+                    job_type=search_term.job_type,
+                    results_count=len(term_results),
+                    filters=search_term.to_search_kwargs(),
+                    results_preview=term_results[:5],
+                )
         except Exception as exc:
             logger.error(
                 "job_search_failed",
