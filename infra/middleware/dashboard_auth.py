@@ -25,9 +25,10 @@ class DashboardAuthMiddleware:
     def __call__(self, request: HttpRequest) -> HttpResponse:
         path = request.path_info
 
-        if path.startswith("/dashboard/"):
-            if not request.user.is_authenticated or not request.user.is_staff:
-                login_url = f"{LOGIN_URL}?{urlencode({'next': path})}"
-                return HttpResponseRedirect(login_url)
+        if path.startswith("/dashboard/") and (
+            not request.user.is_authenticated or not request.user.is_staff
+        ):
+            login_url = f"{LOGIN_URL}?{urlencode({'next': path})}"
+            return HttpResponseRedirect(login_url)
 
         return self.get_response(request)
