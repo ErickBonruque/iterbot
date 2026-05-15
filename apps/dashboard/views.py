@@ -85,3 +85,23 @@ def users_list(request):
     course_filter = request.GET.get("course", "")
     context = DashboardService.get_users_context(course_filter=course_filter)
     return render(request, "dashboard/users_modern.html", context)
+
+
+def business_metrics(request):
+    """
+    Página de métricas de negócio (METR-01, METR-02, METR-03).
+    Exibe search metrics, user metrics e auth funnel com período selecionável.
+    """
+    try:
+        days = int(request.GET.get("days", 30))
+    except (ValueError, TypeError):
+        days = 30
+    # Valida range: 1-365 dias (T-47-03-01)
+    if days < 1:
+        days = 30
+    elif days > 365:
+        days = 365
+
+    context = DashboardService.get_business_metrics_context(days=days)
+
+    return render(request, "dashboard/business_metrics.html", context)
