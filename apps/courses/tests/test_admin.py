@@ -128,6 +128,40 @@ class TestTestSearchAction:
         response = client.post(url, data=data, follow=True)
         assert response.status_code == 200
 
+    @patch("infra.jobspy.service.JobSearchService.search")
+    def test_test_search_creates_job_search_log(self, mock_search, client, admin_user, search_term):
+        """METR-01/D-18: test_search cria JobSearchLog com results."""
+        from apps.jobs.models import JobSearchLog
+
+        mock_search.return_value = [
+            {"title": "Python Developer", "company": "Test Corp"},
+        ]
+        client.force_login(admin_user)
+        url = f"/admin/courses/searchterm/{search_term.pk}/change/"
+        data = {
+            ACTION_KEY: "1",
+            "_save": "1",
+            "course": search_term.course_id,
+            "term": search_term.term,
+            "is_default": "1",
+            "priority": "0",
+            "site_name": "linkedin,indeed,glassdoor",
+            "location": "Curitiba, PR",
+            "results_wanted": "10",
+            "hours_old": "72",
+            "country_indeed": "Brazil",
+            "offset": "0",
+            "is_remote": "0",
+            "linkedin_fetch_description": "0",
+        }
+        client.post(url, data=data, follow=True)
+        logs = JobSearchLog.objects.filter(search_term="python")
+        assert logs.count() >= 1
+        log = logs.first()
+        assert log is not None
+        assert log.user is None  # D-18: admin searches have user=None
+        assert log.results_count == 1
+
 
 @pytest.mark.django_db
 class TestNoStaleSearchMessage:

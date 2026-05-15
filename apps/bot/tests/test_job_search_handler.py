@@ -4,7 +4,7 @@ from django.test import TestCase
 
 from apps.bot.models import ConversationState
 from apps.bot.services import BotService
-from apps.courses.models import Course
+from apps.courses.models import Course, SearchTerm
 from apps.users.models import UserProfile
 
 
@@ -75,6 +75,35 @@ class JobSearchHandlerCourseSelectionTests(TestCase):
         state.save(update_fields=["current_action", "updated_at"])
         self.service.process_message(chat_id, "abc", from_me=False)
         self.assertTrue(self.waha_client.send_message.called)
+
+    def test_perform_search_creates_job_search_log(self):
+        """METR-01/D-17: perform_search cria JobSearchLog com resultados."""
+        from apps.jobs.models import JobSearchLog
+
+        chat_id = "5522777777777@c.us"
+        user = UserProfile.objects.create(phone_number=chat_id, is_authenticated_utfpr=True)
+        ConversationState.objects.get_or_create(user=user)
+        course = Course.objects.create(name="Engenharia de Software", is_active=True)
+        st = SearchTerm.objects.create(course=course, term="python developer")
+        self.job_service.search.return_value = [
+            {
+                "title": "Python Dev",
+                "company": "Corp",
+                "location": "Remote",
+                "job_url": "https://example.com/job/1",
+            },
+        ]
+        handler = self.service.job_handler
+        handler.perform_search(user, chat_id, [st], term_name="python developer")
+
+        logs = JobSearchLog.objects.filter(user=user)
+        self.assertEqual(logs.count(), 1)
+        log = logs.first()
+        self.assertEqual(log.search_term, "python developer")
+        self.assertEqual(log.results_count, 1)
+        # filters contém to_search_kwargs() — verificar que é dict com location
+        self.assertIsInstance(log.filters, dict)
+        self.assertIn("location", log.filters)
 
 
 class CoursePreferenceTests(TestCase):
