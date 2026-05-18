@@ -321,3 +321,83 @@ class TestFetchDailyJobsTask:
 
         entry = settings.CELERY_BEAT_SCHEDULE["fetch-daily-jobs"]
         assert entry["task"] == "apps.jobs.tasks.fetch_daily_jobs"
+
+
+@pytest.mark.django_db
+class TestDailyJobAdmin:
+    def setup_method(self):
+        from apps.courses.models import Course, SearchTerm
+
+        self.course = Course.objects.create(name="Engenharia de Software", is_active=True)
+        self.search_term = SearchTerm.objects.create(course=self.course, term="python")
+
+    def test_dailyjob_registrado_no_admin(self):
+        from django.contrib import admin
+
+        from apps.jobs.models import DailyJob
+
+        assert DailyJob in admin.site._registry
+
+    def test_list_display_contem_campos_esperados(self):
+        from django.contrib import admin
+
+        from apps.jobs.models import DailyJob
+
+        daily_job_admin = admin.site._registry[DailyJob]
+        for field in ("title", "company", "search_term", "fetched_date", "is_manual"):
+            assert field in daily_job_admin.list_display, f"Campo '{field}' ausente em list_display"
+
+    def test_list_filter_contem_campos_esperados(self):
+        from django.contrib import admin
+
+        from apps.jobs.models import DailyJob
+
+        daily_job_admin = admin.site._registry[DailyJob]
+        for field in ("fetched_date", "is_manual"):
+            assert field in daily_job_admin.list_filter, f"Campo '{field}' ausente em list_filter"
+
+    def test_search_fields_contem_title_e_company(self):
+        from django.contrib import admin
+
+        from apps.jobs.models import DailyJob
+
+        daily_job_admin = admin.site._registry[DailyJob]
+        assert "title" in daily_job_admin.search_fields
+        assert "company" in daily_job_admin.search_fields
+
+    def test_date_hierarchy_e_fetched_date(self):
+        from django.contrib import admin
+
+        from apps.jobs.models import DailyJob
+
+        daily_job_admin = admin.site._registry[DailyJob]
+        assert daily_job_admin.date_hierarchy == "fetched_date"
+
+    def test_actions_submit_line_contem_mark_as_manual(self):
+        from django.contrib import admin
+
+        from apps.jobs.models import DailyJob
+
+        daily_job_admin = admin.site._registry[DailyJob]
+        assert "mark_as_manual" in daily_job_admin.actions_submit_line
+
+    def test_mark_as_manual_atualiza_is_manual_para_true(self):
+        from datetime import date
+
+        from django.contrib import admin
+
+        from apps.jobs.models import DailyJob
+
+        job = DailyJob.objects.create(
+            search_term=self.search_term,
+            fetched_date=date.today(),
+            title="Dev Python",
+            company="Corp LTDA",
+            job_url="https://example.com/admin-test/1",
+            is_manual=False,
+        )
+        daily_job_admin = admin.site._registry[DailyJob]
+        request = MagicMock()
+        daily_job_admin.mark_as_manual(request, job)
+        job.refresh_from_db()
+        assert job.is_manual is True
