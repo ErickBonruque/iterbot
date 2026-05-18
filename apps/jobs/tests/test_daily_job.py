@@ -287,3 +287,33 @@ class TestDailyJobCleanup:
         searcher.search.return_value = []
         fetch_and_save_daily_jobs(job_searcher=searcher)
         assert DailyJob.objects.filter(job_url="https://example.com/recent").exists()
+
+
+class TestFetchDailyJobsTask:
+    def test_task_registrada_na_celery_app(self):
+        from waha_bot.celery import app
+
+        assert "apps.jobs.tasks.fetch_daily_jobs" in app.tasks
+
+    def test_beat_schedule_contem_fetch_daily_jobs(self):
+        from django.conf import settings
+
+        assert "fetch-daily-jobs" in settings.CELERY_BEAT_SCHEDULE
+
+    def test_beat_schedule_horario_7h_sem_day_of_week(self):
+        from django.conf import settings
+        from celery.schedules import crontab
+
+        entry = settings.CELERY_BEAT_SCHEDULE["fetch-daily-jobs"]
+        schedule = entry["schedule"]
+        assert isinstance(schedule, crontab)
+        assert str(schedule.hour) == "7"
+        assert str(schedule.minute) == "0"
+        # Sem restrição de dia da semana — roda todo dia
+        assert str(schedule.day_of_week) == "*"
+
+    def test_beat_schedule_aponta_para_task_correta(self):
+        from django.conf import settings
+
+        entry = settings.CELERY_BEAT_SCHEDULE["fetch-daily-jobs"]
+        assert entry["task"] == "apps.jobs.tasks.fetch_daily_jobs"
