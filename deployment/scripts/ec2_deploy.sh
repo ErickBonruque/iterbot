@@ -50,9 +50,9 @@ else
   echo "[deploy] BREVO_API_KEY_B64 vazio — preservando secrets/brevo_api_key.txt existente"
 fi
 
-echo "[deploy] docker compose up"
-docker container prune -f
-docker compose -f docker-compose.yml -f docker-compose.prod.yml up --build -d --remove-orphans
+echo "[deploy] docker compose down + up"
+docker compose -f docker-compose.yml -f docker-compose.prod.yml down --remove-orphans
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up --build -d
 docker image prune -f
 
 echo "[deploy] smoke-check"
