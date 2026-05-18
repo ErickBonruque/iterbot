@@ -20,7 +20,7 @@ logger = structlog.get_logger(__name__)
 
 
 class JobSearchHandler(BaseHandler):
-    def __init__(self, waha_client: MessageSender, job_service: JobSearcher) -> None:
+    def __init__(self, waha_client: MessageSender, job_service: "JobSearcher | None" = None) -> None:
         super().__init__(waha_client)
         self.job_service = job_service
 
@@ -331,13 +331,15 @@ class JobSearchHandler(BaseHandler):
         search_terms: list,
         term_name: str,
     ) -> None:
-        """Executa a busca respeitando a configuração de cada SearchTerm.
+        """Consulta DailyJob pré-fetched ao invés de chamar jobspy (BOT-03).
 
-        Antes o bot chamava `job_service.search(terms, limit=5)` e ignorava
-        location/is_remote/job_type/country_indeed/site_name configurados no
-        admin — divergindo do "Testar busca" e retornando 0 vagas quando a
-        config fugia dos defaults (ex.: remoto, país ≠ Brazil, etc.).
+        Elimina o timeout silencioso que causava "Nenhuma vaga encontrada".
+        DailyJob é populado diariamente pela task fetch_daily_jobs às 07:00.
         """
+        from datetime import date
+
+        from apps.jobs.models import DailyJob
+
         self.send_msg(
             user,
             chat_id,
@@ -348,38 +350,38 @@ class JobSearchHandler(BaseHandler):
             ),
         )
 
-        try:
-            jobs: list[dict] = []
-            for search_term in search_terms:
-                kwargs = search_term.to_search_kwargs(limit_override=self.BOT_RESULTS_PER_TERM)
-                term_results = self.job_service.search(terms=[search_term.term], **kwargs)
-                jobs.extend(term_results)
-                JobSearchLog.objects.create(
-                    user=user,
-                    search_term=search_term.term,
-                    location=search_term.location,
-                    job_type=search_term.job_type,
-                    results_count=len(term_results),
-                    filters=search_term.to_search_kwargs(),
-                    results_preview=term_results[:5],
-                )
-        except Exception as exc:
-            logger.error(
-                "job_search_failed",
-                user_id=user.id,
-                terms=[st.term for st in search_terms],
-                error=str(exc),
-                exc_info=True,
+        today = date.today()
+        limit = self.BOT_RESULTS_PER_TERM * len(search_terms)
+
+        jobs = list(
+            DailyJob.objects.filter(
+                search_term__in=search_terms,
+                fetched_date=today,
             )
-            self.send_msg(
-                user,
-                chat_id,
-                self.resolve_message(
-                    BOT_MESSAGES.search.search_error.key,
-                    BOT_MESSAGES.search.search_error.text,
-                ),
+            .values("title", "company", "location", "job_url")
+            .order_by("-created_at")[:limit]
+        )
+
+        if not jobs:
+            jobs = list(
+                DailyJob.objects.filter(search_term__in=search_terms)
+                .values("title", "company", "location", "job_url")
+                .order_by("-fetched_date")[:limit]
             )
-            return
+
+        for search_term in search_terms:
+            JobSearchLog.objects.create(
+                user=user,
+                search_term=search_term.term,
+                location=search_term.location,
+                job_type=search_term.job_type,
+                results_count=len(jobs),
+                filters=search_term.to_search_kwargs(),
+                results_preview=[
+                    {"title": j["title"], "company": j["company"], "job_url": j["job_url"]}
+                    for j in jobs[:5]
+                ],
+            )
 
         if not jobs:
             self.send_msg(
@@ -403,7 +405,7 @@ class JobSearchHandler(BaseHandler):
         for job in jobs:
             title = job.get("title", "Vaga")
             company = job.get("company", "Empresa")
-            url = job.get("job_url") or job.get("job_url_direct") or "#"
+            url = job.get("job_url") or "#"
             lines.append(f"\n💼 *{title}*\n🏢 {company}\n🔗 {url}")
 
         self.send_msg(user, chat_id, "\n".join(lines))

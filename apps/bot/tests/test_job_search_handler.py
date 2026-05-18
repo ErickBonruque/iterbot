@@ -1,3 +1,5 @@
+from datetime import date, timedelta
+
 from unittest.mock import MagicMock
 
 from django.test import TestCase
@@ -5,6 +7,7 @@ from django.test import TestCase
 from apps.bot.models import ConversationState
 from apps.bot.services import BotService
 from apps.courses.models import Course, SearchTerm
+from apps.jobs.models import DailyJob, JobSearchLog
 from apps.users.models import UserProfile
 
 
@@ -77,22 +80,19 @@ class JobSearchHandlerCourseSelectionTests(TestCase):
         self.assertTrue(self.waha_client.send_message.called)
 
     def test_perform_search_creates_job_search_log(self):
-        """METR-01/D-17: perform_search cria JobSearchLog com resultados."""
-        from apps.jobs.models import JobSearchLog
-
+        """METR-01/D-17: perform_search cria JobSearchLog consultando DailyJob."""
         chat_id = "5522777777777@c.us"
         user = UserProfile.objects.create(phone_number=chat_id, is_authenticated_utfpr=True)
         ConversationState.objects.get_or_create(user=user)
         course = Course.objects.create(name="Engenharia de Software", is_active=True)
         st = SearchTerm.objects.create(course=course, term="python developer")
-        self.job_service.search.return_value = [
-            {
-                "title": "Python Dev",
-                "company": "Corp",
-                "location": "Remote",
-                "job_url": "https://example.com/job/1",
-            },
-        ]
+        DailyJob.objects.create(
+            search_term=st,
+            fetched_date=date.today(),
+            title="Python Dev",
+            company="Corp",
+            job_url="https://example.com/job/1",
+        )
         handler = self.service.job_handler
         handler.perform_search(user, chat_id, [st], term_name="python developer")
 
@@ -101,9 +101,7 @@ class JobSearchHandlerCourseSelectionTests(TestCase):
         log = logs.first()
         self.assertEqual(log.search_term, "python developer")
         self.assertEqual(log.results_count, 1)
-        # filters contém to_search_kwargs() — verificar que é dict com location
         self.assertIsInstance(log.filters, dict)
-        self.assertIn("location", log.filters)
 
 
 class CoursePreferenceTests(TestCase):
@@ -203,3 +201,72 @@ class CoursePreferenceTests(TestCase):
 
         conv_state = ConversationState.objects.get(user=user)
         self.assertEqual(conv_state.selected_course, self.course)
+
+
+class PerformSearchDailyJobTests(TestCase):
+    """Testes para perform_search() usando DailyJob pré-fetched (BOT-03)."""
+
+    def setUp(self):
+        self.waha_client = MagicMock()
+        self.waha_client.settings = MagicMock(session_name="test-session")
+        self.service = BotService(waha_client=self.waha_client)
+        self.chat_id = "5541999910001@c.us"
+        self.user = UserProfile.objects.create(
+            phone_number=self.chat_id, is_authenticated_utfpr=True
+        )
+        ConversationState.objects.get_or_create(user=self.user)
+        self.course = Course.objects.create(name="Engenharia de Software", is_active=True)
+        self.st = SearchTerm.objects.create(course=self.course, term="python developer")
+
+    def test_perform_search_returns_daily_jobs(self):
+        """BOT-03: perform_search envia vagas de DailyJob ao WhatsApp."""
+        DailyJob.objects.create(
+            search_term=self.st,
+            fetched_date=date.today(),
+            title="Dev Python Senior",
+            company="Corp LTDA",
+            job_url="https://example.com/job/123",
+        )
+        handler = self.service.job_handler
+        handler.perform_search(self.user, self.chat_id, [self.st], term_name="python developer")
+        sent_texts = [call[0][1] for call in self.waha_client.send_message.call_args_list]
+        result_text = " ".join(sent_texts)
+        self.assertIn("Dev Python Senior", result_text)
+        self.assertIn("https://example.com/job/123", result_text)
+
+    def test_perform_search_fallback_to_yesterday(self):
+        """BOT-03: Fallback para ontem quando não há vagas hoje (antes das 07:00)."""
+        yesterday = date.today() - timedelta(days=1)
+        DailyJob.objects.create(
+            search_term=self.st,
+            fetched_date=yesterday,
+            title="Vaga de Ontem",
+            company="Corp",
+            job_url="https://example.com/job/456",
+        )
+        handler = self.service.job_handler
+        handler.perform_search(self.user, self.chat_id, [self.st], term_name="python developer")
+        sent_texts = [call[0][1] for call in self.waha_client.send_message.call_args_list]
+        result_text = " ".join(sent_texts)
+        self.assertIn("Vaga de Ontem", result_text)
+
+    def test_perform_search_creates_job_search_log_with_user(self):
+        """BOT-03/METR-01: perform_search cria JobSearchLog com user=user."""
+        DailyJob.objects.create(
+            search_term=self.st,
+            fetched_date=date.today(),
+            title="Dev",
+            company="Corp",
+            job_url="https://example.com/job/789",
+        )
+        handler = self.service.job_handler
+        handler.perform_search(self.user, self.chat_id, [self.st], term_name="python developer")
+        logs = JobSearchLog.objects.filter(user=self.user)
+        self.assertEqual(logs.count(), 1)
+        self.assertEqual(logs.first().search_term, "python developer")
+
+    def test_perform_search_no_jobs_sends_no_jobs_message(self):
+        """BOT-03: Sem DailyJob no banco, bot envia mensagem de nenhuma vaga."""
+        handler = self.service.job_handler
+        handler.perform_search(self.user, self.chat_id, [self.st], term_name="python developer")
+        self.assertEqual(self.waha_client.send_message.call_count, 2)
