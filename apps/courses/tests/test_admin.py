@@ -175,9 +175,10 @@ class TestNoStaleSearchMessage:
     @patch("infra.jobspy.service.JobSearchService.search")
     def test_no_stale_info_message_on_success(self, mock_search, rf, admin_user, search_term):
         """After successful search, test_search must NOT add messages.info with 'Executando busca'."""
-        from apps.courses.admin import SearchTermAdmin
-        from django.contrib.messages.storage.fallback import FallbackStorage
         from django.contrib.messages import constants as message_constants
+        from django.contrib.messages.storage.fallback import FallbackStorage
+
+        from apps.courses.admin import SearchTermAdmin
 
         mock_search.return_value = [
             {"title": "Python Dev", "company": "Corp", "location": "Curitiba, PR"}
@@ -200,9 +201,10 @@ class TestNoStaleSearchMessage:
     @patch("infra.jobspy.service.JobSearchService.search")
     def test_no_stale_info_message_on_empty(self, mock_search, rf, admin_user, search_term):
         """After empty results, test_search must NOT add messages.info with 'Executando busca'."""
-        from apps.courses.admin import SearchTermAdmin
-        from django.contrib.messages.storage.fallback import FallbackStorage
         from django.contrib.messages import constants as message_constants
+        from django.contrib.messages.storage.fallback import FallbackStorage
+
+        from apps.courses.admin import SearchTermAdmin
 
         mock_search.return_value = []
         request = rf.post(f"/admin/courses/searchterm/{search_term.pk}/change/")
@@ -222,9 +224,10 @@ class TestNoStaleSearchMessage:
     @patch("infra.jobspy.service.JobSearchService.search")
     def test_no_stale_info_message_on_error(self, mock_search, rf, admin_user, search_term):
         """After an exception, test_search must NOT add messages.info with 'Executando busca'."""
-        from apps.courses.admin import SearchTermAdmin
-        from django.contrib.messages.storage.fallback import FallbackStorage
         from django.contrib.messages import constants as message_constants
+        from django.contrib.messages.storage.fallback import FallbackStorage
+
+        from apps.courses.admin import SearchTermAdmin
 
         mock_search.side_effect = Exception("API error")
         request = rf.post(f"/admin/courses/searchterm/{search_term.pk}/change/")
@@ -244,8 +247,9 @@ class TestNoStaleSearchMessage:
     @patch("infra.jobspy.service.JobSearchService.search")
     def test_stores_results_in_session_on_success(self, mock_search, rf, admin_user, search_term):
         """Successful search stores results in session."""
-        from apps.courses.admin import SearchTermAdmin
         from django.contrib.messages.storage.fallback import FallbackStorage
+
+        from apps.courses.admin import SearchTermAdmin
 
         mock_search.return_value = [
             {"title": "Python Dev", "company": "Corp", "location": "Curitiba, PR"}
@@ -264,9 +268,10 @@ class TestNoStaleSearchMessage:
     @patch("infra.jobspy.service.JobSearchService.search")
     def test_empty_results_shows_warning(self, mock_search, rf, admin_user, search_term):
         """Empty results should trigger a warning message."""
-        from apps.courses.admin import SearchTermAdmin
-        from django.contrib.messages.storage.fallback import FallbackStorage
         from django.contrib.messages import constants as message_constants
+        from django.contrib.messages.storage.fallback import FallbackStorage
+
+        from apps.courses.admin import SearchTermAdmin
 
         mock_search.return_value = []
         request = rf.post(f"/admin/courses/searchterm/{search_term.pk}/change/")
@@ -286,9 +291,10 @@ class TestNoStaleSearchMessage:
     @patch("infra.jobspy.service.JobSearchService.search")
     def test_exception_shows_error_warning(self, mock_search, rf, admin_user, search_term):
         """Exception during search should trigger a warning message with the error."""
-        from apps.courses.admin import SearchTermAdmin
-        from django.contrib.messages.storage.fallback import FallbackStorage
         from django.contrib.messages import constants as message_constants
+        from django.contrib.messages.storage.fallback import FallbackStorage
+
+        from apps.courses.admin import SearchTermAdmin
 
         mock_search.side_effect = Exception("API error")
         request = rf.post(f"/admin/courses/searchterm/{search_term.pk}/change/")
