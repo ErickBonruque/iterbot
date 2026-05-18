@@ -6,6 +6,7 @@ Guias para configuracao inicial do ambiente de desenvolvimento.
 
 | Arquivo | Descricao |
 |---------|-----------|
+| [GETTING-STARTED.md](GETTING-STARTED.md) | Passo-a-passo completo de primeiro setup |
 | [CONFIGURACAO_LOCAL.md](CONFIGURACAO_LOCAL.md) | Configuracao local com credenciais |
 | [COMO_RODAR_DOCKER.md](COMO_RODAR_DOCKER.md) | Como executar com Docker |
 

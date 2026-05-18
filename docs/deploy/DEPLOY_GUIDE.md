@@ -17,7 +17,7 @@ Este guia reune todos os passos para colocar o IterBot em producao na AWS.
 ssh -i sua-chave.pem ubuntu@SEU-IP-EC2
 
 # Clonar repositorio (ou o setup-ec2.sh faz isso)
-git clone https://github.com/ErickBonruque/IterBot-UTFPR.git /home/ubuntu/iterbot
+git clone https://github.com/ErickBonruque/iterbot.git /home/ubuntu/iterbot
 cd /home/ubuntu/iterbot
 
 # Executar script de provisionamento

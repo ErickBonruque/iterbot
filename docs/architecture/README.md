@@ -14,6 +14,7 @@ Documentacao arquitetural do projeto.
 
 | ID | Titulo | Status |
 |----|--------|--------|
-| ADR-001 | WAHA sem Proxy Traefik | Accepted |
+| ADR-001 | WAHA sem Proxy Traefik | Superseded (producao agora usa Traefik + BasicAuth + TLS) |
 | ADR-002 | Campos Criptografados | Accepted |
-| ADR-003 | Celery para Tasks | Proposed |
+| ADR-003 | Celery para Tasks | Accepted |
+| ADR-004 | EC2 + Docker Compose | Accepted |

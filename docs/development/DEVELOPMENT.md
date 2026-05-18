@@ -30,8 +30,8 @@ Este documento descreve como configurar o ambiente local, executar comandos de b
 
 ```bash
 # Fork no GitHub, depois:
-git clone https://github.com/<seu-usuario>/IterBot-UTFPR.git
-cd IterBot-UTFPR
+git clone https://github.com/<seu-usuario>/iterbot.git
+cd iterbot
 ```
 
 ### 2. Configurar Secrets
@@ -198,7 +198,7 @@ Verificação de tipos estáticos configurada em `pyproject.toml`:
 
 - **Python version:** 3.11
 - **Ferramenta:** `mypy` com plugin `mypy_django_plugin.main`
-- **Settings module:** `waha_bot.settings`
+- **Settings module:** `waha_bot.settings.development`
 - **Flags:** `warn_return_any`, `warn_unused_configs`, `disallow_untyped_defs`
 
 ```bash
@@ -392,7 +392,7 @@ iterbot/
 
 Os testes usam **pytest** com as seguintes configurações em `pyproject.toml`:
 
-- **Settings module:** `waha_bot.settings`
+- **Settings module:** `waha_bot.settings.development`
 - **Test paths:** `apps/`
 - **Padrão de nomes:** `test_*.py` ou `*_test.py`
 - **Cobertura mínima:** 70% (`fail_under = 70`)

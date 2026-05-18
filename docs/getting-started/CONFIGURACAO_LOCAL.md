@@ -93,7 +93,7 @@ openssl rand -base64 12
 ## 📁 Estrutura de Arquivos
 
 ```
-IterBot-UTFPR/
+iterbot/
 ├── .env                 # 🔐 Credenciais locais (não commitar)
 ├── .env.example         # 📝 Template de configuração
 ├── .gitignore           # 🚫 Arquivos ignorados pelo Git

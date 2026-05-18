@@ -45,7 +45,7 @@ graph TB
 
     subgraph "Serviços Externos"
         JOBSAPI[python-jobspy<br/>LinkedIn, Indeed, Glassdoor]
-        SES[AWS SES<br/>E-mail]
+        EMAIL[Provider de E-mail<br/>Resend / Brevo / AWS SES]
     end
 
     STUDENT -->|Mensagens WhatsApp| WAHA
@@ -72,7 +72,7 @@ graph TB
     WORKER --> REDIS
     BEAT --> REDIS
     WORKER --> WAHA
-    WORKER --> SES
+    WORKER --> EMAIL
     WORKER --> JOBSAPI
 ```
 
@@ -95,7 +95,7 @@ graph TB
 2. `AuthenticationHandler` inicia o fluxo: RA → senha → e-mail institucional.
 3. `UTFPRAuthService.authenticate()` valida as credenciais (atualmente placeholder, aceita qualquer RA exceto "000000").
 4. `UTFPRAuthService.link_user()` cria/atualiza o `UserProfile` com RA, senha (criptografada via `EncryptedCharField`) e gera um token de confirmação de e-mail.
-5. A task Celery `send_confirmation_email` envia um link de confirmação via AWS SES.
+5. A task Celery `send_confirmation_email` envia um link de confirmação através do provider de e-mail configurado em `EMAIL_PROVIDER` (Resend por padrão; suporta Brevo, AWS SES, SMTP e console), com fallback opcional via `EMAIL_FALLBACK_PROVIDER`.
 6. O estudante clica no link e `ConfirmEmailView` ativa `is_authenticated_utfpr = True`.
 7. A partir desse momento, o estudante tem acesso completo ao bot (busca de vagas, review semanal).
 
@@ -117,7 +117,7 @@ graph TB
 
 1. A cada 5 minutos, o Celery Beat dispara `check_waha_health`.
 2. A task consulta `GET /api/sessions/{session_name}` no WAHA e registra o resultado em `BotHealthCheck`.
-3. Se duas verificações consecutivas falharem, o sistema tenta reconexão automática com backoff exponencial (30s, 60s, 120s) e envia alerta por e-mail via AWS SES. <!-- VERIFY: backoff durations are [30, 60, 120] seconds as defined in RECONNECT_BACKOFF -->
+3. Se duas verificações consecutivas falharem, o sistema tenta reconexão automática com backoff exponencial (30s, 60s, 120s) e envia alerta por e-mail através do provider configurado (`infra/email/factory.py`). <!-- VERIFY: backoff durations are [30, 60, 120] seconds as defined in RECONNECT_BACKOFF -->
 
 ### 6. Fluxo de resposta da API REST (dashboard)
 
@@ -154,11 +154,12 @@ graph TB
 | `apps/users/` | Model `UserProfile`, serviço de autenticação UTFPR, adapter django-allauth, validação de e-mail institucional, views de confirmação de e-mail e signals. |
 | `apps/courses/` | Modelos `Course` e `SearchTerm` que conectam cursos da UTFPR a termos de busca para scraping. |
 | `apps/core/` | Modelo abstrato `TimeStampedModel`, views de health check, `build_portal_url()` e admin customizado. |
-| `infra/` | Infraestrutura transversal: cliente WAHA, serviço jobspy, campos criptografados, middlewares de correlation ID e logging estruturado, configuração do Traefik. |
+| `infra/` | Infraestrutura transversal: cliente WAHA, serviço jobspy, campos criptografados, middlewares de correlation ID e logging estruturado, factory de providers de e-mail, configuração do Traefik. |
 | `infra/waha/` | `WahaClient` — cliente HTTP que encapsula toda comunicação com a API do WAHA. |
 | `infra/jobspy/` | `JobSearchService` — fachada para o python-jobspy com busca multi-plataforma de vagas. |
 | `infra/security/` | `FieldEncryption` (Fernet) e `EncryptedCharField`/`EncryptedTextField` para criptografia transparente de dados sensíveis no banco. |
 | `infra/middleware/` | `CorrelationIdMiddleware` e `StructuredLoggingMiddleware` — middlewares Django para tracing distribuído e logs estruturados em JSON. |
+| `infra/email/` | Factory de providers de e-mail (`factory.py`), implementações (`providers/resend_provider.py`, `providers/brevo_provider.py`), idempotência (`idempotency.py`) e health checks (`health.py`). Resolve provider por `EMAIL_PROVIDER` com fallback opcional via `EMAIL_FALLBACK_PROVIDER`. |
 | `infra/traefik/` | Configuração do Traefik: `traefik.yml` (dev), `traefik.prod.yml` (produção com redirect HTTPS), `dynamic/middlewares.yml` (security headers, rate limiting, BasicAuth). |
 | `config/` | Configuração centralizada via `env.py` — dataclasses que leem de Docker Secrets → env vars → defaults. |
 | `waha_bot/` | Projeto Django: `settings.py`, `urls.py` (roteamento raiz), `celery.py` (autodiscover), `asgi.py`/`wsgi.py`. |

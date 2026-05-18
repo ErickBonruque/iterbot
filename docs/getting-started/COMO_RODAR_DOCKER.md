@@ -23,8 +23,8 @@ docker-compose --version
 ### 1. Clone o Repositório
 
 ```bash
-git clone https://github.com/ErickBonruque/IterBot-UTFPR.git
-cd IterBot-UTFPR
+git clone https://github.com/ErickBonruque/iterbot.git
+cd iterbot
 ```
 
 ### 2. Configure as Variáveis de Ambiente
