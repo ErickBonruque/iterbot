@@ -1,4 +1,5 @@
 from django.contrib import admin, messages
+from django.http import HttpResponseRedirect
 from unfold.admin import ModelAdmin
 from unfold.decorators import action
 from unfold.enums import ActionVariant
@@ -27,11 +28,11 @@ class DailyJobAdmin(ModelAdmin):
     readonly_fields = ("created_at", "updated_at")
     ordering = ("-fetched_date", "title")
     date_hierarchy = "fetched_date"
-    actions = ["trigger_fetch_daily_jobs"]
+    actions_list = ["trigger_fetch_daily_jobs"]
     actions_submit_line = ["mark_as_manual"]
 
-    @admin.action(description="Buscar vagas agora (dispara task fetch_daily_jobs)")
-    def trigger_fetch_daily_jobs(self, request, queryset):
+    @action(description="Buscar Vagas Agora", variant=ActionVariant.SUCCESS)
+    def trigger_fetch_daily_jobs(self, request):
         from apps.jobs.tasks import fetch_daily_jobs
 
         fetch_daily_jobs.delay()
@@ -40,6 +41,7 @@ class DailyJobAdmin(ModelAdmin):
             "Task de busca de vagas disparada. Aguarde alguns minutos e recarregue a página.",
             level=messages.SUCCESS,
         )
+        return HttpResponseRedirect(request.META.get("HTTP_REFERER", "."))
 
     @action(
         description="Marcar como Manual",
