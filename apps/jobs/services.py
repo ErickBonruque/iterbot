@@ -130,6 +130,77 @@ def build_review_for_user(course, job_searcher: JobSearcher) -> list[dict[str, A
     return combined[:5]
 
 
+def fetch_and_save_daily_jobs(job_searcher) -> dict[str, int]:
+    """Scrapa todos os SearchTerms ativos e persiste em DailyJob (BOT-02).
+
+    Chamada pela task fetch_daily_jobs — não chamar diretamente no webhook.
+    Retorna estatísticas de execução para logging e monitoramento.
+    """
+    from datetime import date, timedelta
+
+    from apps.courses.models import SearchTerm
+    from apps.jobs.models import DailyJob, JobSearchLog
+
+    today = date.today()
+    search_terms = list(SearchTerm.objects.filter(is_default=True).select_related("course"))
+    stats: dict[str, int] = {
+        "terms_processed": 0,
+        "jobs_saved": 0,
+        "jobs_skipped": 0,
+        "errors": 0,
+    }
+
+    for term in search_terms:
+        kwargs = term.to_search_kwargs()
+        try:
+            results = job_searcher.search(terms=[term.term], **kwargs)
+            to_create = [
+                DailyJob(
+                    search_term=term,
+                    fetched_date=today,
+                    title=r.get("title", ""),
+                    company=r.get("company", ""),
+                    location=r.get("location", ""),
+                    job_url=r.get("job_url") or r.get("job_url_direct", ""),
+                    description=r.get("description", ""),
+                    job_type=r.get("job_type", ""),
+                )
+                for r in results
+                if r.get("job_url") or r.get("job_url_direct")
+            ]
+            created = DailyJob.objects.bulk_create(to_create, ignore_conflicts=True)
+            stats["jobs_saved"] += len(created)
+            stats["jobs_skipped"] += len(to_create) - len(created)
+            JobSearchLog.objects.create(
+                user=None,
+                search_term=term.term,
+                location=term.location,
+                job_type=term.job_type,
+                results_count=len(results),
+                filters=term.to_search_kwargs(),
+                results_preview=results[:5],
+            )
+        except Exception:
+            stats["errors"] += 1
+            logger.warning(
+                "fetch_daily_jobs_term_failed",
+                term=term.term,
+                exc_info=True,
+            )
+        stats["terms_processed"] += 1
+
+    # Limpeza de vagas com mais de 7 dias (TTL configurado)
+    deleted, _ = DailyJob.objects.filter(
+        fetched_date__lt=today - timedelta(days=7)
+    ).delete()
+    logger.info(
+        "fetch_daily_jobs_completed",
+        deleted_old=deleted,
+        **stats,
+    )
+    return stats
+
+
 def format_review_message(course_name: str, jobs: list[dict[str, Any]]) -> str:
     """Format a weekly review message for WhatsApp delivery."""
     lines = [

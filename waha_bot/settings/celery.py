@@ -22,6 +22,12 @@ CELERY_BEAT_SCHEDULE = {
         "task": "apps.jobs.tasks.send_weekly_job_review",
         "schedule": crontab(hour=8, minute=0, day_of_week="monday"),
     },
+    # Pré-fetching diário de vagas para o bot — todo dia às 07:00 (Brasília)
+    # Mantém DailyJob atualizado para consulta sub-segundo pelo JobSearchHandler (BOT-02)
+    "fetch-daily-jobs": {
+        "task": "apps.jobs.tasks.fetch_daily_jobs",
+        "schedule": crontab(hour=7, minute=0),
+    },
     # Health check da sessão WAHA — a cada 5 minutos (STAB-01)
     "check-waha-health": {
         "task": "apps.bot.tasks.check_waha_health",
