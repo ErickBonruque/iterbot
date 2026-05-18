@@ -23,13 +23,13 @@ O projeto utiliza **pytest** como framework de testes, com as seguintes extensõ
 A configuração está em `pyproject.toml` na seção `[tool.pytest.ini_options]`:
 
 ```toml
-DJANGO_SETTINGS_MODULE = "waha_bot.settings"
+DJANGO_SETTINGS_MODULE = "waha_bot.settings.development"
 python_files = ["test_*.py", "*_test.py"]
-addopts = "-v --tb=short --strict-markers --cov=waha_bot --cov-report=term-missing --cov-report=html --cov-report=xml --cov-report=lcov"
+addopts = "-v --tb=short --strict-markers --cov=apps/bot --cov=waha_bot --cov-report=term-missing --cov-report=html --cov-report=xml --cov-report=lcov"
 testpaths = ["apps"]
 ```
 
-- `DJANGO_SETTINGS_MODULE` aponta para `waha_bot.settings`.
+- `DJANGO_SETTINGS_MODULE` aponta para `waha_bot.settings.development` (em produção o container usa `waha_bot.settings.production`, definido via `docker-compose.prod.yml`).
 - Os testes são descobertos no diretório `apps/`.
 - Arquivos de teste seguem os padrões `test_*.py` ou `*_test.py`.
 
@@ -87,7 +87,7 @@ poetry run pytest -k "waha"
 
 ### Ambiente de teste
 
-Os testes locais usam `DJANGO_SETTINGS_MODULE=waha_bot.settings` (definido no `pyproject.toml`). Para que os testes funcionem localmente, é necessário ter as variáveis de ambiente configuradas ou usar o container Docker.
+Os testes locais usam `DJANGO_SETTINGS_MODULE=waha_bot.settings.development` (definido no `pyproject.toml`). Para que os testes funcionem localmente, é necessário ter as variáveis de ambiente configuradas ou usar o container Docker.
 
 Na CI, os serviços necessários são provisionados via GitHub Actions:
 

@@ -6,8 +6,8 @@
 
 ```bash
 # Clone o repositório
-git clone https://github.com/ErickBonruque/IterBot-UTFPR.git
-cd IterBot-UTFPR
+git clone https://github.com/ErickBonruque/iterbot.git
+cd iterbot
 
 # Configure secrets e valide ambiente
 make setup
@@ -24,7 +24,7 @@ make start
 | Serviço | URL | Credenciais |
 |---------|-----|-------------|
 | **WAHA Dashboard** | http://localhost:3000/dashboard | `admin` / `cat secrets/waha_dashboard_password.txt` |
-| **Backend Dashboard** | http://localhost:8000/dashboard/ | Ver docs/guides/CREDENCIAIS.md |
+| **Backend Dashboard** | http://localhost:8000/dashboard/ | Ver docs/development/CREDENCIAIS.md |
 | **Django Admin** | http://localhost:8000/admin/ | Criar com `make createsuperuser` |
 
 ## Comandos Úteis

@@ -1,7 +1,7 @@
 # Seguranca — Hardening de Producao
 
 Este documento registra as camadas defensivas aplicadas no deploy da
-IterBot/CapyVagas em AWS EC2, e como operar com elas.
+IterBot em AWS EC2, e como operar com elas.
 
 ## Superficie de ataque publica
 

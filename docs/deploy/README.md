@@ -104,7 +104,7 @@ aws s3api put-bucket-lifecycle-configuration \
 
 ## Monitoring & Alerts
 
-Todos os alertas sao enviados via AWS SES (ja configurado):
+Os alertas sao enviados pelo provider de e-mail configurado em `EMAIL_PROVIDER` (Resend, Brevo, AWS SES, SMTP) — ver `infra/email/factory.py` e [EMAIL_RUNBOOK.md](EMAIL_RUNBOOK.md). Scripts shell de alerta no host usam SMTP via SES por padrao quando `EMAIL_PROVIDER=ses`.
 
 | Alerta | Script | Frequencia | Condicao |
 |--------|--------|------------|----------|

@@ -9,8 +9,8 @@ Assistente de WhatsApp para conectar estudantes da UTFPR com oportunidades de es
 **Pré-requisitos:** Docker, Docker Compose e Git.
 
 ```bash
-git clone git@github.com:ErickBonruque/CapyVagas-UTFPR.git
-cd CapyVagas-UTFPR
+git clone git@github.com:ErickBonruque/iterbot.git
+cd iterbot
 ```
 
 ## Início Rápido
