@@ -1,8 +1,9 @@
 from datetime import timedelta
 
 import redis
-from django.db.models import Avg, Count, F, Max, Q, Sum
-from django.db.models.functions import TruncHour
+from django.db.models import Avg, Count, F, FloatField, Max, Q, Sum
+from django.db.models.fields.json import KeyTextTransform
+from django.db.models.functions import Cast, TruncHour
 from django.utils import timezone
 
 from apps.bot.health import BotHealthMonitor
@@ -331,7 +332,10 @@ class DashboardService:
             metadata__has_key="processing_time_ms",
         )
         bot_processing_avg = (
-            bot_logs.aggregate(avg=Avg("metadata__processing_time_ms"))["avg"] or 0.0
+            bot_logs.annotate(
+                proc_ms=Cast(KeyTextTransform("processing_time_ms", "metadata"), FloatField())
+            ).aggregate(avg=Avg("proc_ms"))["avg"]
+            or 0.0
         )
 
         waha_latency = (
