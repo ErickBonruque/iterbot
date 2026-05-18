@@ -8,11 +8,9 @@ from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
-from apps.companies.services import CompaniesService
 from apps.jobs.models import Company
 from apps.users.models import UserProfile
 from apps.users.services import UTFPRAuthService
-
 
 CACHES_LOCMEM = {
     "default": {
@@ -96,9 +94,7 @@ class TestConfirmEmailView(TestCase):
             token="student-token-abc",
         )
 
-        response = self.client.get(
-            reverse("confirm_email", kwargs={"token": "student-token-abc"})
-        )
+        response = self.client.get(reverse("confirm_email", kwargs={"token": "student-token-abc"}))
 
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response.url, "/accounts/success/")
@@ -109,9 +105,7 @@ class TestConfirmEmailView(TestCase):
 
         # Verify user is authenticated in session
         user = User.objects.get(email="student@alunos.utfpr.edu.br")
-        self.assertEqual(
-            str(self.client.session.get("_auth_user_id")), str(user.pk)
-        )
+        self.assertEqual(str(self.client.session.get("_auth_user_id")), str(user.pk))
 
     def test_confirm_email_auto_login_company_redirects_to_profile(self):
         """Company user confirms email → auto-logged in → redirect to /empresas/perfil/."""
@@ -149,18 +143,14 @@ class TestConfirmEmailView(TestCase):
         profile.email_verified = False
         profile.save()
 
-        response = self.client.get(
-            reverse("confirm_email", kwargs={"token": "company-token-xyz"})
-        )
+        response = self.client.get(reverse("confirm_email", kwargs={"token": "company-token-xyz"}))
 
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response.url, "/empresas/perfil/")
 
     def test_confirm_email_invalid_token_shows_error(self):
         """Confirming with invalid token → no login, shows error page."""
-        response = self.client.get(
-            reverse("confirm_email", kwargs={"token": "nonexistent-token"})
-        )
+        response = self.client.get(reverse("confirm_email", kwargs={"token": "nonexistent-token"}))
 
         # Should render email_confirmed with failure message (200)
         self.assertEqual(response.status_code, 200)
@@ -179,9 +169,7 @@ class TestConfirmEmailView(TestCase):
         self.assertFalse(User.objects.filter(email=profile.email).exists())
         self.assertIsNone(profile.user)
 
-        response = self.client.get(
-            reverse("confirm_email", kwargs={"token": "bot-new-user-token"})
-        )
+        response = self.client.get(reverse("confirm_email", kwargs={"token": "bot-new-user-token"}))
 
         self.assertEqual(response.status_code, 302)
         # Verify User was created and linked

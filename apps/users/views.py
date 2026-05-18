@@ -68,6 +68,7 @@ class ConfirmEmailView(View):
                     # signal that auto-creates a UserProfile, since our profile
                     # already exists and would conflict on the unique email field.
                     from django.db.models.signals import post_save
+
                     from apps.users.signals import create_user_profile
 
                     post_save.disconnect(create_user_profile, sender=User)
