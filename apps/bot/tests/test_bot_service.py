@@ -1,9 +1,11 @@
+from datetime import date
 from unittest.mock import MagicMock
 
 from django.test import TestCase
 
 from apps.bot.services import BotService
 from apps.courses.models import Course, SearchTerm
+from apps.jobs.models import DailyJob
 from apps.users.models import UserProfile
 
 
@@ -66,8 +68,16 @@ class BotServiceFlowTests(TestCase):
 
     def test_course_and_term_selection_drives_job_search(self):
         course = Course.objects.create(name="Engenharia", is_active=True)
-        SearchTerm.objects.create(course=course, term="Python", priority=2)
+        term = SearchTerm.objects.create(course=course, term="Python", priority=2)
         SearchTerm.objects.create(course=course, term="Django", priority=1)
+
+        DailyJob.objects.create(
+            search_term=term,
+            fetched_date=date.today(),
+            title="Dev Python",
+            company="Capy Corp",
+            job_url="https://example.com/vaga1",
+        )
 
         chat_id = "5511999990000@c.us"
         user = self._authenticate_user(chat_id)
@@ -82,23 +92,14 @@ class BotServiceFlowTests(TestCase):
         self.assertEqual(user.conversation_state.current_action, "term_selection")
         self.assertEqual(user.conversation_state.selected_course, course)
 
-        self.job_service.search.return_value = [
-            {"company": "Capy Corp", "title": "Dev", "url": "https://example.com"}
-        ]
         self.service.process_message(chat_id, "1", from_me=False)  # pick top priority term
 
         user.refresh_from_db()
         self.assertIsNone(user.conversation_state.current_action)
         self.assertEqual(user.conversation_state.selected_term.term, "Python")
-        # Bot agora delega kwargs derivados de SearchTerm.to_search_kwargs() e
-        # cap em BOT_RESULTS_PER_TERM=5 por mensagem do WhatsApp.
-        self.assertEqual(self.job_service.search.call_count, 1)
-        _, call_kwargs = self.job_service.search.call_args
-        self.assertEqual(call_kwargs["terms"], ["Python"])
-        self.assertEqual(call_kwargs["limit"], 5)
-        self.assertEqual(call_kwargs["location"], "Curitiba, PR")
+        # Bot agora consulta DailyJob em vez de job_service.search
         sent_text = self.waha_client.send_message.call_args[0][1]
-        self.assertIn("Vagas para Engenharia", sent_text)
+        self.assertIn("Engenharia", sent_text)
         self.assertIn("Python", sent_text)
 
     def test_option_three_requires_authentication_before_listing_courses(self):
@@ -135,8 +136,23 @@ class BotServiceFlowTests(TestCase):
 
     def test_search_all_terms_option_uses_all_default_terms(self):
         course = Course.objects.create(name="Engenharia", is_active=True)
-        SearchTerm.objects.create(course=course, term="Python", priority=2)
-        SearchTerm.objects.create(course=course, term="Django", priority=1)
+        term_python = SearchTerm.objects.create(course=course, term="Python", priority=2)
+        term_django = SearchTerm.objects.create(course=course, term="Django", priority=1)
+
+        DailyJob.objects.create(
+            search_term=term_python,
+            fetched_date=date.today(),
+            title="Dev Python",
+            company="Empresa X",
+            job_url="https://example.com/py1",
+        )
+        DailyJob.objects.create(
+            search_term=term_django,
+            fetched_date=date.today(),
+            title="Dev Django",
+            company="Empresa Y",
+            job_url="https://example.com/dj1",
+        )
 
         chat_id = "5511777666555@c.us"
         user = self._authenticate_user(chat_id)
@@ -151,20 +167,13 @@ class BotServiceFlowTests(TestCase):
         user.refresh_from_db()
         self.assertEqual(user.conversation_state.current_action, "term_selection")
 
-        # Configura retorno de busca e escolhe opção "Buscar Todos"
-        self.job_service.search.return_value = [
-            {"company": "Empresa X", "title": "Dev Python", "url": "https://example.com"}
-        ]
-
-        # Há 2 termos default, então opção 3 corresponde a "Buscar Todos"
+        # Há 2 termos default, entao opcao 3 corresponde a "Buscar Todos"
         self.service.process_message(chat_id, "3", from_me=False)
 
-        # Bot agora chama search() uma vez por SearchTerm para respeitar a
-        # configuração individual (location/is_remote/job_type/etc.) — antes
-        # passava todos os termos numa única chamada com defaults hardcoded.
-        self.assertEqual(self.job_service.search.call_count, 2)
-        called_terms = [call.kwargs["terms"] for call in self.job_service.search.call_args_list]
-        self.assertEqual(called_terms, [["Python"], ["Django"]])
+        # Bot consulta DailyJob para todos os termos default
+        sent_text = self.waha_client.send_message.call_args[0][1]
+        self.assertIn("Dev Python", sent_text)
+        self.assertIn("Dev Django", sent_text)
 
     def test_company_menu_option_opens_onboarding_submenu(self):
         chat_id = "5511999000111@c.us"

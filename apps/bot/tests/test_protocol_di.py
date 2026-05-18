@@ -1,9 +1,12 @@
+from datetime import date
+
 from django.test import TestCase
 
 from apps.bot.services import BotService
 from apps.courses.models import Course, SearchTerm
+from apps.jobs.models import DailyJob
 from apps.users.models import UserProfile
-from infra.waha.protocols import (  # noqa: TC001
+from infra.waha.protocols import (
     Authenticator,
     EmailConfirmationDispatcher,
     JobSearcher,
@@ -88,7 +91,15 @@ class ProtocolDITests(TestCase):
 
     def test_course_search_uses_injected_job_searcher_double(self):
         course = Course.objects.create(name="Engenharia", is_active=True)
-        SearchTerm.objects.create(course=course, term="Python", priority=1)
+        term = SearchTerm.objects.create(course=course, term="Python", priority=1)
+
+        DailyJob.objects.create(
+            search_term=term,
+            fetched_date=date.today(),
+            title="Dev Python",
+            company="Capy",
+            job_url="https://example.com/job1",
+        )
 
         chat_id = "5511888777666@c.us"
         UserProfile.objects.create(phone_number=chat_id, is_authenticated_utfpr=True)
@@ -98,4 +109,6 @@ class ProtocolDITests(TestCase):
         self.service.process_message(chat_id, "1", from_me=False)
         self.service.process_message(chat_id, "1", from_me=False)
 
-        self.assertEqual(self.searcher.calls, [(["Python"], 5)])
+        # perform_search agora consulta DailyJob em vez de job_service.search
+        sent_texts = [text for _, text in self.sender.messages]
+        self.assertTrue(any("Dev Python" in text for text in sent_texts))

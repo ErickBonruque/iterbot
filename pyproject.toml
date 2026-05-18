@@ -73,6 +73,7 @@ ignore = ["E501"]
 "**/serializers.py" = ["RUF012"]
 "**/api_views.py" = ["RUF012"]
 "**/forms.py" = ["RUF012"]
+"**/tests/test_protocol_di.py" = ["TCH001"]
 
 [tool.ruff.lint.mccabe]
 max-complexity = 10
