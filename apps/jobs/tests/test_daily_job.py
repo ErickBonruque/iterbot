@@ -78,17 +78,13 @@ class TestDailyJobModel:
     def test_index_fetched_date_search_term_declared(self):
         from apps.jobs.models import DailyJob
 
-        index_fields = [
-            list(idx.fields) for idx in DailyJob._meta.indexes
-        ]
+        index_fields = [list(idx.fields) for idx in DailyJob._meta.indexes]
         assert ["fetched_date", "search_term"] in index_fields
 
     def test_index_search_term_fetched_date_declared(self):
         from apps.jobs.models import DailyJob
 
-        index_fields = [
-            list(idx.fields) for idx in DailyJob._meta.indexes
-        ]
+        index_fields = [list(idx.fields) for idx in DailyJob._meta.indexes]
         assert ["search_term", "fetched_date"] in index_fields
 
 
@@ -159,10 +155,12 @@ class TestFetchAndSaveDailyJobs:
         from apps.jobs.models import DailyJob
         from apps.jobs.services import fetch_and_save_daily_jobs
 
-        searcher = self._make_searcher([
-            {"title": "Dev Python", "company": "Corp", "job_url": "https://example.com/1"},
-        ])
-        stats = fetch_and_save_daily_jobs(job_searcher=searcher)
+        searcher = self._make_searcher(
+            [
+                {"title": "Dev Python", "company": "Corp", "job_url": "https://example.com/1"},
+            ]
+        )
+        fetch_and_save_daily_jobs(job_searcher=searcher)
         assert DailyJob.objects.filter(job_url="https://example.com/1").exists()
         assert DailyJob.objects.first().fetched_date == date.today()
 
@@ -170,9 +168,11 @@ class TestFetchAndSaveDailyJobs:
         from apps.jobs.models import DailyJob
         from apps.jobs.services import fetch_and_save_daily_jobs
 
-        searcher = self._make_searcher([
-            {"title": "Sem URL", "company": "Corp", "job_url": None, "job_url_direct": None},
-        ])
+        searcher = self._make_searcher(
+            [
+                {"title": "Sem URL", "company": "Corp", "job_url": None, "job_url_direct": None},
+            ]
+        )
         fetch_and_save_daily_jobs(job_searcher=searcher)
         assert DailyJob.objects.count() == 0
 
@@ -180,14 +180,16 @@ class TestFetchAndSaveDailyJobs:
         from apps.jobs.models import DailyJob
         from apps.jobs.services import fetch_and_save_daily_jobs
 
-        searcher = self._make_searcher([
-            {
-                "title": "Dev Java",
-                "company": "Corp",
-                "job_url": None,
-                "job_url_direct": "https://example.com/direct/1",
-            },
-        ])
+        searcher = self._make_searcher(
+            [
+                {
+                    "title": "Dev Java",
+                    "company": "Corp",
+                    "job_url": None,
+                    "job_url_direct": "https://example.com/direct/1",
+                },
+            ]
+        )
         fetch_and_save_daily_jobs(job_searcher=searcher)
         assert DailyJob.objects.filter(job_url="https://example.com/direct/1").exists()
 
@@ -195,9 +197,11 @@ class TestFetchAndSaveDailyJobs:
         from apps.jobs.models import DailyJob
         from apps.jobs.services import fetch_and_save_daily_jobs
 
-        searcher = self._make_searcher([
-            {"title": "Dev Python", "company": "Corp", "job_url": "https://example.com/idem"},
-        ])
+        searcher = self._make_searcher(
+            [
+                {"title": "Dev Python", "company": "Corp", "job_url": "https://example.com/idem"},
+            ]
+        )
         fetch_and_save_daily_jobs(job_searcher=searcher)
         fetch_and_save_daily_jobs(job_searcher=searcher)
         assert DailyJob.objects.filter(job_url="https://example.com/idem").count() == 1
@@ -205,9 +209,11 @@ class TestFetchAndSaveDailyJobs:
     def test_retorna_dict_com_chaves_esperadas(self):
         from apps.jobs.services import fetch_and_save_daily_jobs
 
-        searcher = self._make_searcher([
-            {"title": "Dev", "company": "Corp", "job_url": "https://example.com/x"},
-        ])
+        searcher = self._make_searcher(
+            [
+                {"title": "Dev", "company": "Corp", "job_url": "https://example.com/x"},
+            ]
+        )
         stats = fetch_and_save_daily_jobs(job_searcher=searcher)
         assert set(stats.keys()) == {"terms_processed", "jobs_saved", "jobs_skipped", "errors"}
 
@@ -217,9 +223,7 @@ class TestFetchAndSaveDailyJobs:
         from apps.jobs.services import fetch_and_save_daily_jobs
 
         # Cria segundo term para verificar que processamento continua após erro
-        term2 = SearchTerm.objects.create(
-            course=self.course, term="java developer", is_default=True
-        )
+        SearchTerm.objects.create(course=self.course, term="java developer", is_default=True)
         searcher = MagicMock()
 
         def side_effect(terms, **kwargs):
@@ -237,9 +241,11 @@ class TestFetchAndSaveDailyJobs:
         from apps.jobs.models import JobSearchLog
         from apps.jobs.services import fetch_and_save_daily_jobs
 
-        searcher = self._make_searcher([
-            {"title": "Dev", "company": "Corp", "job_url": "https://example.com/log"},
-        ])
+        searcher = self._make_searcher(
+            [
+                {"title": "Dev", "company": "Corp", "job_url": "https://example.com/log"},
+            ]
+        )
         fetch_and_save_daily_jobs(job_searcher=searcher)
         assert JobSearchLog.objects.filter(user=None).count() == 1
 
@@ -291,7 +297,6 @@ class TestDailyJobCleanup:
 
 class TestFetchDailyJobsTask:
     def test_task_registrada_na_celery_app(self):
-        import apps.jobs.tasks  # força o autodiscover registrar a task
         from waha_bot.celery import app
 
         assert "apps.jobs.tasks.fetch_daily_jobs" in app.tasks
@@ -302,8 +307,8 @@ class TestFetchDailyJobsTask:
         assert "fetch-daily-jobs" in settings.CELERY_BEAT_SCHEDULE
 
     def test_beat_schedule_horario_7h_sem_day_of_week(self):
-        from django.conf import settings
         from celery.schedules import crontab
+        from django.conf import settings
 
         entry = settings.CELERY_BEAT_SCHEDULE["fetch-daily-jobs"]
         schedule = entry["schedule"]
