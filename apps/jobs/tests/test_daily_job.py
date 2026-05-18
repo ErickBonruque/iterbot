@@ -291,6 +291,7 @@ class TestDailyJobCleanup:
 
 class TestFetchDailyJobsTask:
     def test_task_registrada_na_celery_app(self):
+        import apps.jobs.tasks  # força o autodiscover registrar a task
         from waha_bot.celery import app
 
         assert "apps.jobs.tasks.fetch_daily_jobs" in app.tasks
@@ -307,10 +308,13 @@ class TestFetchDailyJobsTask:
         entry = settings.CELERY_BEAT_SCHEDULE["fetch-daily-jobs"]
         schedule = entry["schedule"]
         assert isinstance(schedule, crontab)
-        assert str(schedule.hour) == "7"
-        assert str(schedule.minute) == "0"
-        # Sem restrição de dia da semana — roda todo dia
-        assert str(schedule.day_of_week) == "*"
+        # crontab.hour e .minute são sets internamente — verificar via _orig_hour/_orig_minute
+        # ou comparar com outro crontab equivalente
+        expected = crontab(hour=7, minute=0)
+        assert schedule.hour == expected.hour
+        assert schedule.minute == expected.minute
+        # Sem restrição de dia da semana — roda todo dia (day_of_week="*")
+        assert schedule.day_of_week == expected.day_of_week
 
     def test_beat_schedule_aponta_para_task_correta(self):
         from django.conf import settings
