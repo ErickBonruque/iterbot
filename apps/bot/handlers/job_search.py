@@ -20,7 +20,9 @@ logger = structlog.get_logger(__name__)
 
 
 class JobSearchHandler(BaseHandler):
-    def __init__(self, waha_client: MessageSender, job_service: "JobSearcher | None" = None) -> None:
+    def __init__(
+        self, waha_client: MessageSender, job_service: "JobSearcher | None" = None
+    ) -> None:
         super().__init__(waha_client)
         self.job_service = job_service
 

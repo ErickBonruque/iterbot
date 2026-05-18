@@ -190,9 +190,7 @@ def fetch_and_save_daily_jobs(job_searcher) -> dict[str, int]:
         stats["terms_processed"] += 1
 
     # Limpeza de vagas com mais de 7 dias (TTL configurado)
-    deleted, _ = DailyJob.objects.filter(
-        fetched_date__lt=today - timedelta(days=7)
-    ).delete()
+    deleted, _ = DailyJob.objects.filter(fetched_date__lt=today - timedelta(days=7)).delete()
     logger.info(
         "fetch_daily_jobs_completed",
         deleted_old=deleted,
