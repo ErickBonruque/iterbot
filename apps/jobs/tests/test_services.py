@@ -1,9 +1,8 @@
 """Tests for jobs SSoT search function and get_online_jobs_for_course."""
 
-from unittest.mock import MagicMock, call, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
-from django.test import TestCase
 
 from apps.courses.models import Course, SearchTerm
 from apps.jobs.services import get_online_jobs_for_course, search_with_config
@@ -26,7 +25,7 @@ class TestSearchWithConfig:
 
     def test_uses_per_term_kwargs(self, course, mock_searcher):
         """Each SearchTerm's to_search_kwargs() is called for its own config."""
-        st1 = SearchTerm.objects.create(
+        SearchTerm.objects.create(
             course=course,
             term="python",
             is_default=True,
@@ -35,7 +34,7 @@ class TestSearchWithConfig:
             is_remote=True,
             job_type="internship",
         )
-        st2 = SearchTerm.objects.create(
+        SearchTerm.objects.create(
             course=course,
             term="django",
             is_default=True,
@@ -50,7 +49,7 @@ class TestSearchWithConfig:
             [{"title": "Django Dev", "company": "B"}],
         ]
 
-        result = search_with_config(course, mock_searcher)
+        search_with_config(course, mock_searcher)
 
         assert mock_searcher.search.call_count == 2
         # Verify each call uses its own term's to_search_kwargs()
@@ -105,7 +104,7 @@ class TestSearchWithConfig:
         )
 
         mock_searcher.search.return_value = [{"title": "Result"}]
-        result = search_with_config(course, mock_searcher)
+        search_with_config(course, mock_searcher)
 
         # Only 1 call (for the default term), not for the non-default one
         assert mock_searcher.search.call_count == 1

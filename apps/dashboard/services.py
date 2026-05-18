@@ -7,10 +7,10 @@ from django.utils import timezone
 
 from apps.bot.health import BotHealthMonitor
 from apps.bot.models import BotConfiguration, BotHealthCheck, BotMetrics, InteractionLog
-from config.env import settings
 from apps.courses.models import Course
 from apps.jobs.models import JobSearchLog
 from apps.users.models import UserProfile
+from config.env import settings
 
 
 class DashboardService:
@@ -207,7 +207,7 @@ class DashboardService:
         total_users = UserProfile.objects.count()
 
         # Distribuição por curso (D-12) — inclui "Sem curso definido"
-        from django.db.models import Case, Value, CharField, When
+        from django.db.models import Case, CharField, Value, When
 
         course_dist = (
             UserProfile.objects.values(
@@ -421,7 +421,7 @@ class DashboardService:
         ).count()
 
         result = {
-            "celery_available": True,
+            "celery_available": celery_available,
             "workers": workers,
             "total_workers": len(workers),
             "total_active_tasks": total_active_tasks,

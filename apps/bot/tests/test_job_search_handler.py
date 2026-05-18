@@ -121,7 +121,7 @@ class CoursePreferenceTests(TestCase):
             order=1,
         )
 
-    def _authenticate_user(self, phone_number: str = None) -> UserProfile:
+    def _authenticate_user(self, phone_number: str | None = None) -> UserProfile:
         phone = phone_number or self.chat_id
         user = UserProfile.objects.create(phone_number=phone, is_authenticated_utfpr=True)
         ConversationState.objects.get_or_create(user=user)

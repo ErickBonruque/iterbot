@@ -510,7 +510,7 @@ class TestCompanySignupEmailContext(TestCase):
         from apps.users.models import UserProfile
 
         # Create UserProfile without company (bot flow student)
-        profile = UserProfile.objects.create(
+        UserProfile.objects.create(
             phone_number="5541999000001@c.us",
             email="student-confirm@alunos.utfpr.edu.br",
             ra="a1234567",

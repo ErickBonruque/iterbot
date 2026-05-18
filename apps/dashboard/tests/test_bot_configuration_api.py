@@ -9,8 +9,8 @@ from config.env import settings
 class BotConfigurationApiTests(TestCase):
     def setUp(self):
         self.client = APIClient()
-        User = get_user_model()
-        self.admin = User.objects.create_superuser(
+        user_model = get_user_model()
+        self.admin = user_model.objects.create_superuser(
             username="testadmin",
             email="testadmin@example.com",
             password="testpass123",
