@@ -1,4 +1,3 @@
-
 from django.test import TestCase
 from django.utils import timezone
 
@@ -72,9 +71,7 @@ class BusinessMetricsTests(TestCase):
     """Testes para métricas de negócio (METR-01, METR-02, METR-03)."""
 
     def setUp(self):
-        self.course = Course.objects.create(
-            name="Engenharia de Software", is_active=True, order=1
-        )
+        self.course = Course.objects.create(name="Engenharia de Software", is_active=True, order=1)
         self.user = UserProfile.objects.create(
             phone_number="5541999999999@c.us",
             email="aluno@alunos.utfpr.edu.br",

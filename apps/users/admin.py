@@ -29,7 +29,14 @@ class CoursePreferenceFilter(SimpleListFilter):
 class UserProfileAdmin(ModelAdmin):
     """Admin para perfis de usuários/alunos."""
 
-    list_display = ["phone_number", "email", "ra", "course_name", "is_authenticated_utfpr", "last_activity"]
+    list_display = [
+        "phone_number",
+        "email",
+        "ra",
+        "course_name",
+        "is_authenticated_utfpr",
+        "last_activity",
+    ]
     list_filter = [CoursePreferenceFilter, "is_authenticated_utfpr", "last_activity", "created_at"]
     search_fields = ["phone_number", "email", "ra", "user__username"]
     readonly_fields = ["created_at", "updated_at", "last_activity"]

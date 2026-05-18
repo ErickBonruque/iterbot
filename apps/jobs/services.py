@@ -75,9 +75,7 @@ def search_with_config(
     location, is_remote, job_type, country_indeed, etc. are respected
     per-term — matching the "Testar busca" admin behavior exactly.
     """
-    search_terms = list(
-        course.search_terms.filter(is_default=True).order_by("-priority")
-    )
+    search_terms = list(course.search_terms.filter(is_default=True).order_by("-priority"))
     if not search_terms:
         logger.warning(
             "no_search_terms_for_course",

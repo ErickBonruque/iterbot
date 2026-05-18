@@ -125,10 +125,7 @@ class DashboardService:
         authenticated_users = UserProfile.objects.filter(is_authenticated_utfpr=True).count()
         users_with_course = UserProfile.objects.filter(course__isnull=False).count()
         active_courses_count = (
-            UserProfile.objects.filter(course__isnull=False)
-            .values("course_id")
-            .distinct()
-            .count()
+            UserProfile.objects.filter(course__isnull=False).values("course_id").distinct().count()
         )
         courses_for_filter = Course.objects.filter(is_active=True).order_by("order", "name")
 
@@ -182,8 +179,7 @@ class DashboardService:
         from apps.courses.models import SearchTerm
 
         term_to_course = {
-            st.term: st.course.name
-            for st in SearchTerm.objects.select_related("course").all()
+            st.term: st.course.name for st in SearchTerm.objects.select_related("course").all()
         }
         for term_data in top_terms:
             term_data["course_name"] = term_to_course.get(term_data["search_term"], "—")
@@ -260,15 +256,11 @@ class DashboardService:
         ).count()
 
         # Taxas de conversão (D-16)
-        signup_to_email_rate = (
-            email_verified_count / signups_count if signups_count > 0 else 0.0
-        )
+        signup_to_email_rate = email_verified_count / signups_count if signups_count > 0 else 0.0
         email_to_active_rate = (
             active_authenticated / email_verified_count if email_verified_count > 0 else 0.0
         )
-        overall_conversion_rate = (
-            active_authenticated / signups_count if signups_count > 0 else 0.0
-        )
+        overall_conversion_rate = active_authenticated / signups_count if signups_count > 0 else 0.0
 
         return {
             "signups_count": signups_count,
@@ -299,13 +291,15 @@ class DashboardService:
             context.update(DashboardService.get_search_metrics_context(days=days))
         else:
             # Retorna estrutura vazia para evitar erros no template
-            context.update({
-                "total_searches": 0,
-                "total_jobs_found": 0,
-                "search_success_rate": 0.0,
-                "jobs_per_term": [],
-                "top_terms": [],
-            })
+            context.update(
+                {
+                    "total_searches": 0,
+                    "total_jobs_found": 0,
+                    "search_success_rate": 0.0,
+                    "jobs_per_term": [],
+                    "top_terms": [],
+                }
+            )
 
         # User metrics e auth funnel são independentes de JobSearchLog
         context.update(DashboardService.get_user_metrics_context(days=days))
@@ -317,16 +311,13 @@ class DashboardService:
     def get_api_latency_context(hours: int = 24) -> dict:
         since = timezone.now() - timedelta(hours=hours)
 
-        latency_qs = BotMetrics.objects.filter(
-            metric_name="api.latency_ms", created_at__gte=since
-        )
+        latency_qs = BotMetrics.objects.filter(metric_name="api.latency_ms", created_at__gte=since)
         total_samples = latency_qs.count()
         has_latency_data = total_samples > 0
         avg_api_latency_ms = latency_qs.aggregate(avg=Avg("value"))["avg"] or 0.0
 
         latency_timeseries = list(
-            latency_qs
-            .annotate(hour=TruncHour("created_at"))
+            latency_qs.annotate(hour=TruncHour("created_at"))
             .values("hour")
             .annotate(
                 avg_latency_ms=Avg("value"),
@@ -339,14 +330,17 @@ class DashboardService:
             created_at__gte=since,
             metadata__has_key="processing_time_ms",
         )
-        bot_processing_avg = bot_logs.aggregate(
-            avg=Avg("metadata__processing_time_ms")
-        )["avg"] or 0.0
+        bot_processing_avg = (
+            bot_logs.aggregate(avg=Avg("metadata__processing_time_ms"))["avg"] or 0.0
+        )
 
-        waha_latency = BotHealthCheck.objects.filter(
-            created_at__gte=since,
-            response_time__isnull=False,
-        ).aggregate(avg=Avg("response_time"))["avg"] or 0.0
+        waha_latency = (
+            BotHealthCheck.objects.filter(
+                created_at__gte=since,
+                response_time__isnull=False,
+            ).aggregate(avg=Avg("response_time"))["avg"]
+            or 0.0
+        )
 
         return {
             "has_latency_data": has_latency_data,
@@ -393,11 +387,7 @@ class DashboardService:
             worker_stats = stats[worker_name]
             worker_active = len(active.get(worker_name, []))
             worker_reserved = len(reserved.get(worker_name, []))
-            worker_processed = (
-                worker_stats.get("total", {})
-                .get("tasks", {})
-                .get("all", 0)
-            )
+            worker_processed = worker_stats.get("total", {}).get("tasks", {}).get("all", 0)
             workers[worker_name] = {
                 "status": "online",
                 "active_tasks": worker_active,
@@ -446,16 +436,24 @@ class DashboardService:
             return {
                 "has_waha_data": False,
                 "waha_history": [],
-                "waha_current_status": {"status": "unknown", "session_status": "unknown", "latency_ms": None},
-                "waha_degradation": {"has_degradation": False, "degraded_hours": 0, "total_hours": 0, "degradation_pct": 0},
+                "waha_current_status": {
+                    "status": "unknown",
+                    "session_status": "unknown",
+                    "latency_ms": None,
+                },
+                "waha_degradation": {
+                    "has_degradation": False,
+                    "degraded_hours": 0,
+                    "total_hours": 0,
+                    "degradation_pct": 0,
+                },
                 "period_hours": hours,
             }
 
         from django.db import models
 
         hourly = (
-            checks
-            .annotate(hour=TruncHour("created_at"))
+            checks.annotate(hour=TruncHour("created_at"))
             .values("hour")
             .annotate(
                 total=Count("id"),
@@ -472,13 +470,15 @@ class DashboardService:
             is_degraded = uptime_pct < 90
             if is_degraded:
                 degraded_count += 1
-            history.append({
-                "time": entry["hour"].isoformat() if entry["hour"] else "",
-                "uptime_pct": round(uptime_pct, 1),
-                "avg_latency_ms": round(entry["avg_latency"], 1) if entry["avg_latency"] else 0,
-                "total_checks": entry["total"],
-                "is_degraded": is_degraded,
-            })
+            history.append(
+                {
+                    "time": entry["hour"].isoformat() if entry["hour"] else "",
+                    "uptime_pct": round(uptime_pct, 1),
+                    "avg_latency_ms": round(entry["avg_latency"], 1) if entry["avg_latency"] else 0,
+                    "total_checks": entry["total"],
+                    "is_degraded": is_degraded,
+                }
+            )
 
         latest_check = checks.order_by("-created_at").first()
         online_count = checks.filter(status="online").count()
@@ -491,13 +491,17 @@ class DashboardService:
             "waha_current_status": {
                 "status": latest_check.status if latest_check else "unknown",
                 "session_status": latest_check.session_status if latest_check else "unknown",
-                "latency_ms": round(latest_check.response_time, 1) if latest_check and latest_check.response_time else None,
+                "latency_ms": round(latest_check.response_time, 1)
+                if latest_check and latest_check.response_time
+                else None,
             },
             "waha_degradation": {
                 "has_degradation": degraded_count > 0,
                 "degraded_hours": degraded_count,
                 "total_hours": len(history),
-                "degradation_pct": round((degraded_count / len(history)) * 100, 1) if history else 0,
+                "degradation_pct": round((degraded_count / len(history)) * 100, 1)
+                if history
+                else 0,
             },
             "period_hours": hours,
         }

@@ -53,7 +53,8 @@ class TestDashboardAuthMiddleware(TestCase):
             request.user = AnonymousUser()
             response = self.middleware(request)
             self.assertEqual(
-                response.status_code, 200,
+                response.status_code,
+                200,
                 f"Rota {url} deveria passar sem redirecionamento",
             )
 

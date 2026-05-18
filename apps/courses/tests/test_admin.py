@@ -325,7 +325,9 @@ class TestSearchUsesToSearchKwargs:
     """Verify admin test_search uses to_search_kwargs() — SSoT alignment."""
 
     @patch("infra.jobspy.service.JobSearchService.search")
-    def test_test_search_calls_with_to_search_kwargs(self, mock_search, client, admin_user, search_term):
+    def test_test_search_calls_with_to_search_kwargs(
+        self, mock_search, client, admin_user, search_term
+    ):
         """test_search should call service.search with to_search_kwargs()."""
         mock_search.return_value = []
         client.force_login(admin_user)

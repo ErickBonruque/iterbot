@@ -73,12 +73,8 @@ class TestSearchWithConfig:
 
     def test_aggregates_results(self, course, mock_searcher):
         """Multiple SearchTerms produce combined results."""
-        SearchTerm.objects.create(
-            course=course, term="python", is_default=True, priority=10
-        )
-        SearchTerm.objects.create(
-            course=course, term="django", is_default=True, priority=5
-        )
+        SearchTerm.objects.create(course=course, term="python", is_default=True, priority=10)
+        SearchTerm.objects.create(course=course, term="django", is_default=True, priority=5)
 
         mock_searcher.search.side_effect = [
             [{"title": "Python Dev"}, {"title": "Python Jr"}],
@@ -96,12 +92,8 @@ class TestSearchWithConfig:
 
     def test_non_default_terms_excluded(self, course, mock_searcher):
         """Non-default SearchTerms are excluded from search."""
-        SearchTerm.objects.create(
-            course=course, term="python", is_default=True, priority=10
-        )
-        SearchTerm.objects.create(
-            course=course, term="archived", is_default=False, priority=1
-        )
+        SearchTerm.objects.create(course=course, term="python", is_default=True, priority=10)
+        SearchTerm.objects.create(course=course, term="archived", is_default=False, priority=1)
 
         mock_searcher.search.return_value = [{"title": "Result"}]
         search_with_config(course, mock_searcher)
