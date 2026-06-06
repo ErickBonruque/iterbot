@@ -3,9 +3,12 @@
 
 {% block title %}Portal Empresas - IterBot UTFPR{% endblock %}
 
+{# Suprime a navbar simples do base.html — o portal de empresas usa sua propria navbar com links de navegacao #}
+{% block navbar %}{% endblock %}
+
 {% block content %}
 {% if user.is_authenticated %}
-<nav class="navbar navbar-expand-lg navbar-dark mb-4" style="background-color: var(--utfpr-black); margin-top: -2rem;">
+<nav class="navbar navbar-expand-lg navbar-dark mb-4" style="background-color: var(--utfpr-black);">
     <div class="container">
         <a class="navbar-brand d-flex align-items-center gap-2" href="/empresas/perfil/">
             <img src="{% static 'img/logo-icon.png' %}" alt="IterBot" height="28" width="28" style="border-radius:50%;">
@@ -31,16 +34,14 @@
 </nav>
 {% endif %}
 
-<div class="container py-3">
-    {% if messages %}
-        {% for message in messages %}
-        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-            {{ message }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-        {% endfor %}
-    {% endif %}
+{% if messages %}
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endfor %}
+{% endif %}
 
-    {% block company_content %}{% endblock %}
-</div>
+{% block company_content %}{% endblock %}
 {% endblock %}
