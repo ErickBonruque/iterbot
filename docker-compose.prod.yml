@@ -44,9 +44,11 @@ services:
       - "traefik.http.routers.login-secure.middlewares=security-headers@file,login-rate-limit@file"
       - "traefik.http.routers.login-secure.priority=90"
       - "traefik.http.routers.login-secure.service=backend"
-      # Router dedicado para admin e portal — BasicAuth + rate-limit restrito
-      - "traefik.http.routers.admin-secure.rule=Host(`${DOMAIN}`) && (PathPrefix(`/admin`) || PathPrefix(`/portal`))"
+      # Router dedicado para admin e empresas — BasicAuth + rate-limit restrito
+      - "traefik.http.routers.admin-secure.rule=Host(`${DOMAIN}`) && (PathPrefix(`/admin`) || PathPrefix(`/empresas`))"
       - "traefik.http.routers.admin-secure.entrypoints=websecure"
+      - "traefik.http.routers.admin-secure.tls=true"
+      - "traefik.http.routers.admin-secure.tls.certresolver=letsencrypt"
       - "traefik.http.routers.admin-secure.middlewares=admin-auth@file,security-headers@file,admin-rate-limit@file"
       - "traefik.http.routers.admin-secure.priority=100"
       - "traefik.http.routers.admin-secure.service=backend"
