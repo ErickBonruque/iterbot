@@ -22,7 +22,19 @@ class DjangoSettings:
         else:
             allowed_hosts_iterable = allowed_hosts_raw
         self.allowed_hosts = [h.strip() for h in allowed_hosts_iterable if h and h.strip()]
-        self.portal_base_url = env("PORTAL_BASE_URL")
+
+        # PORTAL_BASE_URL: lê diretamente do env. Se ausente ou vazio, deriva de DOMAIN.
+        # Isso garante que a URL enviada pelo bot seja sempre o domínio atual da EC2,
+        # mesmo quando apenas DOMAIN é atualizado e PORTAL_BASE_URL não é redefinido.
+        portal_base_url = env("PORTAL_BASE_URL", default="")
+        if not portal_base_url:
+            domain = env("DOMAIN", default="localhost")
+            if domain and domain != "localhost":
+                portal_base_url = f"https://{domain}"
+            else:
+                portal_base_url = f"http://{domain}"
+        self.portal_base_url = portal_base_url
+
         # Chave dedicada para criptografia de campos sensíveis.
         # Lida de Docker secret "encryption_key" ou variável ENCRYPTION_KEY.
         # Se ausente, encryption.py fará fallback para SECRET_KEY (retrocompat).
