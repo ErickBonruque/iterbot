@@ -1,5 +1,6 @@
 import structlog
 from django.contrib import admin, messages
+from django.utils import timezone
 from django.utils.html import format_html
 from unfold.admin import ModelAdmin
 
@@ -43,34 +44,49 @@ class CompanyAdmin(ModelAdmin):
 
     def approve_companies(self, request, queryset):
         updated = queryset.filter(status=CompanyStatus.PENDING).update(
-            status=CompanyStatus.APPROVED
+            status=CompanyStatus.APPROVED,
+            updated_at=timezone.now(),
         )
         logger.info(
             "companies_approved_bulk",
             count=updated,
             admin_user=request.user.username,
         )
-        self.message_user(
-            request,
-            f"{updated} empresa(s) aprovada(s) com sucesso.",
-            level=messages.SUCCESS,
-        )
+        if updated == 0:
+            self.message_user(
+                request,
+                "Nenhuma empresa estava em estado elegível para aprovação.",
+                level=messages.WARNING,
+            )
+        else:
+            self.message_user(
+                request,
+                f"{updated} empresa(s) aprovada(s) com sucesso.",
+                level=messages.SUCCESS,
+            )
 
     approve_companies.short_description = "Aprovar empresas selecionadas"
 
     def block_companies(self, request, queryset):
         updated = queryset.filter(
             status__in=[CompanyStatus.PENDING, CompanyStatus.APPROVED]
-        ).update(status=CompanyStatus.BLOCKED)
+        ).update(status=CompanyStatus.BLOCKED, updated_at=timezone.now())
         logger.info(
             "companies_blocked_bulk",
             count=updated,
             admin_user=request.user.username,
         )
-        self.message_user(
-            request,
-            f"{updated} empresa(s) bloqueada(s).",
-            level=messages.WARNING,
-        )
+        if updated == 0:
+            self.message_user(
+                request,
+                "Nenhuma empresa estava em estado elegível para bloqueio.",
+                level=messages.WARNING,
+            )
+        else:
+            self.message_user(
+                request,
+                f"{updated} empresa(s) bloqueada(s).",
+                level=messages.WARNING,
+            )
 
     block_companies.short_description = "Bloquear empresas selecionadas"
