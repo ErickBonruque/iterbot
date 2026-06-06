@@ -248,7 +248,6 @@ class JobSearchHandler(BaseHandler):
             return
 
         lines = [f"*{i + 1}*) {t.term}" for i, t in enumerate(terms)]
-        lines.append(f"*{len(terms) + 1}*) Buscar Todos")
         msg = self.resolve_message(
             BOT_MESSAGES.search.term_selection_intro.key,
             BOT_MESSAGES.search.term_selection_intro.text,
@@ -296,16 +295,7 @@ class JobSearchHandler(BaseHandler):
             )
             return
 
-        if idx == len(terms):
-            selected_search_terms = terms
-            term_name = "Todos os termos"
-        elif 0 <= idx < len(terms):
-            term = terms[idx]
-            conversation_state.selected_term = term
-            conversation_state.save(update_fields=["selected_term", "updated_at"])
-            selected_search_terms = [term]
-            term_name = term.term
-        else:
+        if not (0 <= idx < len(terms)):
             self.send_msg(
                 user,
                 chat_id,
@@ -315,6 +305,12 @@ class JobSearchHandler(BaseHandler):
                 ),
             )
             return
+
+        term = terms[idx]
+        conversation_state.selected_term = term
+        conversation_state.save(update_fields=["selected_term", "updated_at"])
+        selected_search_terms = [term]
+        term_name = term.term
 
         apply_state_transition(
             conversation_state=conversation_state,

@@ -134,47 +134,6 @@ class BotServiceFlowTests(TestCase):
         self.assertIn(course2.name, sent_text)
         self.assertNotIn("Curso Inativo", sent_text)
 
-    def test_search_all_terms_option_uses_all_default_terms(self):
-        course = Course.objects.create(name="Engenharia", is_active=True)
-        term_python = SearchTerm.objects.create(course=course, term="Python", priority=2)
-        term_django = SearchTerm.objects.create(course=course, term="Django", priority=1)
-
-        DailyJob.objects.create(
-            search_term=term_python,
-            fetched_date=date.today(),
-            title="Dev Python",
-            company="Empresa X",
-            job_url="https://example.com/py1",
-        )
-        DailyJob.objects.create(
-            search_term=term_django,
-            fetched_date=date.today(),
-            title="Dev Django",
-            company="Empresa Y",
-            job_url="https://example.com/dj1",
-        )
-
-        chat_id = "5511777666555@c.us"
-        user = self._authenticate_user(chat_id)
-
-        # Inicia fluxo de curso (opcao 1 do menu autenticado = Buscar Vagas)
-        self.service.process_message(chat_id, "1", from_me=False)
-        user.refresh_from_db()
-        self.assertEqual(user.conversation_state.current_action, "course_selection")
-
-        # Escolhe o primeiro curso
-        self.service.process_message(chat_id, "1", from_me=False)
-        user.refresh_from_db()
-        self.assertEqual(user.conversation_state.current_action, "term_selection")
-
-        # Há 2 termos default, entao opcao 3 corresponde a "Buscar Todos"
-        self.service.process_message(chat_id, "3", from_me=False)
-
-        # Bot consulta DailyJob para todos os termos default
-        sent_text = self.waha_client.send_message.call_args[0][1]
-        self.assertIn("Dev Python", sent_text)
-        self.assertIn("Dev Django", sent_text)
-
     def test_company_menu_option_opens_onboarding_submenu(self):
         chat_id = "5511999000111@c.us"
 
