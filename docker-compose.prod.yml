@@ -42,7 +42,7 @@ services:
       - "traefik.http.routers.login-secure.tls=true"
       - "traefik.http.routers.login-secure.tls.certresolver=letsencrypt"
       - "traefik.http.routers.login-secure.middlewares=security-headers@file,login-rate-limit@file"
-      - "traefik.http.routers.login-secure.priority=90"
+      - "traefik.http.routers.login-secure.priority=110"
       - "traefik.http.routers.login-secure.service=backend"
       # Router dedicado para admin e empresas — BasicAuth + rate-limit restrito
       - "traefik.http.routers.admin-secure.rule=Host(`${DOMAIN}`) && (PathPrefix(`/admin`) || PathPrefix(`/empresas`))"
