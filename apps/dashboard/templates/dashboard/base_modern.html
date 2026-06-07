@@ -122,6 +122,16 @@
                     Status do Bot
                 </a>
 
+                <a href="{% url 'observability' %}"
+                   class="flex items-center px-4 py-3 mb-2 rounded-lg hover:bg-gray-800 transition-colors
+                          {% if 'observability' in request.path %}bg-gray-800 text-green-400{% endif %}">
+                    <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M15 12a3 3 0 11-6 0 3 3 0 016 0z M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                    </svg>
+                    Observabilidade
+                </a>
+
                 <a href="{% url 'bot_configuration' %}" class="flex items-center px-4 py-3 mb-2 rounded-lg hover:bg-gray-800 transition-colors {% if 'configuration' in request.path %}bg-gray-800 text-green-400{% endif %}">
                     <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 1.343-3 3s1.343 3 3 3 3-1.343 3-3-1.343-3-3-3zm0-6a9 9 0 00-9 9c0 4.337 3.064 7.942 7.112 8.82l1.388 3.18 1.388-3.18C17.936 18.942 21 15.337 21 11a9 9 0 00-9-9z"></path>
