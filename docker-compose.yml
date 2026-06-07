@@ -161,7 +161,7 @@ services:
     # Usando entrypoint padrão do WAHA
     environment:
       # WhatsApp Engine Configuration
-      - WHATSAPP_DEFAULT_ENGINE=WEBJS
+      - WHATSAPP_DEFAULT_ENGINE=NOWEB
       - WHATSAPP_HOOK_URL=http://backend:8000/webhook/
       - WHATSAPP_HOOK_EVENTS=message.any
 
