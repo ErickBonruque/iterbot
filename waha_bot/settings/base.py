@@ -56,7 +56,6 @@ INSTALLED_APPS = [
     "apps.courses",
     "apps.jobs",
     "apps.bot",
-    "apps.dashboard",
     "apps.companies",
 ]
 
@@ -69,7 +68,6 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
-    "infra.middleware.dashboard_auth.DashboardAuthMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "allauth.account.middleware.AccountMiddleware",
@@ -250,14 +248,40 @@ UNFOLD = {
     ],
     "SIDEBAR": {
         "show_search": True,
-        "show_all_applications": True,
+        "show_all_applications": False,
         "navigation": [
             {
-                "title": "Usuarios",
+                "title": "Monitoramento",
                 "separator": False,
                 "items": [
                     {
-                        "title": "Usuarios Django",
+                        "title": "Status do Bot",
+                        "icon": "monitor_heart",
+                        "link": "/admin/status-bot/",
+                    },
+                    {
+                        "title": "Observabilidade",
+                        "icon": "troubleshoot",
+                        "link": "/admin/observabilidade/",
+                    },
+                    {
+                        "title": "Métricas de Negócio",
+                        "icon": "bar_chart",
+                        "link": "/admin/metricas-negocio/",
+                    },
+                    {
+                        "title": "Métricas Técnicas",
+                        "icon": "speed",
+                        "link": "/admin/metricas-tecnicas/",
+                    },
+                ],
+            },
+            {
+                "title": "Usuários",
+                "separator": False,
+                "items": [
+                    {
+                        "title": "Usuários Django",
                         "icon": "person",
                         "link": reverse_lazy("admin:auth_user_changelist"),
                     },
@@ -290,28 +314,33 @@ UNFOLD = {
                 ],
             },
             {
-                "title": "Bot",
+                "title": "Bot WhatsApp",
                 "separator": False,
                 "items": [
                     {
-                        "title": "Configuracoes",
+                        "title": "Configurações",
                         "icon": "settings",
                         "link": reverse_lazy("admin:bot_botconfiguration_changelist"),
                     },
                     {
-                        "title": "Saude do Bot",
-                        "icon": "monitor_heart",
+                        "title": "Logs de Saúde",
+                        "icon": "favorite",
                         "link": reverse_lazy("admin:bot_bothealthcheck_changelist"),
                     },
                     {
-                        "title": "Metricas",
-                        "icon": "bar_chart",
-                        "link": reverse_lazy("admin:bot_botmetrics_changelist"),
+                        "title": "Log de Ações",
+                        "icon": "receipt_long",
+                        "link": reverse_lazy("admin:bot_botactionlog_changelist"),
                     },
                     {
-                        "title": "Interacoes",
+                        "title": "Interações",
                         "icon": "chat",
                         "link": reverse_lazy("admin:bot_interactionlog_changelist"),
+                    },
+                    {
+                        "title": "Métricas Brutas",
+                        "icon": "data_object",
+                        "link": reverse_lazy("admin:bot_botmetrics_changelist"),
                     },
                 ],
             },
@@ -332,7 +361,7 @@ UNFOLD = {
                 ],
             },
             {
-                "title": "Links Rapidos",
+                "title": "Links Rápidos",
                 "separator": False,
                 "items": [
                     {

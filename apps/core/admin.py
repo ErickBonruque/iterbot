@@ -1,9 +1,11 @@
 from django.contrib import admin
+from django.template.response import TemplateResponse
+from django.urls import path
 from unfold.sites import UnfoldAdminSite
 
 
 class IterBotAdminSite(UnfoldAdminSite):
-    """Site de administração customizado para IterBot UTFPR com métricas na home."""
+    """Site de administração customizado para IterBot UTFPR."""
 
     site_header = "IterBot UTFPR"
     site_title = "IterBot Admin"
@@ -17,7 +19,6 @@ class IterBotAdminSite(UnfoldAdminSite):
 
         extra_context = extra_context or {}
 
-        # Contadores
         extra_context["total_alunos"] = UserProfile.objects.count()
         extra_context["empresas_ativas"] = Company.objects.filter(
             status=CompanyStatus.APPROVED
@@ -30,7 +31,6 @@ class IterBotAdminSite(UnfoldAdminSite):
         extra_context["vagas_total"] = Job.objects.count()
         extra_context["total_interacoes"] = InteractionLog.objects.count()
 
-        # Status do bot
         ultimo_health = BotHealthCheck.objects.order_by("-created_at").first()
         if ultimo_health:
             extra_context["bot_status"] = ultimo_health.status
@@ -44,6 +44,93 @@ class IterBotAdminSite(UnfoldAdminSite):
             extra_context["bot_session_status"] = "unknown"
 
         return super().index(request, extra_context=extra_context)
+
+    def get_urls(self):
+        custom_urls = [
+            path(
+                "status-bot/",
+                self.admin_view(self.status_bot_view),
+                name="status_bot",
+            ),
+            path(
+                "observabilidade/",
+                self.admin_view(self.observabilidade_view),
+                name="observabilidade",
+            ),
+            path(
+                "metricas-negocio/",
+                self.admin_view(self.metricas_negocio_view),
+                name="metricas_negocio",
+            ),
+            path(
+                "metricas-tecnicas/",
+                self.admin_view(self.metricas_tecnicas_view),
+                name="metricas_tecnicas",
+            ),
+        ]
+        return custom_urls + super().get_urls()
+
+    def status_bot_view(self, request):
+        from apps.core.services import DashboardService
+
+        context = {
+            **self.each_context(request),
+            **DashboardService.get_bot_status_context(),
+            "title": "Status do Bot",
+        }
+        return TemplateResponse(request, "admin/iterbot/status_bot.html", context)
+
+    def observabilidade_view(self, request):
+        from apps.bot.models import BotActionLog
+        from apps.core.services import DashboardService
+
+        try:
+            hours = int(request.GET.get("hours", 24))
+        except (ValueError, TypeError):
+            hours = 24
+        hours = max(1, min(hours, 720))
+        action_type = request.GET.get("action_type", "")
+
+        context = {
+            **self.each_context(request),
+            **DashboardService.get_observability_context(hours=hours, action_type=action_type),
+            "title": "Observabilidade",
+            "action_type_choices": BotActionLog.ACTION_CHOICES,
+        }
+        return TemplateResponse(request, "admin/iterbot/observabilidade.html", context)
+
+    def metricas_negocio_view(self, request):
+        from apps.core.services import DashboardService
+
+        try:
+            days = int(request.GET.get("days", 30))
+        except (ValueError, TypeError):
+            days = 30
+        days = max(1, min(days, 365))
+
+        context = {
+            **self.each_context(request),
+            **DashboardService.get_business_metrics_context(days=days),
+            "title": "Métricas de Negócio",
+            "period_days": days,
+        }
+        return TemplateResponse(request, "admin/iterbot/metricas_negocio.html", context)
+
+    def metricas_tecnicas_view(self, request):
+        from apps.core.services import DashboardService
+
+        try:
+            hours = int(request.GET.get("hours", 24))
+        except (ValueError, TypeError):
+            hours = 24
+        hours = max(1, min(hours, 720))
+
+        context = {
+            **self.each_context(request),
+            **DashboardService.get_technical_metrics_context(hours=hours),
+            "title": "Métricas Técnicas",
+        }
+        return TemplateResponse(request, "admin/iterbot/metricas_tecnicas.html", context)
 
 
 # Patch the existing admin.site instance's class in-place so all @admin.register()

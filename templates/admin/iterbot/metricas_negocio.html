@@ -1,0 +1,146 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block content_title %}<h1>Métricas de Negócio</h1>{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+    <a href="{% url 'admin:index' %}">Início</a>
+    &rsaquo; Métricas de Negócio
+</div>
+{% endblock %}
+
+{% block content %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+
+<div style="margin-bottom: 24px;">
+
+    <!-- Filtros de período -->
+    <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 24px;">
+        <strong>Período:</strong>
+        <a href="?days=7" class="cv-admin-action {% if period_days == 7 %}cv-admin-action--active{% endif %}">7 dias</a>
+        <a href="?days=30" class="cv-admin-action {% if period_days == 30 %}cv-admin-action--active{% endif %}">30 dias</a>
+        <a href="?days=90" class="cv-admin-action {% if period_days == 90 %}cv-admin-action--active{% endif %}">90 dias</a>
+        <a href="?days=365" class="cv-admin-action {% if period_days == 365 %}cv-admin-action--active{% endif %}">365 dias</a>
+    </div>
+
+    <!-- Métricas de Busca -->
+    <article class="cv-admin-panel" style="margin-bottom: 24px;">
+        <h2 class="cv-admin-panel-title">Métricas de Busca de Vagas</h2>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 16px; margin-bottom: 16px;">
+            <div class="cv-admin-metric-card">
+                <p class="cv-admin-metric-label">Total de Buscas</p>
+                <p class="cv-admin-metric-value">{{ total_searches }}</p>
+            </div>
+            <div class="cv-admin-metric-card">
+                <p class="cv-admin-metric-label">Vagas Encontradas</p>
+                <p class="cv-admin-metric-value">{{ total_jobs_found }}</p>
+            </div>
+            <div class="cv-admin-metric-card">
+                <p class="cv-admin-metric-label">Taxa de Sucesso</p>
+                <p class="cv-admin-metric-value">{{ search_success_rate|floatformat:1 }}%</p>
+            </div>
+        </div>
+
+        {% if top_terms %}
+        <h3 style="font-size: 0.9rem; font-weight: 600; margin-bottom: 8px;">Termos Mais Buscados</h3>
+        <div style="overflow-x: auto;">
+            <table class="cv-admin-table" style="width:100%;">
+                <thead>
+                    <tr>
+                        <th>Termo</th>
+                        <th>Curso</th>
+                        <th>Buscas</th>
+                        <th>Vagas Encontradas</th>
+                        <th>Última Busca</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for t in top_terms %}
+                    <tr>
+                        <td>{{ t.search_term }}</td>
+                        <td>{{ t.course_name|default:"—" }}</td>
+                        <td>{{ t.total_searches }}</td>
+                        <td>{{ t.total_results|default:0 }}</td>
+                        <td>{{ t.last_search|date:"d/m/Y H:i" }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+    </article>
+
+    <!-- Métricas de Usuários -->
+    <article class="cv-admin-panel" style="margin-bottom: 24px;">
+        <h2 class="cv-admin-panel-title">Métricas de Usuários</h2>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 16px; margin-bottom: 16px;">
+            <div class="cv-admin-metric-card">
+                <p class="cv-admin-metric-label">Total de Alunos</p>
+                <p class="cv-admin-metric-value">{{ total_users }}</p>
+            </div>
+            <div class="cv-admin-metric-card">
+                <p class="cv-admin-metric-label">Autenticados UTFPR</p>
+                <p class="cv-admin-metric-value">{{ authenticated_users }}</p>
+            </div>
+            <div class="cv-admin-metric-card">
+                <p class="cv-admin-metric-label">Com Curso Definido</p>
+                <p class="cv-admin-metric-value">{{ users_with_course }}</p>
+            </div>
+            <div class="cv-admin-metric-card">
+                <p class="cv-admin-metric-label">Usuários Ativos</p>
+                <p class="cv-admin-metric-value">{{ active_users|default:"—" }}</p>
+            </div>
+            <div class="cv-admin-metric-card">
+                <p class="cv-admin-metric-label">Engajamento</p>
+                <p class="cv-admin-metric-value">{{ engagement_rate|floatformat:1|default:"—" }}%</p>
+            </div>
+        </div>
+
+        {% if user_distribution %}
+        <h3 style="font-size: 0.9rem; font-weight: 600; margin-bottom: 8px;">Distribuição por Curso</h3>
+        <div style="overflow-x: auto;">
+            <table class="cv-admin-table" style="width:100%;">
+                <thead>
+                    <tr>
+                        <th>Curso</th>
+                        <th>Alunos</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for entry in user_distribution %}
+                    <tr>
+                        <td>{{ entry.course_name }}</td>
+                        <td>{{ entry.count }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+    </article>
+
+    <!-- Funil de Autenticação -->
+    <article class="cv-admin-panel">
+        <h2 class="cv-admin-panel-title">Funil de Autenticação</h2>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 16px;">
+            <div class="cv-admin-metric-card">
+                <p class="cv-admin-metric-label">Tentativas</p>
+                <p class="cv-admin-metric-value">{{ auth_attempts|default:"—" }}</p>
+            </div>
+            <div class="cv-admin-metric-card cv-admin-metric-card--success">
+                <p class="cv-admin-metric-label">Sucessos</p>
+                <p class="cv-admin-metric-value">{{ auth_successes|default:"—" }}</p>
+            </div>
+            <div class="cv-admin-metric-card cv-admin-metric-card--accent">
+                <p class="cv-admin-metric-label">Falhas</p>
+                <p class="cv-admin-metric-value">{{ auth_failures|default:"—" }}</p>
+            </div>
+            <div class="cv-admin-metric-card">
+                <p class="cv-admin-metric-label">Taxa de Conversão</p>
+                <p class="cv-admin-metric-value">{{ auth_conversion_rate|floatformat:1|default:"—" }}%</p>
+            </div>
+        </div>
+    </article>
+</div>
+{% endblock %}

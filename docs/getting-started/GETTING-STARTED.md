@@ -111,10 +111,12 @@ Acesse os serviços:
 
 | Serviço | URL |
 |---------|-----|
-| Backend Dashboard | http://localhost:8000/dashboard/ |
 | Django Admin | http://localhost:8000/admin/ |
+| Status do Bot | http://localhost:8000/admin/status-bot/ |
+| Observabilidade | http://localhost:8000/admin/observabilidade/ |
+| Métricas de Negócio | http://localhost:8000/admin/metricas-negocio/ |
+| Métricas Técnicas | http://localhost:8000/admin/metricas-tecnicas/ |
 | WAHA Dashboard | http://localhost:3000/dashboard |
-| API Docs | http://localhost:8000/api/docs/ |
 | Traefik Dashboard | http://localhost:8080 |
 
 As credenciais do WAHA Dashboard são `admin` e a senha está em `secrets/waha_dashboard_password.txt`:

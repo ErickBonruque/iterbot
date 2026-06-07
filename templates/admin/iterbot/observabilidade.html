@@ -1,0 +1,132 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block content_title %}<h1>Observabilidade</h1>{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+    <a href="{% url 'admin:index' %}">Início</a>
+    &rsaquo; Observabilidade
+</div>
+{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 24px;">
+
+    <!-- Filtros de período -->
+    <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 16px;">
+        <strong>Período:</strong>
+        <a href="?hours=1{% if selected_action_type %}&action_type={{ selected_action_type }}{% endif %}"
+           class="cv-admin-action {% if period_hours == 1 %}cv-admin-action--active{% endif %}">1 hora</a>
+        <a href="?hours=24{% if selected_action_type %}&action_type={{ selected_action_type }}{% endif %}"
+           class="cv-admin-action {% if period_hours == 24 %}cv-admin-action--active{% endif %}">24 horas</a>
+        <a href="?hours=168{% if selected_action_type %}&action_type={{ selected_action_type }}{% endif %}"
+           class="cv-admin-action {% if period_hours == 168 %}cv-admin-action--active{% endif %}">7 dias</a>
+        <a href="?hours=720{% if selected_action_type %}&action_type={{ selected_action_type }}{% endif %}"
+           class="cv-admin-action {% if period_hours == 720 %}cv-admin-action--active{% endif %}">30 dias</a>
+
+        <form method="get" style="display:inline-flex; align-items:center; gap:6px; margin-left:16px;">
+            <input type="hidden" name="hours" value="{{ period_hours }}">
+            <label style="font-weight:600; font-size:0.85rem;">Tipo de Ação:</label>
+            <select name="action_type" onchange="this.form.submit()" style="font-size:0.85rem; padding:4px 8px; border:1px solid #ccc; border-radius:4px;">
+                <option value="" {% if not selected_action_type %}selected{% endif %}>Todos</option>
+                {% for value, label in action_type_choices %}
+                <option value="{{ value }}" {% if selected_action_type == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </form>
+    </div>
+
+    <!-- Cards de resumo -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 16px; margin-bottom: 24px;">
+        <div class="cv-admin-metric-card">
+            <p class="cv-admin-metric-label">Total de Ações</p>
+            <p class="cv-admin-metric-value">{{ total_actions }}</p>
+        </div>
+        <div class="cv-admin-metric-card {% if error_rate > 10 %}cv-admin-metric-card--danger{% elif error_rate > 5 %}cv-admin-metric-card--accent{% endif %}">
+            <p class="cv-admin-metric-label">Taxa de Erro</p>
+            <p class="cv-admin-metric-value">{{ error_rate }}%</p>
+        </div>
+        <div class="cv-admin-metric-card {% if total_errors > 0 %}cv-admin-metric-card--accent{% endif %}">
+            <p class="cv-admin-metric-label">Total de Erros</p>
+            <p class="cv-admin-metric-value">{{ total_errors }}</p>
+        </div>
+    </div>
+
+    <!-- Log de Ações -->
+    <article class="cv-admin-panel" style="margin-bottom: 24px;">
+        <h2 class="cv-admin-panel-title">Log de Ações (últimas 50)</h2>
+        <div style="overflow-x: auto;">
+            <table class="cv-admin-table" style="width:100%;">
+                <thead>
+                    <tr>
+                        <th>Data/Hora</th>
+                        <th>Tipo</th>
+                        <th>Usuário</th>
+                        <th>Termo Buscado</th>
+                        <th>Vagas</th>
+                        <th>Duração</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for log in actions %}
+                    <tr>
+                        <td>{{ log.created_at|date:"d/m/Y H:i" }}</td>
+                        <td>{{ log.get_action_type_display }}</td>
+                        <td>{% if log.user %}{{ log.user.phone_number }}{% else %}—{% endif %}</td>
+                        <td>{{ log.search_term|default:"—" }}</td>
+                        <td>{{ log.jobs_found|default:"—" }}</td>
+                        <td>{% if log.duration_ms %}{{ log.duration_ms }} ms{% else %}—{% endif %}</td>
+                        <td>
+                            {% if log.status == 'SUCCESS' %}
+                                <span class="cv-admin-status-badge cv-admin-status-badge--success">Sucesso</span>
+                            {% elif log.status == 'ERROR' %}
+                                <span class="cv-admin-status-badge cv-admin-status-badge--danger">Erro</span>
+                            {% elif log.status == 'TIMEOUT' %}
+                                <span class="cv-admin-status-badge cv-admin-status-badge--warning">Timeout</span>
+                            {% else %}
+                                <span class="cv-admin-status-badge cv-admin-status-badge--neutral">{{ log.status }}</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="7">Nenhuma ação registrada no período.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </article>
+
+    <!-- Erros recentes -->
+    {% if errors %}
+    <article class="cv-admin-panel">
+        <h2 class="cv-admin-panel-title">Erros Recentes (últimos 50)</h2>
+        <div style="overflow-x: auto;">
+            <table class="cv-admin-table" style="width:100%;">
+                <thead>
+                    <tr>
+                        <th>Data/Hora</th>
+                        <th>Tipo</th>
+                        <th>Usuário</th>
+                        <th>Tipo de Erro</th>
+                        <th>Mensagem de Erro</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for err in errors %}
+                    <tr>
+                        <td>{{ err.created_at|date:"d/m/Y H:i" }}</td>
+                        <td>{{ err.get_action_type_display }}</td>
+                        <td>{% if err.user %}{{ err.user.phone_number }}{% else %}—{% endif %}</td>
+                        <td>{{ err.error_type|default:"—" }}</td>
+                        <td>{{ err.error_message|default:"—"|truncatechars:120 }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </article>
+    {% endif %}
+</div>
+{% endblock %}

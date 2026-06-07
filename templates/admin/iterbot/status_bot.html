@@ -1,0 +1,120 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block content_title %}<h1>Status do Bot</h1>{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+    <a href="{% url 'admin:index' %}">Início</a>
+    &rsaquo; Status do Bot
+</div>
+{% endblock %}
+
+{% block content %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+
+<div style="margin-bottom: 24px;">
+
+    <!-- Cards de status atual -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px;">
+        <div class="cv-admin-metric-card {% if current_status.status == 'online' %}cv-admin-metric-card--success{% elif current_status.status == 'offline' %}cv-admin-metric-card--danger{% else %}cv-admin-metric-card--warning{% endif %}">
+            <p class="cv-admin-metric-label">Status Atual</p>
+            <p class="cv-admin-metric-value">
+                {% if current_status.status == 'online' %}Online
+                {% elif current_status.status == 'offline' %}Offline
+                {% elif current_status.status == 'error' %}Erro
+                {% else %}Desconhecido{% endif %}
+            </p>
+        </div>
+        <div class="cv-admin-metric-card">
+            <p class="cv-admin-metric-label">Sessão WAHA</p>
+            <p class="cv-admin-metric-value" style="font-size: 1.2rem;">{{ current_status.session_status|default:"N/A" }}</p>
+        </div>
+        <div class="cv-admin-metric-card">
+            <p class="cv-admin-metric-label">Latência</p>
+            <p class="cv-admin-metric-value">{% if current_status.response_time %}{{ current_status.response_time|floatformat:1 }} ms{% else %}—{% endif %}</p>
+        </div>
+        <div class="cv-admin-metric-card">
+            <p class="cv-admin-metric-label">Uptime 24h</p>
+            <p class="cv-admin-metric-value">{{ metrics_24h.uptime_percentage }}%</p>
+        </div>
+        <div class="cv-admin-metric-card cv-admin-metric-card--accent">
+            <p class="cv-admin-metric-label">Erros 24h</p>
+            <p class="cv-admin-metric-value">{{ metrics_24h.error_count }}</p>
+        </div>
+    </div>
+
+    <!-- Métricas por período -->
+    <div class="cv-admin-panels-grid" style="margin-bottom: 24px;">
+        <article class="cv-admin-panel">
+            <h2 class="cv-admin-panel-title">Última Hora</h2>
+            <table class="cv-admin-table">
+                <tr><th>Uptime</th><td>{{ metrics_1h.uptime_percentage }}%</td></tr>
+                <tr><th>Checks OK</th><td>{{ metrics_1h.successful_checks }}</td></tr>
+                <tr><th>Checks Total</th><td>{{ metrics_1h.total_checks }}</td></tr>
+                <tr><th>Latência Média</th><td>{% if metrics_1h.avg_response_time %}{{ metrics_1h.avg_response_time|floatformat:1 }} ms{% else %}—{% endif %}</td></tr>
+                <tr><th>Erros</th><td>{{ metrics_1h.error_count }}</td></tr>
+            </table>
+        </article>
+
+        <article class="cv-admin-panel">
+            <h2 class="cv-admin-panel-title">Últimas 24 Horas</h2>
+            <table class="cv-admin-table">
+                <tr><th>Uptime</th><td>{{ metrics_24h.uptime_percentage }}%</td></tr>
+                <tr><th>Checks OK</th><td>{{ metrics_24h.successful_checks }}</td></tr>
+                <tr><th>Checks Total</th><td>{{ metrics_24h.total_checks }}</td></tr>
+                <tr><th>Latência Média</th><td>{% if metrics_24h.avg_response_time %}{{ metrics_24h.avg_response_time|floatformat:1 }} ms{% else %}—{% endif %}</td></tr>
+                <tr><th>Erros</th><td>{{ metrics_24h.error_count }}</td></tr>
+            </table>
+        </article>
+
+        <article class="cv-admin-panel">
+            <h2 class="cv-admin-panel-title">Últimos 7 Dias</h2>
+            <table class="cv-admin-table">
+                <tr><th>Uptime</th><td>{{ metrics_7d.uptime_percentage }}%</td></tr>
+                <tr><th>Checks OK</th><td>{{ metrics_7d.successful_checks }}</td></tr>
+                <tr><th>Checks Total</th><td>{{ metrics_7d.total_checks }}</td></tr>
+                <tr><th>Latência Média</th><td>{% if metrics_7d.avg_response_time %}{{ metrics_7d.avg_response_time|floatformat:1 }} ms{% else %}—{% endif %}</td></tr>
+                <tr><th>Erros</th><td>{{ metrics_7d.error_count }}</td></tr>
+            </table>
+        </article>
+    </div>
+
+    <!-- Checks recentes -->
+    <article class="cv-admin-panel">
+        <h2 class="cv-admin-panel-title">Últimos Checks de Saúde</h2>
+        <table class="cv-admin-table" style="width:100%;">
+            <thead>
+                <tr>
+                    <th>Data/Hora</th>
+                    <th>Status</th>
+                    <th>Sessão WAHA</th>
+                    <th>Latência (ms)</th>
+                    <th>Erro</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for check in recent_checks %}
+                <tr>
+                    <td>{{ check.created_at|date:"d/m/Y H:i:s" }}</td>
+                    <td>
+                        {% if check.status == 'online' %}
+                            <span class="cv-admin-status-badge cv-admin-status-badge--success">Online</span>
+                        {% elif check.status == 'offline' %}
+                            <span class="cv-admin-status-badge cv-admin-status-badge--danger">Offline</span>
+                        {% else %}
+                            <span class="cv-admin-status-badge cv-admin-status-badge--warning">{{ check.status }}</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ check.session_status|default:"—" }}</td>
+                    <td>{% if check.response_time %}{{ check.response_time|floatformat:1 }}{% else %}—{% endif %}</td>
+                    <td>{{ check.error_message|default:"—"|truncatechars:60 }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="5">Nenhum check registrado.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </article>
+</div>
+{% endblock %}

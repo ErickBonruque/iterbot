@@ -117,8 +117,10 @@ Verifica se Backend, WAHA, PostgreSQL e Redis estão respondendo.
 | Serviço | URL |
 |---------|-----|
 | Django Admin | http://localhost:8000/admin/ |
-| API Docs | http://localhost:8000/api/docs/ |
-| Dashboard do Bot | http://localhost:8000/dashboard/ |
+| Status do Bot | http://localhost:8000/admin/status-bot/ |
+| Observabilidade | http://localhost:8000/admin/observabilidade/ |
+| Métricas de Negócio | http://localhost:8000/admin/metricas-negocio/ |
+| Métricas Técnicas | http://localhost:8000/admin/metricas-tecnicas/ |
 | WAHA Dashboard | http://localhost:3000/dashboard |
 | Traefik Dashboard | http://localhost:8080 |
 

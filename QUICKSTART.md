@@ -24,8 +24,9 @@ make start
 | Serviço | URL | Credenciais |
 |---------|-----|-------------|
 | **WAHA Dashboard** | http://localhost:3000/dashboard | `admin` / `cat secrets/waha_dashboard_password.txt` |
-| **Backend Dashboard** | http://localhost:8000/dashboard/ | Ver docs/development/CREDENCIAIS.md |
 | **Django Admin** | http://localhost:8000/admin/ | Criar com `make createsuperuser` |
+| **Status do Bot** | http://localhost:8000/admin/status-bot/ | Requer login no admin |
+| **Observabilidade** | http://localhost:8000/admin/observabilidade/ | Requer login no admin |
 
 ## Comandos Úteis
 

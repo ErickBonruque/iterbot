@@ -1,0 +1,204 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block content_title %}<h1>Métricas Técnicas</h1>{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+    <a href="{% url 'admin:index' %}">Início</a>
+    &rsaquo; Métricas Técnicas
+</div>
+{% endblock %}
+
+{% block content %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+
+<div style="margin-bottom: 24px;">
+
+    <!-- Filtros de período -->
+    <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 24px;">
+        <strong>Período:</strong>
+        <a href="?hours=1" class="cv-admin-action {% if period_hours == 1 %}cv-admin-action--active{% endif %}">1 hora</a>
+        <a href="?hours=24" class="cv-admin-action {% if period_hours == 24 %}cv-admin-action--active{% endif %}">24 horas</a>
+        <a href="?hours=168" class="cv-admin-action {% if period_hours == 168 %}cv-admin-action--active{% endif %}">7 dias</a>
+        <a href="?hours=720" class="cv-admin-action {% if period_hours == 720 %}cv-admin-action--active{% endif %}">30 dias</a>
+    </div>
+
+    <!-- Latência da API -->
+    <article class="cv-admin-panel" style="margin-bottom: 24px;">
+        <h2 class="cv-admin-panel-title">Latência da API WAHA</h2>
+        {% if has_latency_data %}
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 16px; margin-bottom: 16px;">
+            <div class="cv-admin-metric-card">
+                <p class="cv-admin-metric-label">Latência Média</p>
+                <p class="cv-admin-metric-value">{% if avg_latency %}{{ avg_latency|floatformat:1 }} ms{% else %}—{% endif %}</p>
+            </div>
+            <div class="cv-admin-metric-card">
+                <p class="cv-admin-metric-label">Latência Máxima</p>
+                <p class="cv-admin-metric-value">{% if max_latency %}{{ max_latency|floatformat:1 }} ms{% else %}—{% endif %}</p>
+            </div>
+            <div class="cv-admin-metric-card">
+                <p class="cv-admin-metric-label">Latência Mínima</p>
+                <p class="cv-admin-metric-value">{% if min_latency %}{{ min_latency|floatformat:1 }} ms{% else %}—{% endif %}</p>
+            </div>
+            <div class="cv-admin-metric-card">
+                <p class="cv-admin-metric-label">Amostras</p>
+                <p class="cv-admin-metric-value">{{ sample_count|default:0 }}</p>
+            </div>
+        </div>
+
+        {% if latency_timeseries %}
+        <div style="max-width: 700px;">
+            <canvas id="latencyChart" height="120"></canvas>
+        </div>
+        <script>
+        (function() {
+            const labels = [{% for p in latency_timeseries %}"{{ p.time|date:'H:i' }}"{% if not forloop.last %},{% endif %}{% endfor %}];
+            const data = [{% for p in latency_timeseries %}{{ p.avg_latency|default:0 }}{% if not forloop.last %},{% endif %}{% endfor %}];
+            new Chart(document.getElementById('latencyChart'), {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Latência Média (ms)',
+                        data: data,
+                        borderColor: '#4f46e5',
+                        backgroundColor: 'rgba(79,70,229,0.1)',
+                        fill: true,
+                        tension: 0.3,
+                    }]
+                },
+                options: { responsive: true, plugins: { legend: { display: false } } }
+            });
+        })();
+        </script>
+        {% endif %}
+
+        {% else %}
+        <p>Sem dados de latência para o período selecionado.</p>
+        {% endif %}
+    </article>
+
+    <!-- Celery -->
+    <article class="cv-admin-panel" style="margin-bottom: 24px;">
+        <h2 class="cv-admin-panel-title">Fila de Tarefas (Celery)</h2>
+        {% if celery_available %}
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 16px; margin-bottom: 16px;">
+            <div class="cv-admin-metric-card cv-admin-metric-card--success">
+                <p class="cv-admin-metric-label">Workers Ativos</p>
+                <p class="cv-admin-metric-value">{{ total_workers }}</p>
+            </div>
+            <div class="cv-admin-metric-card">
+                <p class="cv-admin-metric-label">Tarefas em Execução</p>
+                <p class="cv-admin-metric-value">{{ total_active_tasks }}</p>
+            </div>
+            <div class="cv-admin-metric-card">
+                <p class="cv-admin-metric-label">Fila Pendente</p>
+                <p class="cv-admin-metric-value">{% if queue_depth >= 0 %}{{ queue_depth }}{% else %}—{% endif %}</p>
+            </div>
+            <div class="cv-admin-metric-card">
+                <p class="cv-admin-metric-label">Total Processado</p>
+                <p class="cv-admin-metric-value">{{ total_processed }}</p>
+            </div>
+            <div class="cv-admin-metric-card {% if task_failure_count > 0 %}cv-admin-metric-card--accent{% endif %}">
+                <p class="cv-admin-metric-label">Falhas 24h</p>
+                <p class="cv-admin-metric-value">{{ task_failure_count }}</p>
+            </div>
+        </div>
+
+        {% if workers %}
+        <h3 style="font-size: 0.9rem; font-weight: 600; margin-bottom: 8px;">Workers</h3>
+        <table class="cv-admin-table" style="width:100%;">
+            <thead>
+                <tr>
+                    <th>Worker</th>
+                    <th>Status</th>
+                    <th>Em Execução</th>
+                    <th>Reservadas</th>
+                    <th>Processadas</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for name, w in workers.items %}
+                <tr>
+                    <td>{{ name }}</td>
+                    <td><span class="cv-admin-status-badge cv-admin-status-badge--success">{{ w.status }}</span></td>
+                    <td>{{ w.active_tasks }}</td>
+                    <td>{{ w.reserved_tasks }}</td>
+                    <td>{{ w.total_processed }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% endif %}
+
+        {% else %}
+        <p><span class="cv-admin-status-badge cv-admin-status-badge--danger">Celery indisponível</span></p>
+        {% endif %}
+    </article>
+
+    <!-- WAHA Uptime -->
+    <article class="cv-admin-panel">
+        <h2 class="cv-admin-panel-title">Disponibilidade do WAHA</h2>
+        {% if has_waha_data %}
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 16px; margin-bottom: 16px;">
+            <div class="cv-admin-metric-card">
+                <p class="cv-admin-metric-label">Status Atual</p>
+                <p class="cv-admin-metric-value" style="font-size:1.1rem;">
+                    {% if waha_current_status.status == 'online' %}
+                        <span class="cv-admin-status-badge cv-admin-status-badge--success">Online</span>
+                    {% else %}
+                        <span class="cv-admin-status-badge cv-admin-status-badge--danger">{{ waha_current_status.status }}</span>
+                    {% endif %}
+                </p>
+            </div>
+            <div class="cv-admin-metric-card">
+                <p class="cv-admin-metric-label">Uptime Geral</p>
+                <p class="cv-admin-metric-value">{{ overall_uptime_pct }}%</p>
+            </div>
+            <div class="cv-admin-metric-card">
+                <p class="cv-admin-metric-label">Latência Atual</p>
+                <p class="cv-admin-metric-value">{% if waha_current_status.latency_ms %}{{ waha_current_status.latency_ms }} ms{% else %}—{% endif %}</p>
+            </div>
+            {% if waha_degradation.has_degradation %}
+            <div class="cv-admin-metric-card cv-admin-metric-card--accent">
+                <p class="cv-admin-metric-label">Horas Degradadas</p>
+                <p class="cv-admin-metric-value">{{ waha_degradation.degraded_hours }}/{{ waha_degradation.total_hours }}</p>
+            </div>
+            {% endif %}
+        </div>
+
+        {% if waha_history %}
+        <div style="max-width: 700px;">
+            <canvas id="wahaChart" height="100"></canvas>
+        </div>
+        <script>
+        (function() {
+            const labels = [{% for h in waha_history %}"{{ h.time|slice:'11:16' }}"{% if not forloop.last %},{% endif %}{% endfor %}];
+            const data = [{% for h in waha_history %}{{ h.uptime_pct }}{% if not forloop.last %},{% endif %}{% endfor %}];
+            new Chart(document.getElementById('wahaChart'), {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Uptime por hora (%)',
+                        data: data,
+                        backgroundColor: data.map(v => v >= 90 ? 'rgba(34,197,94,0.7)' : 'rgba(239,68,68,0.7)'),
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { display: false } },
+                    scales: { y: { min: 0, max: 100 } }
+                }
+            });
+        })();
+        </script>
+        {% endif %}
+
+        {% else %}
+        <p>Sem dados de disponibilidade para o período selecionado.</p>
+        {% endif %}
+    </article>
+</div>
+{% endblock %}

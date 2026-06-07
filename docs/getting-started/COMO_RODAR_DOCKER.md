@@ -177,8 +177,9 @@ Resposta esperada:
 
 ### 11. Acesse a Aplicação
 
-- **Dashboard**: http://localhost/dashboard/
 - **Django Admin**: http://localhost/admin/
+- **Status do Bot**: http://localhost/admin/status-bot/
+- **Observabilidade**: http://localhost/admin/observabilidade/
 - **WAHA Dashboard**: http://waha.localhost/
 - **Traefik Dashboard**: http://localhost:8080/
 - **Health Check**: http://localhost/health/

@@ -119,12 +119,11 @@ graph TB
 2. A task consulta `GET /api/sessions/{session_name}` no WAHA e registra o resultado em `BotHealthCheck`.
 3. Se duas verificações consecutivas falharem, o sistema tenta reconexão automática com backoff exponencial (30s, 60s, 120s) e envia alerta por e-mail através do provider configurado (`infra/email/factory.py`). <!-- VERIFY: backoff durations are [30, 60, 120] seconds as defined in RECONNECT_BACKOFF -->
 
-### 6. Fluxo de resposta da API REST (dashboard)
+### 6. Monitoramento e Métricas no Admin
 
-1. Requisições `/api/*` são roteadas pelo DRF Router para ViewSets (`CourseViewSet`, `UserProfileViewSet`, `SearchTermViewSet`, `InteractionLogViewSet`, `BotStatusViewSet`, `BotConfigurationViewSet`).
-2. Todos os ViewSets exigem `IsAdminUser` — apenas usuários `is_staff=True` têm acesso. Requisições não autenticadas recebem HTTP 403.
-3. `BotStatusViewSet` invoca `BotHealthMonitor` para retornar status atual e métricas agregadas (uptime, tempo de resposta médio, contagem de erros).
-4. Serializers DRF convertem modelos para JSON com campos calculados (ex: `interactions_count`, `search_terms_count`).
+1. O Django Admin (`/admin/`) centraliza gestão e monitoramento. Páginas customizadas estão em `/admin/status-bot/`, `/admin/observabilidade/`, `/admin/metricas-negocio/` e `/admin/metricas-tecnicas/`.
+2. Todas as páginas são protegidas pelo próprio Django Admin (`is_staff=True`). Usuários não autenticados são redirecionados para `/admin/login/`.
+3. As páginas de métricas consomem `DashboardService` (`apps/core/services.py`) que agrega dados de múltiplos modelos (`BotHealthCheck`, `BotActionLog`, `InteractionLog`, `UserProfile`, `JobSearchLog`) via ORM.
 
 ## Abstrações Principais
 
@@ -145,15 +144,14 @@ graph TB
 
 | Diretório | Descrição |
 |-----------|-----------|
-| `apps/` | Aplicações Django discretas, cada uma representando um domínio funcional (bot, jobs, companies, dashboard, users, courses, core). |
+| `apps/` | Aplicações Django discretas, cada uma representando um domínio funcional (bot, jobs, companies, users, courses, core). |
 | `apps/bot/` | Lógica do bot WhatsApp: webhook view, serviço orquestrador, handlers de conversação, models de configuração/saúde/logs, tasks Celery e monitoramento. |
 | `apps/bot/handlers/` | Handlers especializados de conversação separados por responsabilidade (auth, job_search, menu, job_review), seguindo o padrão Strategy com `BaseHandler` abstrato. |
 | `apps/jobs/` | Modelos de domínio de vagas: `Company`, `Job`, `JobApplication`, `JobSearchLog`, validadores (CNPJ) e task de review semanal. |
 | `apps/companies/` | Portal web para empresas: views baseadas em classe (signup, login, perfil, CRUD de vagas), forms, mixins de autorização e URLs. |
-| `apps/dashboard/` | Dashboard admin + API REST pública (DRF ViewSets + Serializers) para cursos, termos de busca, usuários, interações, status e configuração do bot. |
 | `apps/users/` | Model `UserProfile`, serviço de autenticação UTFPR, adapter django-allauth, validação de e-mail institucional, views de confirmação de e-mail e signals. |
 | `apps/courses/` | Modelos `Course` e `SearchTerm` que conectam cursos da UTFPR a termos de busca para scraping. |
-| `apps/core/` | Modelo abstrato `TimeStampedModel`, views de health check, `build_portal_url()` e admin customizado. |
+| `apps/core/` | Modelo abstrato `TimeStampedModel`, views de health check, `build_portal_url()`, admin customizado (`IterBotAdminSite`) com páginas de monitoramento e `DashboardService` (agregador de métricas). |
 | `infra/` | Infraestrutura transversal: cliente WAHA, serviço jobspy, campos criptografados, middlewares de correlation ID e logging estruturado, factory de providers de e-mail, configuração do Traefik. |
 | `infra/waha/` | `WahaClient` — cliente HTTP que encapsula toda comunicação com a API do WAHA. |
 | `infra/jobspy/` | `JobSearchService` — fachada para o python-jobspy com busca multi-plataforma de vagas. |

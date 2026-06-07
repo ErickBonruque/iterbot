@@ -9,8 +9,6 @@ from apps.users.views import ConfirmEmailView
 urlpatterns = [
     path("", RedirectView.as_view(url="/admin/", permanent=False)),
     path("health/", HealthCheckView.as_view(), name="health"),
-    path("api/", include("apps.dashboard.api_urls")),
-    path("dashboard/", include("apps.dashboard.urls")),
     path("admin/", iterbot_admin.urls),
     path("webhook/", webhook),
     path("empresas/", include("apps.companies.urls")),
