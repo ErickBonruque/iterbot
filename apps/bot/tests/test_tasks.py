@@ -121,7 +121,7 @@ class TestHealthMonitorReconnectFlow:
         assert result is False
         mock_reconnect_task.apply_async.assert_not_called()
 
-    @patch("apps.bot.email_service.send_offline_alert_email")
+    @patch("apps.bot.health.send_offline_alert_email")
     @patch("apps.bot.health.BotHealthMonitor.attempt_reconnect", return_value=False)
     @patch("apps.bot.health.BotHealthMonitor.check_bot_status")
     @patch("apps.bot.health.cache")
@@ -130,7 +130,10 @@ class TestHealthMonitorReconnectFlow:
     ):
         from apps.bot.health import BotHealthMonitor
 
-        mock_cache.get.return_value = {"status": "offline"}
+        offline_status = {"status": "offline"}
+        mock_cache.get.side_effect = lambda key: (
+            None if key == "waha_alert_sent" else offline_status
+        )
         mock_check_status.return_value = {
             "status": "offline",
             "session_status": "STOPPED",
