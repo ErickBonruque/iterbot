@@ -36,9 +36,7 @@ class BotActionLog(TimeStampedModel):
     duration_ms = models.IntegerField(null=True, blank=True)
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default="SUCCESS")
     error_message = models.TextField(null=True, blank=True)
-    error_type = models.CharField(
-        max_length=20, choices=ERROR_TYPE_CHOICES, null=True, blank=True
-    )
+    error_type = models.CharField(max_length=20, choices=ERROR_TYPE_CHOICES, null=True, blank=True)
     metadata = models.JSONField(null=True, blank=True)
 
     class Meta:
