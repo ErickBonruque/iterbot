@@ -67,6 +67,16 @@ class IterBotAdminSite(UnfoldAdminSite):
                 self.admin_view(self.metricas_tecnicas_view),
                 name="metricas_tecnicas",
             ),
+            path(
+                "api/waha-status/",
+                self.admin_view(self.waha_status_api_view),
+                name="waha_status_api",
+            ),
+            path(
+                "api/waha-restart/",
+                self.admin_view(self.waha_restart_api_view),
+                name="waha_restart_api",
+            ),
         ]
         return custom_urls + super().get_urls()
 
@@ -131,6 +141,44 @@ class IterBotAdminSite(UnfoldAdminSite):
             "title": "Métricas Técnicas",
         }
         return TemplateResponse(request, "admin/iterbot/metricas_tecnicas.html", context)
+
+    def waha_status_api_view(self, request):
+        from django.core.cache import cache
+        from django.http import JsonResponse
+
+        from apps.bot.health import BotHealthMonitor
+
+        # Usar cache populado pelo Celery (TTL 60s) — evita requisição ao WAHA a cada poll do browser
+        cached = cache.get("bot_last_status")
+        if cached:
+            # Converter datetime para string para serialização JSON
+            result = dict(cached)
+            last_check = result.get("last_check")
+            if last_check is not None and hasattr(last_check, "isoformat"):
+                result["last_check"] = last_check.isoformat()
+            return JsonResponse(result)
+
+        # Cache vazio: checar diretamente (raramente acontece)
+        monitor = BotHealthMonitor()
+        result = monitor.check_bot_status()
+        result["last_check"] = result["last_check"].isoformat()
+        return JsonResponse(result)
+
+    def waha_restart_api_view(self, request):
+        from django.http import JsonResponse
+
+        from infra.waha.client import WahaClient
+
+        if request.method != "POST":
+            return JsonResponse({"error": "Method not allowed"}, status=405)
+
+        try:
+            client = WahaClient()
+            success = client.start_session()
+        except Exception:
+            success = False
+
+        return JsonResponse({"success": success})
 
 
 # Patch the existing admin.site instance's class in-place so all @admin.register()
