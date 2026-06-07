@@ -242,3 +242,47 @@ class TechnicalMetricsTests(TestCase):
         self.assertEqual(ctx["period_hours"], 1)
         ctx = DashboardService.get_technical_metrics_context(hours=168)
         self.assertEqual(ctx["period_hours"], 168)
+
+
+class ObservabilityContextTests(TestCase):
+    """OBS-01, OBS-02: DashboardService.get_observability_context()."""
+
+    def setUp(self):
+        from apps.bot.models import BotActionLog
+
+        self.user = UserProfile.objects.create(phone_number="5541999000002@c.us")
+        self.log_search_ok = BotActionLog.objects.create(
+            user=self.user,
+            action_type="SEARCH",
+            status="SUCCESS",
+            search_term="python",
+            jobs_found=5,
+            duration_ms=200,
+        )
+        self.log_error = BotActionLog.objects.create(
+            user=self.user,
+            action_type="SEARCH",
+            status="ERROR",
+            error_type="EXCEPTION",
+            error_message="Test error",
+        )
+
+    def test_observability_returns_actions(self):
+        """OBS-01: get_observability_context retorna lista 'actions' com registros."""
+        raise NotImplementedError("Wave 0 stub — implementar em Plan 03")
+
+    def test_observability_hours_filter(self):
+        """OBS-01: Filtro ?hours=1 restringe registros ao período correto."""
+        raise NotImplementedError("Wave 0 stub — implementar em Plan 03")
+
+    def test_observability_action_type_filter(self):
+        """OBS-01: Filtro ?action_type=SEARCH retorna apenas logs de busca."""
+        raise NotImplementedError("Wave 0 stub — implementar em Plan 03")
+
+    def test_observability_errors_only_status_error(self):
+        """OBS-02: Lista 'errors' contém apenas registros com status=ERROR."""
+        raise NotImplementedError("Wave 0 stub — implementar em Plan 03")
+
+    def test_error_rate_calculation(self):
+        """OBS-02: error_rate calculado como (errors/total * 100), arredondado a 1 decimal."""
+        raise NotImplementedError("Wave 0 stub — implementar em Plan 03")
