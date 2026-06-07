@@ -91,12 +91,43 @@ class BaseHandler(ABC):
             message: Message text to send
         """
         try:
-            self.waha_client.send_message(chat_id, message)
-            self._log_sent(user, message)
+            success = self.waha_client.send_message(chat_id, message)
+            if not success:
+                # WahaClient retorna False para HTTP não-2xx (não levanta exceção)
+                from apps.bot.models.bot_action_log import (
+                    BotActionLog,  # import local: evita circular import
+                )
+
+                BotActionLog.objects.create(
+                    user=user,
+                    action_type="WAHA_SEND",
+                    status="ERROR",
+                    error_type="WAHA_SEND_FAIL",
+                    metadata={"chat_id": chat_id, "msg_preview": message[:100]},
+                )
+                logger.error(
+                    "waha_send_fail",
+                    user_id=user.id if user else None,
+                    chat_id=chat_id,
+                )
+            else:
+                self._log_sent(user, message)
         except Exception as e:
+            from apps.bot.models.bot_action_log import (
+                BotActionLog,  # import local: evita circular import
+            )
+
+            BotActionLog.objects.create(
+                user=user,
+                action_type="WAHA_SEND",
+                status="ERROR",
+                error_type="EXCEPTION",
+                error_message=str(e),
+                metadata={"chat_id": chat_id},
+            )
             logger.error(
                 "failed_to_send_message",
-                user_id=user.id,
+                user_id=user.id if user else None,
                 chat_id=chat_id,
                 error=str(e),
                 exc_info=True,
