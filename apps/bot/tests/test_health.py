@@ -78,3 +78,35 @@ class TestBotHealthMonitorStructlog:
             ):
                 result = monitor.check_bot_status()
         assert result["status"] == "offline"
+
+
+class TestAlertThrottle:
+    """WAHA-02: Throttle de alertas de email via Redis cache — stubs RED.
+
+    Estes testes falham intencionalmente até a implementação no Wave 1.
+    Comportamento esperado:
+    - check_and_reconnect() deve verificar cache.get("waha_alert_sent") antes de enviar email
+    - Se chave existe: skip silencioso do envio de email
+    - Se chave não existe: enviar email e chamar cache.set("waha_alert_sent", True, 1800)
+    """
+
+    def test_throttle_skips_second_alert_within_30min(self):
+        """Segundo alerta dentro de 30min deve ser suprimido (cache key existe)."""
+        raise NotImplementedError(
+            "Wave 1 (54-02): implementar guard cache.get('waha_alert_sent') "
+            "em check_and_reconnect() antes de send_offline_alert_email()"
+        )
+
+    def test_throttle_sends_alert_after_cooldown_expires(self):
+        """Primeiro alerta (ou após expirar TTL de 1800s) deve ser enviado normalmente."""
+        raise NotImplementedError(
+            "Wave 1 (54-02): após cache expirar (TTL 1800s), próxima falha "
+            "consecutiva deve enviar email e resetar a chave"
+        )
+
+    def test_redis_key_ttl_is_1800s(self):
+        """cache.set('waha_alert_sent', True, timeout=1800) deve ser chamado ao enviar alerta."""
+        raise NotImplementedError(
+            "Wave 1 (54-02): verificar que cache.set é chamado com timeout=1800 "
+            "ao enviar o alerta de desconexão WAHA"
+        )
