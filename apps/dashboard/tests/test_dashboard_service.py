@@ -269,20 +269,47 @@ class ObservabilityContextTests(TestCase):
 
     def test_observability_returns_actions(self):
         """OBS-01: get_observability_context retorna lista 'actions' com registros."""
-        raise NotImplementedError("Wave 0 stub — implementar em Plan 03")
+        ctx = DashboardService.get_observability_context(hours=24)
+        self.assertIn(self.log_search_ok, ctx["actions"])
+        self.assertIn("total_actions", ctx)
+        self.assertIn("error_rate", ctx)
 
     def test_observability_hours_filter(self):
-        """OBS-01: Filtro ?hours=1 restringe registros ao período correto."""
-        raise NotImplementedError("Wave 0 stub — implementar em Plan 03")
+        """OBS-01: Filtro hours=1 exclui registros criados há mais de 1h."""
+        from datetime import timedelta
+
+        from django.utils import timezone
+
+        from apps.bot.models import BotActionLog
+
+        old_log = BotActionLog.objects.create(
+            action_type="MENU",
+            status="SUCCESS",
+        )
+        # Forçar created_at para 2 horas atrás usando update() (bypass auto_now_add)
+        BotActionLog.objects.filter(pk=old_log.pk).update(
+            created_at=timezone.now() - timedelta(hours=2)
+        )
+        ctx = DashboardService.get_observability_context(hours=1)
+        action_pks = [a.pk for a in ctx["actions"]]
+        self.assertNotIn(old_log.pk, action_pks)
 
     def test_observability_action_type_filter(self):
-        """OBS-01: Filtro ?action_type=SEARCH retorna apenas logs de busca."""
-        raise NotImplementedError("Wave 0 stub — implementar em Plan 03")
+        """OBS-01: Filtro action_type=MENU exclui logs SEARCH."""
+        ctx = DashboardService.get_observability_context(hours=24, action_type="MENU")
+        action_pks = [a.pk for a in ctx["actions"]]
+        self.assertNotIn(self.log_search_ok.pk, action_pks)
 
     def test_observability_errors_only_status_error(self):
-        """OBS-02: Lista 'errors' contém apenas registros com status=ERROR."""
-        raise NotImplementedError("Wave 0 stub — implementar em Plan 03")
+        """OBS-02: errors contém apenas status=ERROR; log SUCCESS não aparece."""
+        ctx = DashboardService.get_observability_context(hours=24)
+        error_pks = [e.pk for e in ctx["errors"]]
+        self.assertIn(self.log_error.pk, error_pks)
+        self.assertNotIn(self.log_search_ok.pk, error_pks)
 
     def test_error_rate_calculation(self):
-        """OBS-02: error_rate calculado como (errors/total * 100), arredondado a 1 decimal."""
-        raise NotImplementedError("Wave 0 stub — implementar em Plan 03")
+        """OBS-02: error_rate = errors/total * 100 arredondado a 1 decimal."""
+        ctx = DashboardService.get_observability_context(hours=24)
+        # 1 SUCCESS + 1 ERROR = 50.0%
+        self.assertEqual(ctx["error_rate"], 50.0)
+        self.assertEqual(ctx["total_errors"], 1)
