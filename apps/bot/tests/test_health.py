@@ -81,32 +81,118 @@ class TestBotHealthMonitorStructlog:
 
 
 class TestAlertThrottle:
-    """WAHA-02: Throttle de alertas de email via Redis cache — stubs RED.
+    """WAHA-02: Throttle de alertas de email via Redis cache."""
 
-    Estes testes falham intencionalmente até a implementação no Wave 1.
-    Comportamento esperado:
-    - check_and_reconnect() deve verificar cache.get("waha_alert_sent") antes de enviar email
-    - Se chave existe: skip silencioso do envio de email
-    - Se chave não existe: enviar email e chamar cache.set("waha_alert_sent", True, 1800)
-    """
+    def _make_monitor(self):
+        from apps.bot.health import BotHealthMonitor
+
+        return BotHealthMonitor(waha_url="http://localhost:3000", session_name="test")
 
     def test_throttle_skips_second_alert_within_30min(self):
         """Segundo alerta dentro de 30min deve ser suprimido (cache key existe)."""
-        raise NotImplementedError(
-            "Wave 1 (54-02): implementar guard cache.get('waha_alert_sent') "
-            "em check_and_reconnect() antes de send_offline_alert_email()"
-        )
+        from unittest.mock import patch
+
+        monitor = self._make_monitor()
+        # Simular dois checks consecutivos OFFLINE
+        offline_status = {
+            "status": "offline",
+            "session_status": "STOPPED",
+            "response_time": None,
+            "error_message": "timeout",
+            "last_check": None,
+        }
+
+        with (
+            patch("apps.bot.health.BotHealthMonitor.check_bot_status", return_value=offline_status),
+            patch("apps.bot.health.BotHealthMonitor.attempt_reconnect", return_value=False),
+            patch("apps.bot.health.cache") as mock_cache,
+            patch("apps.bot.health.send_offline_alert_email") as mock_email,
+        ):
+            # Primeira chamada: cache vazio → prev_is_ok=False, curr_is_ok=False
+            mock_cache.get.side_effect = lambda key: (
+                None
+                if key == "waha_alert_sent"
+                else offline_status
+                if key == "bot_last_status"
+                else None
+            )
+            monitor.check_and_reconnect()
+
+            # Simular que a chave existe agora (throttle ativo)
+            mock_cache.get.side_effect = lambda key: (
+                True
+                if key == "waha_alert_sent"
+                else offline_status
+                if key == "bot_last_status"
+                else None
+            )
+            mock_email.reset_mock()
+            monitor.check_and_reconnect()
+
+        # Segunda chamada NÃO deve ter enviado email
+        mock_email.assert_not_called()
 
     def test_throttle_sends_alert_after_cooldown_expires(self):
-        """Primeiro alerta (ou após expirar TTL de 1800s) deve ser enviado normalmente."""
-        raise NotImplementedError(
-            "Wave 1 (54-02): após cache expirar (TTL 1800s), próxima falha "
-            "consecutiva deve enviar email e resetar a chave"
-        )
+        """Quando cache key não existe (expirou), alerta deve ser enviado."""
+        from unittest.mock import patch
+
+        monitor = self._make_monitor()
+        offline_status = {
+            "status": "offline",
+            "session_status": "STOPPED",
+            "response_time": None,
+            "error_message": "timeout",
+            "last_check": None,
+        }
+
+        with (
+            patch("apps.bot.health.BotHealthMonitor.check_bot_status", return_value=offline_status),
+            patch("apps.bot.health.BotHealthMonitor.attempt_reconnect", return_value=False),
+            patch("apps.bot.health.cache") as mock_cache,
+            patch("apps.bot.health.send_offline_alert_email") as mock_email,
+        ):
+            mock_cache.get.side_effect = lambda key: (
+                None
+                if key == "waha_alert_sent"
+                else offline_status
+                if key == "bot_last_status"
+                else None
+            )
+            monitor.check_and_reconnect()
+
+        mock_email.assert_called_once()
 
     def test_redis_key_ttl_is_1800s(self):
         """cache.set('waha_alert_sent', True, timeout=1800) deve ser chamado ao enviar alerta."""
-        raise NotImplementedError(
-            "Wave 1 (54-02): verificar que cache.set é chamado com timeout=1800 "
-            "ao enviar o alerta de desconexão WAHA"
-        )
+        from unittest.mock import call, patch
+
+        monitor = self._make_monitor()
+        offline_status = {
+            "status": "offline",
+            "session_status": "STOPPED",
+            "response_time": None,
+            "error_message": "timeout",
+            "last_check": None,
+        }
+
+        with (
+            patch("apps.bot.health.BotHealthMonitor.check_bot_status", return_value=offline_status),
+            patch("apps.bot.health.BotHealthMonitor.attempt_reconnect", return_value=False),
+            patch("apps.bot.health.cache") as mock_cache,
+            patch("apps.bot.health.send_offline_alert_email"),
+        ):
+            mock_cache.get.side_effect = lambda key: (
+                None
+                if key == "waha_alert_sent"
+                else offline_status
+                if key == "bot_last_status"
+                else None
+            )
+            monitor.check_and_reconnect()
+
+        # Verificar que cache.set foi chamado com a chave e TTL corretos
+        throttle_calls = [
+            c for c in mock_cache.set.call_args_list if c.args and c.args[0] == "waha_alert_sent"
+        ]
+        assert len(throttle_calls) == 1
+        assert throttle_calls[0] == call("waha_alert_sent", True, timeout=1800)
