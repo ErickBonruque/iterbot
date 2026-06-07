@@ -200,5 +200,94 @@
         <p>Sem dados de disponibilidade para o período selecionado.</p>
         {% endif %}
     </article>
+
+    <!-- Card de Status em Tempo Real do WAHA -->
+    <article class="cv-admin-panel" style="margin-bottom: 24px;" id="waha-realtime-card">
+        <h2 class="cv-admin-panel-title">
+            Status da Sessão WAHA em Tempo Real
+            <span style="font-size:0.75rem; font-weight:400; margin-left:8px; opacity:0.6;">
+                atualiza a cada 30s
+            </span>
+        </h2>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 16px; margin-bottom: 16px;">
+            <div class="cv-admin-metric-card">
+                <p class="cv-admin-metric-label">Status</p>
+                <p class="cv-admin-metric-value" data-field="status">—</p>
+            </div>
+            <div class="cv-admin-metric-card">
+                <p class="cv-admin-metric-label">Sessão</p>
+                <p class="cv-admin-metric-value" data-field="session_status">—</p>
+            </div>
+            <div class="cv-admin-metric-card">
+                <p class="cv-admin-metric-label">Latência</p>
+                <p class="cv-admin-metric-value" data-field="response_time">—</p>
+            </div>
+            <div class="cv-admin-metric-card">
+                <p class="cv-admin-metric-label">Última Verificação</p>
+                <p class="cv-admin-metric-value" style="font-size:0.85rem;" data-field="last_check">—</p>
+            </div>
+        </div>
+        {% csrf_token %}
+        <button id="waha-restart-btn" class="cv-admin-action" style="margin-top:8px;">
+            Reconectar Sessão
+        </button>
+    </article>
+
+    <script>
+    (function() {
+        var card = document.getElementById('waha-realtime-card');
+        if (!card) return;
+
+        function updateWahaStatus() {
+            fetch("{% url 'admin:waha_status_api' %}", {
+                headers: {"X-Requested-With": "XMLHttpRequest"}
+            })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                card.querySelector('[data-field="status"]').textContent = data.status || '—';
+                card.querySelector('[data-field="session_status"]').textContent = data.session_status || '—';
+                card.querySelector('[data-field="response_time"]').textContent =
+                    data.response_time ? data.response_time + ' ms' : '—';
+                card.querySelector('[data-field="last_check"]').textContent =
+                    data.last_check ? new Date(data.last_check).toLocaleTimeString('pt-BR') : '—';
+            })
+            .catch(function() {
+                card.querySelector('[data-field="status"]').textContent = 'erro ao carregar';
+            });
+        }
+
+        updateWahaStatus();
+        setInterval(updateWahaStatus, 30000);
+
+        var restartBtn = document.getElementById('waha-restart-btn');
+        if (restartBtn) {
+            restartBtn.addEventListener('click', function() {
+                restartBtn.disabled = true;
+                restartBtn.textContent = 'Reconectando...';
+                var csrfToken = card.querySelector('[name=csrfmiddlewaretoken]').value;
+                fetch("{% url 'admin:waha_restart_api' %}", {
+                    method: "POST",
+                    headers: {
+                        "X-CSRFToken": csrfToken,
+                        "X-Requested-With": "XMLHttpRequest"
+                    }
+                })
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    restartBtn.textContent = data.success ? 'Reconectado!' : 'Falha na reconexão';
+                    setTimeout(function() {
+                        restartBtn.disabled = false;
+                        restartBtn.textContent = 'Reconectar Sessão';
+                        updateWahaStatus();
+                    }, 3000);
+                })
+                .catch(function() {
+                    restartBtn.textContent = 'Erro de conexão';
+                    restartBtn.disabled = false;
+                });
+            });
+        }
+    })();
+    </script>
 </div>
 {% endblock %}

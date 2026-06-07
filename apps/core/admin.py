@@ -153,8 +153,9 @@ class IterBotAdminSite(UnfoldAdminSite):
         if cached:
             # Converter datetime para string para serialização JSON
             result = dict(cached)
-            if result.get("last_check") is not None:
-                result["last_check"] = result["last_check"].isoformat()
+            last_check = result.get("last_check")
+            if last_check is not None and hasattr(last_check, "isoformat"):
+                result["last_check"] = last_check.isoformat()
             return JsonResponse(result)
 
         # Cache vazio: checar diretamente (raramente acontece)
