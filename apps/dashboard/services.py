@@ -7,7 +7,13 @@ from django.db.models.functions import Cast, TruncHour
 from django.utils import timezone
 
 from apps.bot.health import BotHealthMonitor
-from apps.bot.models import BotConfiguration, BotHealthCheck, BotMetrics, InteractionLog
+from apps.bot.models import (
+    BotActionLog,
+    BotConfiguration,
+    BotHealthCheck,
+    BotMetrics,
+    InteractionLog,
+)
 from apps.courses.models import Course
 from apps.jobs.models import JobSearchLog
 from apps.users.models import UserProfile
@@ -508,6 +514,43 @@ class DashboardService:
                 else 0,
             },
             "period_hours": hours,
+        }
+
+    @staticmethod
+    def get_observability_context(hours: int = 24, action_type: str = "") -> dict:
+        """
+        Retorna contexto de observabilidade do bot para o dashboard (OBS-01, OBS-02).
+        Filtra por período (hours) e tipo de ação (action_type).
+        """
+        since = timezone.now() - timedelta(hours=hours)
+
+        qs = BotActionLog.objects.select_related("user").filter(created_at__gte=since)
+        if action_type:
+            qs = qs.filter(action_type=action_type)
+
+        actions = list(qs.order_by("-created_at")[:50])
+
+        # Seção de erros: aplica o mesmo filtro action_type para consistência
+        errors_qs = BotActionLog.objects.select_related("user").filter(
+            created_at__gte=since, status="ERROR"
+        )
+        if action_type:
+            errors_qs = errors_qs.filter(action_type=action_type)
+        errors = list(errors_qs.order_by("-created_at")[:50])
+
+        total_actions = qs.count()
+        total_errors = qs.filter(status="ERROR").count()
+        error_rate = round(total_errors / total_actions * 100, 1) if total_actions > 0 else 0.0
+
+        return {
+            "actions": actions,
+            "errors": errors,
+            "total_actions": total_actions,
+            "total_errors": total_errors,
+            "error_rate": error_rate,
+            "period_hours": hours,
+            "selected_action_type": action_type,
+            "action_type_choices": BotActionLog.ACTION_CHOICES,
         }
 
     @staticmethod

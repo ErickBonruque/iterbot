@@ -198,4 +198,5 @@ class TestDashboardViews(TestCase):
 
     def test_observability_returns_200(self):
         """OBS-01: GET /dashboard/observability/ com staff user retorna 200."""
-        raise NotImplementedError("Wave 0 stub — implementar em Plan 03/04")
+        response = self.client.get(reverse("observability"))
+        self.assertEqual(response.status_code, 200)
