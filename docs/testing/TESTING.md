@@ -295,26 +295,51 @@ make pre-commit-install
 apps/
   bot/tests/
     __init__.py
-    test_bot_service.py     # BotService: menu, login, fluxos do bot
-    test_bot_configuration.py  # BotConfiguration model e BotService init
-    test_waha_client.py     # WahaClient: send_message, start_session, structlog
-    test_tasks.py            # Celery tasks: health check, reconexão, alertas
-    test_health.py           # BotHealthMonitor: check_bot_status, logging structlog
-    test_webhook_security.py # Segurança do webhook: SSL redirect, isenção de rota
+    test_authentication_handler.py  # AuthenticationHandler: fluxo de autenticação por WhatsApp
+    test_bot_action_log.py          # BotActionLog: criação, status, tipos de ação
+    test_bot_configuration.py       # BotConfiguration model e BotService init
+    test_bot_service.py             # BotService: menu, login, fluxos do bot
+    test_brevo_provider.py          # Provider Brevo: envio de e-mail transacional
+    test_conversation_state_migration.py  # Migração de estado de conversação
+    test_email_fallback.py          # Fallback automático de provider de e-mail
+    test_email_health.py            # Health check de provider de e-mail
+    test_email_idempotency.py       # Idempotência no envio de e-mails
+    test_email_service.py           # EmailService: providers, configuração
+    test_health.py                  # BotHealthMonitor: check_bot_status, logging structlog
+    test_job_review_handler.py      # JobReviewHandler: fluxo de review semanal
+    test_job_search_handler.py      # JobSearchHandler: busca via DailyJob, fallback
+    test_menu_handler.py            # MenuHandler: menu principal do bot
+    test_messages.py                # Formatação de mensagens WhatsApp
+    test_protocol_di.py             # DI por Protocol (injeção de dependência)
+    test_state_machine.py           # State machine do bot (current_action)
+    test_tasks.py                   # Celery tasks: health check, reconexão, alertas
+    test_waha_client.py             # WahaClient: send_message, start_session, structlog
+    test_webhook_security.py        # Segurança do webhook: SSL redirect, isenção de rota
+    test_webhook_views.py           # Views de webhook: parsing, dispatch
   companies/tests/
     __init__.py
-    test_views.py            # Views: signup, login, perfil, CRUD de vagas
     test_forms.py            # Formulários: CompanySignup, CompanyProfile, Job
-  dashboard/tests/
-    test_bot_configuration_api.py  # API DRF: configuração ativa, sincronização admin
+    test_mixins.py           # Mixins de autorização do portal de empresas
+    test_views.py            # Views: signup, login, perfil, CRUD de vagas
+  courses/tests/
+    __init__.py
+    test_admin.py            # Admin de cursos e SearchTerm
+    test_models.py           # Models: Course, SearchTerm
+    test_search_service.py   # Serviço de busca com to_search_kwargs()
   jobs/tests/
     __init__.py
     factories.py             # CompanyFactory, JobFactory, JobApplicationFactory
+    test_company_admin.py    # Admin de empresas e vagas
+    test_daily_job.py        # DailyJob: deduplicação, unique_together, is_manual
     test_models.py           # Models: Company, Job, JobApplication
-    test_tasks.py            # Tasks: formatação de review, deduplicação, URLs
+    test_services.py         # Services: fetch_and_save_daily_jobs, send_weekly_reviews
+    test_tasks.py            # Tasks: fetch_daily_jobs, send_weekly_job_review
   users/tests/
     __init__.py
     factories.py             # UserProfileFactory
     test_auth_flow.py        # Fluxo de autenticação: signup, login, logout, reset
+    test_password_reset_adapter.py  # Adapter de reset de senha
+    test_services.py         # UTFPRAuthService: authenticate, link_user, confirm_email
     test_settings.py         # Settings de teste (cache locmem, email backend)
+    test_views.py            # Views de usuário: confirmação de e-mail, perfil
 ```

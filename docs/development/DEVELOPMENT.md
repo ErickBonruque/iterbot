@@ -121,6 +121,7 @@ Verifica se Backend, WAHA, PostgreSQL e Redis estão respondendo.
 | Observabilidade | http://localhost:8000/admin/observabilidade/ |
 | Métricas de Negócio | http://localhost:8000/admin/metricas-negocio/ |
 | Métricas Técnicas | http://localhost:8000/admin/metricas-tecnicas/ |
+| Portal de Empresas | http://localhost:8000/empresas/ |
 | WAHA Dashboard | http://localhost:3000/dashboard |
 | Traefik Dashboard | http://localhost:8080 |
 
@@ -360,13 +361,12 @@ O deploy para EC2 é automático via GitHub Actions (`deploy.yml`) após merge e
 ```
 iterbot/
 ├── apps/                       # Aplicações Django
-│   ├── bot/                    # Bot WhatsApp (handlers, services, views, tasks, health)
-│   ├── companies/              # Portal da empresa (views, forms, urls)
-│   ├── core/                   # TimeStampedModel, health checks, admin customizado
-│   ├── courses/                # Cursos e search terms
-│   ├── dashboard/              # Dashboard admin + DRF API
-│   ├── jobs/                   # Vagas (models, tasks, validators)
-│   └── users/                  # Auth (models, adapters, services)
+│   ├── bot/                    # Bot WhatsApp (handlers/, models/, services.py, views.py, tasks.py, health.py)
+│   ├── companies/              # Portal da empresa (/empresas/*) — views, forms, urls
+│   ├── core/                   # TimeStampedModel, health checks, admin customizado (IterBotAdminSite), DashboardService, BotActionLog
+│   ├── courses/                # Cursos (Course) e termos de busca (SearchTerm)
+│   ├── jobs/                   # Vagas (models/, DailyJob, tasks.py, validators.py)
+│   └── users/                  # Auth (models.py, adapters.py, services.py)
 ├── config/
 │   └── env.py                  # Configuração de variáveis de ambiente e secrets
 ├── deployment/
@@ -374,11 +374,12 @@ iterbot/
 ├── docker/
 │   └── django/                 # Dockerfile e scripts de entrada
 ├── infra/
-│   ├── jobspy/                 # Service de busca de vagas
+│   ├── email/                  # Factory de providers de e-mail (Resend, Brevo, SES/SMTP)
+│   ├── jobspy/                 # Service de busca de vagas (JobSearchService)
 │   ├── middleware/             # Correlation ID + structured logging
 │   ├── security/               # Encryption + EncryptedCharField
 │   ├── traefik/                # Config do proxy reverso
-│   └── waha/                   # Client WAHA HTTP API
+│   └── waha/                   # Client WAHA HTTP API (WahaClient)
 ├── secrets/                    # Docker secrets (gitignored, gerados por setup_secrets.sh)
 ├── waha_bot/                   # Configuração do projeto Django (settings, urls, celery)
 ├── .env.example                # Template de variáveis de ambiente
@@ -395,7 +396,7 @@ iterbot/
 Os testes usam **pytest** com as seguintes configurações em `pyproject.toml`:
 
 - **Settings module:** `waha_bot.settings.development`
-- **Test paths:** `apps/`
+- **Test paths:** `apps/` (inclui `apps/bot/`, `apps/jobs/`, `apps/companies/`, `apps/users/`, `apps/courses/`, `apps/core/`)
 - **Padrão de nomes:** `test_*.py` ou `*_test.py`
 - **Cobertura mínima:** 70% (`fail_under = 70`)
 - **Cobertura de branches:** habilitada
