@@ -107,6 +107,27 @@ def business_metrics(request):
     return render(request, "dashboard/business_metrics.html", context)
 
 
+def observability(request):
+    """
+    Página de observabilidade do bot (OBS-01, OBS-02, OBS-03).
+    Exibe log de ações e erros recentes com filtros de período e tipo.
+    Validação: hours entre 1 e 720; action_type passado direto ao service (ORM parameterized).
+    """
+    try:
+        hours = int(request.GET.get("hours", 24))
+    except (ValueError, TypeError):
+        hours = 24
+    if hours < 1:
+        hours = 24
+    elif hours > 720:
+        hours = 720
+
+    action_type = request.GET.get("action_type", "")
+
+    context = DashboardService.get_observability_context(hours=hours, action_type=action_type)
+    return render(request, "dashboard/observability.html", context)
+
+
 def technical_metrics(request):
     """
     Página de métricas técnicas (METR-04, METR-05, METR-06).
