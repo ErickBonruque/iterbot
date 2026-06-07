@@ -9,10 +9,14 @@ from django.core.cache import cache
 from django.db.models import Avg
 from django.utils import timezone
 
+from apps.bot.email_service import send_offline_alert_email
 from apps.bot.models import BotHealthCheck
 from config.env import settings
 
 logger = structlog.get_logger(__name__)
+
+ALERT_THROTTLE_KEY = "waha_alert_sent"
+ALERT_THROTTLE_TTL = 1800  # 30 minutos
 
 
 class BotHealthMonitor:
@@ -149,8 +153,6 @@ class BotHealthMonitor:
 
     def check_and_reconnect(self) -> dict:
         """Executa health check e aplica threshold de 2 falhas consecutivas."""
-        from apps.bot.email_service import send_offline_alert_email
-
         prev_status_data = cache.get("bot_last_status") or {}
         prev_is_ok = prev_status_data.get("status") == "online"
 
@@ -174,13 +176,27 @@ class BotHealthMonitor:
             )
 
             reconnect_success = self.attempt_reconnect(attempt=1)
-            send_offline_alert_email(
-                session_name=self.session_name,
-                current_status=current_result["status"],
-                error_message=current_result.get("error_message"),
-                reconnect_attempted=True,
-                reconnect_success=reconnect_success,
-            )
+
+            if not cache.get(ALERT_THROTTLE_KEY):
+                send_offline_alert_email(
+                    session_name=self.session_name,
+                    current_status=current_result["status"],
+                    error_message=current_result.get("error_message"),
+                    reconnect_attempted=True,
+                    reconnect_success=reconnect_success,
+                )
+                cache.set(ALERT_THROTTLE_KEY, True, timeout=ALERT_THROTTLE_TTL)
+                logger.info(
+                    "waha_alert_sent_and_throttled",
+                    session_name=self.session_name,
+                    throttle_ttl_seconds=ALERT_THROTTLE_TTL,
+                )
+            else:
+                logger.info(
+                    "waha_alert_throttled_skipped",
+                    session_name=self.session_name,
+                    note="Alert already sent within throttle window",
+                )
         elif prev_is_ok and not curr_is_ok:
             logger.info(
                 "waha_first_failure_detected",
