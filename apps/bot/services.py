@@ -1,5 +1,7 @@
 """Refactored bot service using handler pattern and separation of concerns."""
 
+import time
+
 import structlog
 from django.conf import settings
 
@@ -63,6 +65,7 @@ class BotService:
             return
 
         text = message.strip().lower()
+        start = time.time()
 
         try:
             user = UserProfile.objects.get(phone_number=chat_id)
@@ -73,49 +76,70 @@ class BotService:
         conversation_state = self._get_conversation_state(user)
         self._log_received(user, message)
 
-        if text in {
-            "menu",
-            "inicio",
-            "início",
-            "start",
-            "começar",
-            "oi",
-            "ola",
-            "olá",
-            "bom dia",
-            "boa tarde",
-            "boa noite",
-        }:
-            self._reset_state(user)
-            self.menu_handler.send_menu(user, chat_id)
-            return
+        try:
+            if text in {
+                "menu",
+                "inicio",
+                "início",
+                "start",
+                "começar",
+                "oi",
+                "ola",
+                "olá",
+                "bom dia",
+                "boa tarde",
+                "boa noite",
+            }:
+                self._reset_state(user)
+                self.menu_handler.send_menu(user, chat_id)
+            elif text in {"cancelar", "voltar", "sair"}:
+                if text == "sair" and user.is_authenticated_utfpr:
+                    self.auth_handler.handle_logout(user, chat_id)
+                else:
+                    self._reset_state(user)
+                    self.waha_client.send_message(
+                        chat_id,
+                        self.auth_handler.resolve_message(
+                            "system.action_cancelled",
+                            BOT_MESSAGES.system.action_cancelled.text,
+                        ),
+                    )
+                    self.menu_handler.send_menu(user, chat_id)
+            elif is_waiting_confirmation(conversation_state.current_action):
+                self.auth_handler.handle_login_waiting_confirmation(user, chat_id, text)
+            elif has_active_flow(conversation_state.current_action) and self._handle_pending_action(
+                user, chat_id, text
+            ):
+                pass
+            else:
+                self._handle_main_menu_command(user, chat_id, text)
 
-        if text in {"cancelar", "voltar", "sair"}:
-            if text == "sair" and user.is_authenticated_utfpr:
-                self.auth_handler.handle_logout(user, chat_id)
-                return
-
-            self._reset_state(user)
-            self.waha_client.send_message(
-                chat_id,
-                self.auth_handler.resolve_message(
-                    "system.action_cancelled",
-                    BOT_MESSAGES.system.action_cancelled.text,
-                ),
+            # Log de sucesso — registra que a mensagem foi processada
+            from apps.bot.models.bot_action_log import (
+                BotActionLog,  # import local: evita circular import
             )
-            self.menu_handler.send_menu(user, chat_id)
-            return
 
-        if is_waiting_confirmation(conversation_state.current_action):
-            self.auth_handler.handle_login_waiting_confirmation(user, chat_id, text)
-            return
+            BotActionLog.objects.create(
+                user=user,
+                action_type="MENU",
+                status="SUCCESS",
+                duration_ms=int((time.time() - start) * 1000),
+            )
+        except Exception as e:
+            from apps.bot.models.bot_action_log import (
+                BotActionLog,  # import local: evita circular import
+            )
 
-        if has_active_flow(conversation_state.current_action) and self._handle_pending_action(
-            user, chat_id, text
-        ):
-            return
-
-        self._handle_main_menu_command(user, chat_id, text)
+            BotActionLog.objects.create(
+                user=user,
+                action_type="MENU",
+                status="ERROR",
+                error_type="EXCEPTION",
+                error_message=str(e),
+                duration_ms=int((time.time() - start) * 1000),
+            )
+            logger.error("process_message_exception", chat_id=chat_id, error=str(e), exc_info=True)
+            raise  # OBRIGATÓRIO: não engolir a exceção
 
     # Aliases textuais — independentes do menu visível.
     _ALIAS_LOGIN = frozenset({"cadastrar", "login", "entrar"})
