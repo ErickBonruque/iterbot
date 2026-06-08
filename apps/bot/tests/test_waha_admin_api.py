@@ -11,8 +11,8 @@ from django.test import Client
 @pytest.fixture
 def staff_client(db):
     """Client autenticado como staff."""
-    User = get_user_model()
-    user = User.objects.create_user(
+    user_model = get_user_model()
+    user = user_model.objects.create_user(
         username="admin_test",
         password="testpass123",
         is_staff=True,
@@ -31,8 +31,8 @@ def anon_client(db):
 @pytest.fixture
 def non_staff_client(db):
     """Client autenticado mas sem is_staff."""
-    User = get_user_model()
-    user = User.objects.create_user(
+    user_model = get_user_model()
+    user = user_model.objects.create_user(
         username="regular_user",
         password="testpass123",
         is_staff=False,
