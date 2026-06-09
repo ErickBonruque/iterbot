@@ -26,6 +26,16 @@
             <p class="cv-admin-metric-label">Empresas ativas</p>
             <p class="cv-admin-metric-value">{{ empresas_ativas|default:"0" }}</p>
         </article>
+        <article class="cv-admin-metric-card {% if empresas_pendentes %}cv-admin-metric-card--accent{% endif %}">
+            <p class="cv-admin-metric-label">Empresas pendentes</p>
+            <p class="cv-admin-metric-value">
+                {% if empresas_pendentes %}
+                <a href="{% url 'admin:jobs_company_changelist' %}?status__exact=pending" style="color:inherit;text-decoration:none;">{{ empresas_pendentes }}</a>
+                {% else %}
+                0
+                {% endif %}
+            </p>
+        </article>
         <article class="cv-admin-metric-card cv-admin-metric-card--accent">
             <p class="cv-admin-metric-label">Vagas pendentes</p>
             <p class="cv-admin-metric-value">{{ vagas_pendentes|default:"0" }}</p>

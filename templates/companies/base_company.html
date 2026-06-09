@@ -23,7 +23,11 @@
                     <a class="nav-link" href="/empresas/perfil/">Perfil</a>
                 </li>
                 <li class="nav-item">
+                    {% if request.user.is_authenticated and request.user.company.status == 'approved' %}
                     <a class="nav-link" href="/empresas/vagas/nova/">Nova Vaga</a>
+                    {% else %}
+                    <span class="nav-link text-muted" style="cursor:default;" title="Disponível após aprovação do cadastro">Nova Vaga</span>
+                    {% endif %}
                 </li>
                 <li class="nav-item">
                     <a class="nav-link" href="/empresas/logout/">Sair</a>

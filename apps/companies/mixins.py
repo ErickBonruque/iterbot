@@ -1,5 +1,7 @@
+from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import PermissionDenied
+from django.shortcuts import redirect
 
 from apps.jobs.models import CompanyStatus
 
@@ -41,10 +43,14 @@ class ApprovedCompanyRequiredMixin(CompanyRequiredMixin):
         company = request.user.company
         if company.status != CompanyStatus.APPROVED:
             if company.status == CompanyStatus.BLOCKED:
-                raise PermissionDenied(
-                    "Sua empresa esta bloqueada. Entre em contato com a administracao."
+                messages.error(
+                    request,
+                    "Sua empresa está bloqueada. Entre em contato com a administração.",
                 )
-            raise PermissionDenied(
-                "Sua empresa ainda nao foi aprovada. Aguarde a analise para publicar vagas."
-            )
+            else:
+                messages.warning(
+                    request,
+                    "Sua empresa ainda não foi aprovada. Aguarde a análise para publicar vagas.",
+                )
+            return redirect("/empresas/perfil/")
         return response

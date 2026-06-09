@@ -6,6 +6,8 @@ Para confirmar seu e-mail e ativar sua conta, acesse o link abaixo:
 
 {{ activate_url }}
 
+⚠️ Não recebeu o e-mail? Verifique também sua caixa de spam ou lixo eletrônico.
+
 Se você não solicitou este cadastro, ignore este e-mail.
 
 --

@@ -1,6 +1,7 @@
 import structlog
 from allauth.account.views import LoginView, LogoutView, SignupView
 from django.contrib import messages
+from django.contrib.auth import logout as auth_logout
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.shortcuts import redirect, render
 from django.urls import reverse_lazy
@@ -27,12 +28,26 @@ class CompanySignupView(SignupView):
     template_name = "companies/signup.html"
     form_class = CompanySignupForm
 
+    def dispatch(self, request, *args, **kwargs):
+        # Rotas de empresa são independentes da sessão de aluno.
+        # Se um aluno logado acessar /empresas/signup/, deslogamos antes de prosseguir
+        # para que o allauth não redirecione por já estar autenticado.
+        if request.user.is_authenticated:
+            auth_logout(request)
+        return super().dispatch(request, *args, **kwargs)
+
 
 class CompanyLoginView(LoginView):
     """View de login de empresa."""
 
     template_name = "companies/login.html"
     success_url = "/empresas/perfil/"
+
+    def dispatch(self, request, *args, **kwargs):
+        # Mesma razão: deslogar sessão de aluno para não redirecionar erroneamente.
+        if request.user.is_authenticated:
+            auth_logout(request)
+        return super().dispatch(request, *args, **kwargs)
 
 
 class CompanyLogoutView(LogoutView):

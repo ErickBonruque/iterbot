@@ -19,7 +19,9 @@ class IterBotAdminSite(UnfoldAdminSite):
 
         extra_context = extra_context or {}
 
-        extra_context["total_alunos"] = UserProfile.objects.count()
+        extra_context["total_alunos"] = UserProfile.objects.exclude(
+            user__company__isnull=False
+        ).count()
         extra_context["empresas_ativas"] = Company.objects.filter(
             status=CompanyStatus.APPROVED
         ).count()

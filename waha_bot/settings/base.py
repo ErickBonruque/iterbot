@@ -251,6 +251,17 @@ UNFOLD = {
         "show_all_applications": False,
         "navigation": [
             {
+                "title": "Painel",
+                "separator": False,
+                "items": [
+                    {
+                        "title": "Painel Principal",
+                        "icon": "home",
+                        "link": "/admin/",
+                    },
+                ],
+            },
+            {
                 "title": "Monitoramento",
                 "separator": False,
                 "items": [
@@ -317,11 +328,6 @@ UNFOLD = {
                 "title": "Bot WhatsApp",
                 "separator": False,
                 "items": [
-                    {
-                        "title": "Configurações",
-                        "icon": "settings",
-                        "link": reverse_lazy("admin:bot_botconfiguration_changelist"),
-                    },
                     {
                         "title": "Logs de Saúde",
                         "icon": "favorite",

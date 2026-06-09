@@ -5,6 +5,26 @@
 {% block company_content %}
 <div class="row justify-content-center">
     <div class="col-md-8 col-lg-6">
+
+        {% if company.status == 'pending' %}
+        <div class="alert alert-warning d-flex align-items-start gap-3 mb-4" role="alert">
+            <div style="font-size:1.5rem;">⏳</div>
+            <div>
+                <strong>Cadastro aguardando aprovação</strong><br>
+                Seus dados foram recebidos e estão em análise pela equipe da UTFPR.
+                Após a aprovação você poderá publicar vagas e elas ficarão visíveis para os alunos no WhatsApp.
+            </div>
+        </div>
+        {% elif company.status == 'blocked' %}
+        <div class="alert alert-danger d-flex align-items-start gap-3 mb-4" role="alert">
+            <div style="font-size:1.5rem;">🚫</div>
+            <div>
+                <strong>Empresa bloqueada</strong><br>
+                Sua empresa foi suspensa. Entre em contato com a administração da UTFPR para mais informações.
+            </div>
+        </div>
+        {% endif %}
+
         <div class="card">
             <div class="card-header text-center">
                 <h4 class="mb-0">Dados da Empresa</h4>
@@ -149,7 +169,13 @@
         <div class="card mt-4">
             <div class="card-body text-center text-muted">
                 <p class="mb-2">Nenhuma vaga cadastrada ainda.</p>
+                {% if company.status == 'approved' %}
                 <a href="/empresas/vagas/nova/" class="btn btn-primary">Cadastrar Primeira Vaga</a>
+                {% else %}
+                <button class="btn btn-secondary" disabled title="Disponível após aprovação do cadastro">
+                    Cadastrar Primeira Vaga
+                </button>
+                {% endif %}
             </div>
         </div>
         {% endif %}

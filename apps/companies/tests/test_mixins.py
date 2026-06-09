@@ -45,14 +45,14 @@ class ApprovedCompanyRequiredMixinTests(TestCase):
         self.client.force_login(user)
 
         response = self.client.get("/empresas/vagas/nova/")
-        self.assertEqual(response.status_code, 403)
+        self.assertRedirects(response, "/empresas/perfil/", fetch_redirect_response=False)
 
     def test_blocked_company_blocked_from_creating_jobs(self):
         user, _ = self._make_user_with_company("bloqueada2", CompanyStatus.BLOCKED)
         self.client.force_login(user)
 
         response = self.client.get("/empresas/vagas/nova/")
-        self.assertEqual(response.status_code, 403)
+        self.assertRedirects(response, "/empresas/perfil/", fetch_redirect_response=False)
 
     def test_approved_company_can_access_create_view(self):
         user, _ = self._make_user_with_company("aprovada3", CompanyStatus.APPROVED)
@@ -73,7 +73,7 @@ class ApprovedCompanyRequiredMixinTests(TestCase):
         self.client.force_login(user)
 
         response = self.client.get(f"/empresas/vagas/{job.pk}/editar/")
-        self.assertEqual(response.status_code, 403)
+        self.assertRedirects(response, "/empresas/perfil/", fetch_redirect_response=False)
 
     def test_pending_company_blocked_from_deleting_jobs(self):
         user, company = self._make_user_with_company("pendente5", CompanyStatus.PENDING)
@@ -87,7 +87,7 @@ class ApprovedCompanyRequiredMixinTests(TestCase):
         self.client.force_login(user)
 
         response = self.client.get(reverse("companies:job_delete", kwargs={"pk": job.pk}))
-        self.assertEqual(response.status_code, 403)
+        self.assertRedirects(response, "/empresas/perfil/", fetch_redirect_response=False)
 
     def test_pending_company_can_access_profile(self):
         """Edição de perfil continua liberada para PENDING (apenas CRUD de vagas é gated)."""
