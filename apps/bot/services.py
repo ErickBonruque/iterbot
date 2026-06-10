@@ -273,6 +273,15 @@ class BotService:
             self.company_auth_service.reauth_company(user.phone_number)
             self._reset_state(user)
             user_reloaded = UserProfile.objects.select_related("company").get(pk=user.pk)
+            company_name = user_reloaded.company.nome if user_reloaded.company else "Empresa"
+            self.waha_client.send_message(
+                chat_id,
+                self.menu_handler.resolve_message(
+                    BOT_MESSAGES.menu.company_reauth_success.key,
+                    BOT_MESSAGES.menu.company_reauth_success.text,
+                    company_name=company_name,
+                ),
+            )
             self.menu_handler.send_menu(user_reloaded, chat_id)
             return True
         return False
