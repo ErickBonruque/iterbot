@@ -1,4 +1,4 @@
-"""Handler de autenticação de empresa via WhatsApp."""
+"""Handler de autenticação de empresa via WhatsApp (email + senha do portal)."""
 
 import structlog
 
@@ -6,7 +6,7 @@ from apps.bot.messages import BOT_MESSAGES
 from apps.bot.models import ConversationState
 from apps.bot.state_machine import (
     STATE_COMPANY_LOGIN_EMAIL,
-    STATE_COMPANY_WAITING_CONFIRMATION,
+    STATE_COMPANY_LOGIN_PASSWORD,
     STATE_IDLE,
     apply_state_transition,
 )
@@ -19,7 +19,7 @@ logger = structlog.get_logger(__name__)
 
 
 class CompanyAuthHandler(BaseHandler):
-    """Gerencia fluxo de login de empresa via WhatsApp."""
+    """Gerencia fluxo de login de empresa via WhatsApp (email + senha)."""
 
     def __init__(self, waha_client: MessageSender, company_auth_service, email_dispatcher) -> None:
         super().__init__(waha_client)
@@ -31,7 +31,7 @@ class CompanyAuthHandler(BaseHandler):
         return state
 
     def start_company_login_flow(self, user: UserProfile, chat_id: str) -> None:
-        """Pergunta o email da empresa cadastrado no portal."""
+        """Pede o e-mail da empresa cadastrado no portal."""
         conv = self._get_conversation_state(user)
         apply_state_transition(
             conversation_state=conv,
@@ -48,11 +48,13 @@ class CompanyAuthHandler(BaseHandler):
         )
 
     def handle_company_login_email(self, user: UserProfile, chat_id: str, text: str) -> None:
-        """Recebe email, localiza empresa e envia link de confirmação."""
-        email = text.strip().lower()
-        profile = self.company_auth.link_company_by_email(user.phone_number, email)
+        """Valida que a empresa existe e pede a senha."""
+        from apps.jobs.models.company import Company
 
-        if profile is None:
+        email = text.strip().lower()
+        try:
+            Company.objects.get(email=email)
+        except Company.DoesNotExist:
             self.send_msg(
                 user,
                 chat_id,
@@ -61,90 +63,62 @@ class CompanyAuthHandler(BaseHandler):
                     BOT_MESSAGES.menu.company_login_not_found.text,
                 ),
             )
-            # Volta para seleção de onboarding (não para idle) para o usuário tentar novamente.
             conv = self._get_conversation_state(user)
             apply_state_transition(conversation_state=conv, next_state=STATE_IDLE)
             return
 
-        self.email_dispatcher.dispatch_company_confirmation_email(profile.id)
-
         conv = self._get_conversation_state(user)
+        conv.flow_data = {"company_email": email}
         apply_state_transition(
             conversation_state=conv,
-            next_state=STATE_COMPANY_WAITING_CONFIRMATION,
+            next_state=STATE_COMPANY_LOGIN_PASSWORD,
+            update_fields=["flow_data"],
         )
         self.send_msg(
             user,
             chat_id,
             self.resolve_message(
-                BOT_MESSAGES.menu.company_login_email_sent.key,
-                BOT_MESSAGES.menu.company_login_email_sent.text,
-                email=profile.company.email,
+                BOT_MESSAGES.menu.company_login_ask_password.key,
+                BOT_MESSAGES.menu.company_login_ask_password.text,
             ),
         )
-        logger.info("company_confirmation_email_dispatched", user_id=user.id)
 
-    def handle_company_waiting_confirmation(
-        self, user: UserProfile, chat_id: str, text: str
-    ) -> bool:
-        """Aguarda confirmação via email. Detecta se já foi confirmado."""
-        # Recarrega user do banco para pegar is_company_authenticated atualizado.
-        fresh = UserProfile.objects.select_related("company").get(pk=user.pk)
-        if fresh.is_company_authenticated:
-            conv = self._get_conversation_state(user)
+    def handle_company_login_password(self, user: UserProfile, chat_id: str, text: str) -> None:
+        """Autentica a empresa com a senha e loga diretamente."""
+        conv = self._get_conversation_state(user)
+        email = (conv.flow_data or {}).get("company_email", "")
+
+        if not email:
             apply_state_transition(
                 conversation_state=conv, next_state=STATE_IDLE, clear_flow_data=True
             )
+            self.send_msg(user, chat_id, BOT_MESSAGES.menu.unknown_command.text)
+            return
+
+        profile = self.company_auth.authenticate_company(user.phone_number, email, text)
+
+        if profile is None:
             self.send_msg(
                 user,
                 chat_id,
                 self.resolve_message(
-                    BOT_MESSAGES.menu.company_welcome.key,
-                    BOT_MESSAGES.menu.company_welcome.text,
-                    company_name=fresh.company.nome,
+                    BOT_MESSAGES.menu.company_login_wrong_credentials.key,
+                    BOT_MESSAGES.menu.company_login_wrong_credentials.text,
                 ),
             )
-            return True
+            return
 
-        text_lower = text.strip().lower()
-        if text_lower == "reenviar":
-            ok = self._resend_company_confirmation(user, chat_id)
-            if ok:
-                self.send_msg(
-                    user,
-                    chat_id,
-                    self.resolve_message(
-                        BOT_MESSAGES.menu.company_login_resend_success.key,
-                        BOT_MESSAGES.menu.company_login_resend_success.text,
-                    ),
-                )
-            else:
-                self.send_msg(
-                    user,
-                    chat_id,
-                    self.resolve_message(
-                        BOT_MESSAGES.menu.company_login_resend_error.key,
-                        BOT_MESSAGES.menu.company_login_resend_error.text,
-                    ),
-                )
-            return True
-
+        apply_state_transition(conversation_state=conv, next_state=STATE_IDLE, clear_flow_data=True)
         self.send_msg(
             user,
             chat_id,
             self.resolve_message(
-                BOT_MESSAGES.menu.company_login_waiting.key,
-                BOT_MESSAGES.menu.company_login_waiting.text,
+                BOT_MESSAGES.menu.company_welcome.key,
+                BOT_MESSAGES.menu.company_welcome.text,
+                company_name=profile.company.nome,
             ),
         )
-        return True
-
-    def _resend_company_confirmation(self, user: UserProfile, chat_id: str) -> bool:
-        fresh = UserProfile.objects.select_related("company").get(pk=user.pk)
-        if fresh.is_company_authenticated or not fresh.company_confirmation_token:
-            return False
-        self.email_dispatcher.dispatch_company_confirmation_email(fresh.id)
-        return True
+        logger.info("company_login_success", user_id=user.id, company_id=profile.company_id)
 
     def handle(self, user: UserProfile, chat_id: str, text: str) -> bool:
         from apps.bot.state_machine import normalize_current_action
@@ -153,7 +127,7 @@ class CompanyAuthHandler(BaseHandler):
         if action == STATE_COMPANY_LOGIN_EMAIL:
             self.handle_company_login_email(user, chat_id, text)
             return True
-        if action == STATE_COMPANY_WAITING_CONFIRMATION:
-            self.handle_company_waiting_confirmation(user, chat_id, text)
+        if action == STATE_COMPANY_LOGIN_PASSWORD:
+            self.handle_company_login_password(user, chat_id, text)
             return True
         return False

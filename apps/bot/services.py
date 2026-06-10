@@ -17,7 +17,6 @@ from apps.bot.models import BotConfiguration, ConversationState, InteractionLog
 from apps.bot.state_machine import (
     ROUTE_COMPANY,
     STATE_COMPANY_ONBOARDING_SELECTION,
-    STATE_COMPANY_WAITING_CONFIRMATION,
     STATE_IDLE,
     apply_state_transition,
     has_active_flow,
@@ -154,11 +153,6 @@ class BotService:
             self._handle_switch_to_student(user, chat_id)
         elif is_waiting_confirmation(conversation_state.current_action):
             self.auth_handler.handle_login_waiting_confirmation(user, chat_id, text)
-        elif (
-            normalize_current_action(conversation_state.current_action)
-            == STATE_COMPANY_WAITING_CONFIRMATION
-        ):
-            self.company_auth_handler.handle_company_waiting_confirmation(user, chat_id, text)
         elif has_active_flow(conversation_state.current_action) and self._handle_pending_action(
             user, chat_id, text
         ):

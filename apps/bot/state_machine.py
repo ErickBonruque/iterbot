@@ -15,7 +15,8 @@ STATE_COURSE_SELECTION = "course_selection"
 STATE_TERM_SELECTION = "term_selection"
 STATE_COMPANY_ONBOARDING_SELECTION = "company_onboarding_selection"
 STATE_COMPANY_LOGIN_EMAIL = "company_login_email"
-STATE_COMPANY_WAITING_CONFIRMATION = "company_waiting_confirmation"
+STATE_COMPANY_LOGIN_PASSWORD = "company_login_password"
+STATE_COMPANY_WAITING_CONFIRMATION = "company_waiting_confirmation"  # legacy
 
 CANONICAL_STATES = {
     STATE_LOGIN_STEP_RA,
@@ -26,7 +27,7 @@ CANONICAL_STATES = {
     STATE_TERM_SELECTION,
     STATE_COMPANY_ONBOARDING_SELECTION,
     STATE_COMPANY_LOGIN_EMAIL,
-    STATE_COMPANY_WAITING_CONFIRMATION,
+    STATE_COMPANY_LOGIN_PASSWORD,
 }
 
 LEGACY_STATE_ALIASES = {
@@ -56,7 +57,7 @@ JOB_ROUTE_STATES = {
 COMPANY_ROUTE_STATES = {
     STATE_COMPANY_ONBOARDING_SELECTION,
     STATE_COMPANY_LOGIN_EMAIL,
-    STATE_COMPANY_WAITING_CONFIRMATION,
+    STATE_COMPANY_LOGIN_PASSWORD,
 }
 
 
@@ -72,7 +73,7 @@ class ConversationFlowStateMachine(StateMachine):
     term_selection = State(STATE_TERM_SELECTION)
     company_onboarding_selection = State(STATE_COMPANY_ONBOARDING_SELECTION)
     company_login_email = State(STATE_COMPANY_LOGIN_EMAIL)
-    company_waiting_confirmation = State(STATE_COMPANY_WAITING_CONFIRMATION)
+    company_login_password = State(STATE_COMPANY_LOGIN_PASSWORD)
 
     begin_login = (
         idle.to(login_step_ra)
@@ -90,10 +91,10 @@ class ConversationFlowStateMachine(StateMachine):
 
     start_company_onboarding = idle.to(company_onboarding_selection)
     begin_company_login = company_onboarding_selection.to(company_login_email)
-    await_company_confirmation = company_login_email.to(company_waiting_confirmation)
-    finish_company_onboarding = company_onboarding_selection.to(
+    begin_company_password_step = company_login_email.to(company_login_password)
+    finish_company_onboarding = company_onboarding_selection.to(idle) | company_login_password.to(
         idle
-    ) | company_waiting_confirmation.to(idle)
+    )
 
     cancel = (
         login_step_ra.to(idle)
@@ -104,7 +105,7 @@ class ConversationFlowStateMachine(StateMachine):
         | term_selection.to(idle)
         | company_onboarding_selection.to(idle)
         | company_login_email.to(idle)
-        | company_waiting_confirmation.to(idle)
+        | company_login_password.to(idle)
     )
 
 

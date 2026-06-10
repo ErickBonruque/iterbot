@@ -73,6 +73,48 @@ class CompanyAuthService:
         logger.info("company_confirmed", user_id=profile.id, company_id=profile.company_id)
         return profile
 
+    def authenticate_company(
+        self, phone_number: str, company_email: str, password: str
+    ) -> UserProfile | None:
+        """Autentica empresa pelo e-mail e senha do portal.
+
+        Retorna UserProfile com is_company_authenticated=True se credenciais válidas,
+        None caso contrário.
+        """
+        from django.contrib.auth.models import User
+
+        try:
+            company = Company.objects.get(email=company_email.strip().lower())
+        except Company.DoesNotExist:
+            logger.info("company_auth_not_found", email=company_email)
+            return None
+
+        # Localiza o auth.User pelo email da empresa.
+        try:
+            auth_user = User.objects.get(email=company_email.strip().lower())
+        except User.DoesNotExist:
+            logger.info("company_auth_user_not_found", email=company_email)
+            return None
+
+        if not auth_user.check_password(password):
+            logger.info("company_auth_wrong_password", email=company_email)
+            return None
+
+        profile, _ = UserProfile.objects.get_or_create(phone_number=phone_number)
+        profile.company = company
+        profile.is_company_authenticated = True
+        profile.company_confirmation_token = None
+        profile.save(
+            update_fields=[
+                "company",
+                "is_company_authenticated",
+                "company_confirmation_token",
+                "updated_at",
+            ]
+        )
+        logger.info("company_authenticated", user_id=profile.id, company_id=company.id)
+        return profile
+
     def logout_company(self, phone_number: str) -> bool:
         """Encerra sessão empresa preservando o vínculo para re-login rápido."""
         try:

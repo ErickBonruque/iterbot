@@ -107,21 +107,13 @@ class MenuMessages:
         "menu.company_login_not_found",
         "❌ Nenhuma empresa encontrada com esse e-mail.\n\nVerifique o e-mail e tente novamente, ou cadastre sua empresa com a opção *1 — Criar conta*.",
     )
-    company_login_email_sent: MessageTemplate = MessageTemplate(
-        "menu.company_login_email_sent",
-        "📨 Link de confirmação enviado para *{email}*!\n\nClique no link do e-mail para vincular este WhatsApp à sua conta empresa.\n\nAguardando confirmação... Você pode enviar *reenviar* para receber o link novamente.",
+    company_login_ask_password: MessageTemplate = MessageTemplate(
+        "menu.company_login_ask_password",
+        "🔑 Digite a *senha* do portal da empresa:\n\n_(Digite 'cancelar' para voltar)_",
     )
-    company_login_waiting: MessageTemplate = MessageTemplate(
-        "menu.company_login_waiting",
-        "⏳ Ainda aguardando confirmação do e-mail.\n\nEnvie *reenviar* para receber o link novamente, ou *cancelar* para sair.",
-    )
-    company_login_resend_success: MessageTemplate = MessageTemplate(
-        "menu.company_login_resend_success",
-        "📨 Link reenviado! Verifique sua caixa de entrada.",
-    )
-    company_login_resend_error: MessageTemplate = MessageTemplate(
-        "menu.company_login_resend_error",
-        "❌ Não foi possível reenviar o link. Tente cancelar e começar novamente.",
+    company_login_wrong_credentials: MessageTemplate = MessageTemplate(
+        "menu.company_login_wrong_credentials",
+        "❌ E-mail ou senha incorretos.\n\nTente novamente ou digite *cancelar* para voltar.",
     )
     company_welcome: MessageTemplate = MessageTemplate(
         "menu.company_welcome",

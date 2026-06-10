@@ -27,7 +27,7 @@ class ConversationStateMachineContractTests(TestCase):
     def test_canonical_states_cover_expected_flows(self):
         from apps.bot.state_machine import (
             STATE_COMPANY_LOGIN_EMAIL,
-            STATE_COMPANY_WAITING_CONFIRMATION,
+            STATE_COMPANY_LOGIN_PASSWORD,
         )
 
         expected = {
@@ -39,7 +39,7 @@ class ConversationStateMachineContractTests(TestCase):
             STATE_TERM_SELECTION,
             STATE_COMPANY_ONBOARDING_SELECTION,
             STATE_COMPANY_LOGIN_EMAIL,
-            STATE_COMPANY_WAITING_CONFIRMATION,
+            STATE_COMPANY_LOGIN_PASSWORD,
         }
         self.assertSetEqual(CANONICAL_STATES, expected)
 
