@@ -28,6 +28,7 @@ class BotMessagesCatalogTests(TestCase):
         rendered = menu.text.format(
             brand_header=BOT_MESSAGES.menu.brand_header,
             ra="a1234567",
+            switch_empresa="",
         )
         self.assertIn("a1234567", rendered)
 
@@ -53,6 +54,7 @@ class MessageResolutionTests(TestCase):
             BOT_MESSAGES.menu.main_authenticated.text,
             brand_header=BOT_MESSAGES.menu.brand_header,
             ra="a999999",
+            switch_empresa="",
         )
         self.assertIn("a999999", value)
         self.assertIn("IterBot", value)

@@ -117,11 +117,12 @@
                         <small>Sua vaga sera analisada antes de ser publicada.</small>
                     </div>
 
-                    <div class="d-grid gap-2">
+                    <div class="d-flex gap-2">
+                        <a href="{% url 'companies:profile' %}" class="btn btn-secondary btn-lg flex-fill">Cancelar</a>
                         {% if form.instance.pk %}
-                        <button type="submit" class="btn btn-primary btn-lg">Salvar Alteracoes</button>
+                        <button type="submit" class="btn btn-primary btn-lg flex-fill">Salvar Alteracoes</button>
                         {% else %}
-                        <button type="submit" class="btn btn-primary btn-lg">Publicar Vaga</button>
+                        <button type="submit" class="btn btn-primary btn-lg flex-fill">Publicar Vaga</button>
                         {% endif %}
                     </div>
                 </form>

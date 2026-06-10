@@ -17,6 +17,7 @@ class CompanyAdmin(ModelAdmin):
     readonly_fields = ("created_at", "updated_at")
     ordering = ("-created_at",)
     actions = ["approve_companies", "block_companies"]
+    change_form_show_cancel_button = True
     fieldsets = (
         (
             "Dados da Empresa",

@@ -381,3 +381,76 @@ def send_confirmation_email_to_user(user_id: int) -> dict:
         "user_id": user_id,
         "email": user.email,
     }
+
+
+def send_company_confirmation_email_to_user(user_id: int) -> dict:
+    """Envia e-mail de confirmação de vínculo empresa→WhatsApp."""
+    try:
+        user = UserProfile.objects.select_related("company").get(id=user_id)
+    except UserProfile.DoesNotExist:
+        return {"status": "error", "reason": "user_not_found", "user_id": user_id}
+
+    if user.is_company_authenticated:
+        return {"status": "skipped", "reason": "already_authenticated", "user_id": user_id}
+
+    if not user.company_confirmation_token:
+        return {"status": "error", "reason": "no_token", "user_id": user_id}
+
+    if user.company is None:
+        return {"status": "error", "reason": "no_company", "user_id": user_id}
+
+    base_url = (getattr(django_settings, "PORTAL_BASE_URL", "") or "http://localhost:8000").rstrip(
+        "/"
+    )
+    confirm_url = f"{base_url}/confirmar-empresa/{user.company_confirmation_token}"
+
+    company_email = user.company.email
+    company_name = user.company.nome
+
+    body_lines = [
+        f"Olá, {company_name}!",
+        "",
+        "Recebemos uma solicitação para vincular este e-mail ao IterBot via WhatsApp.",
+        "",
+        "Para confirmar o vínculo e acessar o menu da empresa no bot, clique no link abaixo:",
+        "",
+        confirm_url,
+        "",
+        "Este link expira em 24 horas.",
+        "",
+        "Se você não solicitou este acesso, ignore este e-mail.",
+        "",
+        "Atenciosamente,",
+        "Equipe IterBot UTFPR",
+    ]
+    idempotency_key = build_email_idempotency_key(
+        "company_confirmation",
+        recipient=company_email,
+        event_token=user.company_confirmation_token,
+        event_uid=str(user.id),
+    )
+
+    result = send_transactional_email(
+        subject="IterBot — Confirme o vínculo da sua empresa",
+        message="\n".join(body_lines),
+        recipient_list=[company_email],
+        idempotency_key=idempotency_key,
+        event_type="company_confirmation",
+    )
+
+    if result["status"] != "sent":
+        return {
+            "status": "error",
+            "reason": "provider_error",
+            "provider": result.get("provider"),
+            "error_code": result.get("error_code"),
+            "user_id": user_id,
+        }
+
+    return {
+        "status": "sent",
+        "provider": result.get("provider"),
+        "message_id": result.get("message_id"),
+        "user_id": user_id,
+        "email": company_email,
+    }

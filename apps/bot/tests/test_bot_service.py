@@ -142,8 +142,8 @@ class BotServiceFlowTests(TestCase):
         user = UserProfile.objects.get(phone_number=chat_id)
         self.assertEqual(user.conversation_state.current_action, "company_onboarding_selection")
         sent_text = self.waha_client.send_message.call_args[0][1]
-        self.assertIn("Cadastrar empresa", sent_text)
-        self.assertIn("Ja tenho conta / publicar vaga", sent_text)
+        self.assertIn("Criar conta no portal", sent_text)
+        self.assertIn("Já tenho conta", sent_text)
 
     def test_company_onboarding_new_company_contains_signup_link(self):
         chat_id = "5511999000222@c.us"
@@ -157,18 +157,19 @@ class BotServiceFlowTests(TestCase):
         sent_text = self.waha_client.send_message.call_args[0][1]
         self.assertIn("/empresas/signup/", sent_text)
 
-    def test_company_onboarding_existing_company_contains_login_and_new_job(self):
+    def test_company_onboarding_login_option_asks_for_email(self):
+        """Opção 2 do onboarding agora inicia fluxo de login por e-mail."""
         chat_id = "5511999000333@c.us"
 
-        with self.settings(PORTAL_BASE_URL="https://52-201-248-14.sslip.io"):
-            self.service.process_message(chat_id, "2", from_me=False)
-            self.waha_client.send_message.reset_mock()
+        self.service.process_message(chat_id, "2", from_me=False)
+        self.waha_client.send_message.reset_mock()
 
-            self.service.process_message(chat_id, "2", from_me=False)
+        self.service.process_message(chat_id, "2", from_me=False)
 
+        user = UserProfile.objects.get(phone_number=chat_id)
+        self.assertEqual(user.conversation_state.current_action, "company_login_email")
         sent_text = self.waha_client.send_message.call_args[0][1]
-        self.assertIn("/empresas/login/", sent_text)
-        self.assertIn("/empresas/vagas/nova/", sent_text)
+        self.assertIn("e-mail", sent_text.lower())
 
     def test_company_onboarding_with_invalid_portal_base_url_sends_unavailable_message(self):
         chat_id = "5511999000444@c.us"

@@ -57,6 +57,33 @@ class UserProfile(TimeStampedModel):
         related_name="preferred_by",
         help_text="Curso preferido do aluno (salvo automaticamente na 1ª busca)",
     )
+
+    # Campos de autenticação empresa via WhatsApp
+    company = models.ForeignKey(
+        "jobs.Company",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="whatsapp_users",
+        help_text="Empresa vinculada a este número WhatsApp",
+    )
+    is_company_authenticated = models.BooleanField(
+        default=False,
+        help_text="Indica se este número está autenticado como empresa",
+    )
+    company_confirmation_token = models.CharField(
+        max_length=64,
+        null=True,
+        blank=True,
+        unique=True,
+        help_text="Token para confirmar vínculo WhatsApp-empresa via email",
+    )
+    company_confirmation_sent_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="Data/hora do envio do email de confirmação de empresa",
+    )
+
     last_activity = models.DateTimeField(auto_now=True)
 
     def __str__(self):

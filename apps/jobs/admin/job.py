@@ -15,6 +15,7 @@ class JobAdmin(ModelAdmin):
     readonly_fields = ("created_at", "updated_at")
     ordering = ("-created_at",)
     actions_submit_line = ["approve_job", "reject_job"]
+    change_form_show_cancel_button = True
 
     def status_badge(self, obj):
         colors = {

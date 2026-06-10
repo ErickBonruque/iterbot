@@ -85,7 +85,7 @@ class MenuMessages:
     )
     main_authenticated: MessageTemplate = MessageTemplate(
         "menu.main_authenticated",
-        "{brand_header}\n\n👤 *Usuário*: {ra}\n\n📋 *Menu Principal*:\n1️⃣ Buscar Vagas\n2️⃣ Ver Review de Vagas\n3️⃣ Sair da Conta\n4️⃣ Trocar Curso Preferido\n\nDigite o número da opção desejada.",
+        "{brand_header}\n\n👤 *Usuário*: {ra}\n\n📋 *Menu Principal*:\n1️⃣ Buscar Vagas\n2️⃣ Ver Review de Vagas\n3️⃣ Sair da Conta\n4️⃣ Trocar Curso Preferido{switch_empresa}\n\nDigite o número da opção desejada.",
     )
     main_unauthenticated: MessageTemplate = MessageTemplate(
         "menu.main_unauthenticated",
@@ -93,15 +93,71 @@ class MenuMessages:
     )
     company_onboarding_menu: MessageTemplate = MessageTemplate(
         "menu.company_onboarding_menu",
-        "{brand_header}\n\n🏢 *Onboarding para Empresas*\n\n1️⃣ Cadastrar empresa\n2️⃣ Ja tenho conta / publicar vaga\n\nDigite 1 ou 2 para continuar.",
+        "{brand_header}\n\n🏢 *Onboarding para Empresas*\n\n1️⃣ Criar conta no portal\n2️⃣ Já tenho conta — entrar\n\nDigite 1 ou 2 para continuar.",
     )
     company_onboarding_signup: MessageTemplate = MessageTemplate(
         "menu.company_onboarding_signup",
-        "✅ *Cadastro de Empresa*\n\n1) Crie sua conta: {signup_url}\n2) Confirme os dados da empresa\n3) Entre no portal para publicar sua primeira vaga",
+        "✅ *Cadastro de Empresa*\n\nCrie sua conta no portal:\n{signup_url}\n\nApós o cadastro, volte e use a opção *2 — Já tenho conta* para entrar pelo WhatsApp.",
     )
-    company_onboarding_publish: MessageTemplate = MessageTemplate(
-        "menu.company_onboarding_publish",
-        "✅ *Publicar Vaga*\n\nAcesse sua conta: {login_url}\nNova vaga: {new_job_url}",
+    company_login_ask_email: MessageTemplate = MessageTemplate(
+        "menu.company_login_ask_email",
+        "📧 Digite o *e-mail* que você usou para cadastrar sua empresa no portal:",
+    )
+    company_login_not_found: MessageTemplate = MessageTemplate(
+        "menu.company_login_not_found",
+        "❌ Nenhuma empresa encontrada com esse e-mail.\n\nVerifique o e-mail e tente novamente, ou cadastre sua empresa com a opção *1 — Criar conta*.",
+    )
+    company_login_email_sent: MessageTemplate = MessageTemplate(
+        "menu.company_login_email_sent",
+        "📨 Link de confirmação enviado para *{email}*!\n\nClique no link do e-mail para vincular este WhatsApp à sua conta empresa.\n\nAguardando confirmação... Você pode enviar *reenviar* para receber o link novamente.",
+    )
+    company_login_waiting: MessageTemplate = MessageTemplate(
+        "menu.company_login_waiting",
+        "⏳ Ainda aguardando confirmação do e-mail.\n\nEnvie *reenviar* para receber o link novamente, ou *cancelar* para sair.",
+    )
+    company_login_resend_success: MessageTemplate = MessageTemplate(
+        "menu.company_login_resend_success",
+        "📨 Link reenviado! Verifique sua caixa de entrada.",
+    )
+    company_login_resend_error: MessageTemplate = MessageTemplate(
+        "menu.company_login_resend_error",
+        "❌ Não foi possível reenviar o link. Tente cancelar e começar novamente.",
+    )
+    company_welcome: MessageTemplate = MessageTemplate(
+        "menu.company_welcome",
+        "🏢 *{company_name}* — bem-vinda ao IterBot!\n\nSua conta empresa está vinculada. Envie qualquer mensagem para acessar o menu.",
+    )
+    company_main: MessageTemplate = MessageTemplate(
+        "menu.company_main",
+        "{brand_header}\n\n🏢 *{company_name}*\n\n📋 *Menu Empresa*:\n1️⃣ Ver vagas cadastradas\n2️⃣ Acessar portal da empresa\n3️⃣ Cadastrar nova vaga (link)\n0️⃣ Sair da conta empresa{switch_aluno}\n\nDigite o número da opção desejada.",
+    )
+    company_jobs_header: MessageTemplate = MessageTemplate(
+        "menu.company_jobs_header",
+        "📋 *Vagas de {company_name}*:\n\n{jobs_list}\n\nTotal: {count} vaga(s).",
+    )
+    company_jobs_empty: MessageTemplate = MessageTemplate(
+        "menu.company_jobs_empty",
+        "📭 Nenhuma vaga cadastrada ainda.\n\nUse a opção *3 — Cadastrar nova vaga* para publicar sua primeira vaga.",
+    )
+    company_job_item: MessageTemplate = MessageTemplate(
+        "menu.company_job_item",
+        "• *{titulo}* ({tipo}) — _{status}_",
+    )
+    company_portal_link: MessageTemplate = MessageTemplate(
+        "menu.company_portal_link",
+        "🌐 *Portal da Empresa*\n\nAcesse seu perfil: {profile_url}",
+    )
+    company_new_job_link: MessageTemplate = MessageTemplate(
+        "menu.company_new_job_link",
+        "➕ *Cadastrar Nova Vaga*\n\nAcesse o formulário: {new_job_url}",
+    )
+    company_logout_success: MessageTemplate = MessageTemplate(
+        "menu.company_logout_success",
+        "👋 Você saiu da conta empresa.\n\nPara entrar novamente, envie *empresa* a qualquer momento.",
+    )
+    company_reauth_success: MessageTemplate = MessageTemplate(
+        "menu.company_reauth_success",
+        "✅ Bem-vinda de volta, *{company_name}*!",
     )
     unknown_command: MessageTemplate = MessageTemplate(
         "menu.unknown_command",

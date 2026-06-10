@@ -270,7 +270,101 @@ sequenceDiagram
 
 ---
 
-## 6. Task de Pré-fetching Diário de Vagas
+## 6. Fluxo de Autenticação de Empresa via WhatsApp
+
+Empresas cadastradas no portal podem vincular seu número WhatsApp à conta do portal. Após o vínculo, o bot exibe um menu próprio de empresa (leitura).
+
+### Diagrama — Primeiro Login
+
+```mermaid
+sequenceDiagram
+    participant Empresa
+    participant WAHA
+    participant BotService
+    participant CompanyAuthHandler
+    participant CompanyAuthService
+    participant Email
+
+    Empresa->>WAHA: "empresa"
+    WAHA->>BotService: process_message(chat_id, "empresa")
+    BotService->>BotService: _start_company_onboarding()
+    Note over BotService: company=None → mostra onboarding
+    BotService-->>Empresa: Menu: 1=Criar conta / 2=Já tenho conta
+
+    Empresa->>WAHA: "2"
+    WAHA->>BotService: process_message(chat_id, "2")
+    BotService->>CompanyAuthHandler: start_company_login_flow()
+    CompanyAuthHandler-->>Empresa: "Digite o e-mail da empresa"
+    Note over CompanyAuthHandler: STATE_COMPANY_LOGIN_EMAIL
+
+    Empresa->>WAHA: "empresa@exemplo.com"
+    WAHA->>BotService: process_message(chat_id, "empresa@exemplo.com")
+    BotService->>CompanyAuthHandler: handle_company_login_email()
+    CompanyAuthHandler->>CompanyAuthService: link_company_by_email(phone, email)
+    CompanyAuthService-->>CompanyAuthHandler: UserProfile com token e company linkada
+    CompanyAuthHandler->>Email: dispatch_company_confirmation_email(user_id)
+    CompanyAuthHandler-->>Empresa: "Link enviado para empresa@exemplo.com"
+    Note over CompanyAuthHandler: STATE_COMPANY_WAITING_CONFIRMATION
+
+    Empresa->>Web: Clica no link /confirmar-empresa/<token>/
+    Web->>CompanyAuthService: confirm_company_email(token)
+    CompanyAuthService-->>Web: is_company_authenticated=True
+
+    Empresa->>WAHA: "menu" (qualquer mensagem)
+    WAHA->>BotService: process_message(chat_id, "menu")
+    BotService->>MenuHandler: send_menu() — detecta is_company_authenticated=True
+    MenuHandler-->>Empresa: Menu Empresa (vagas / portal / nova vaga / sair)
+```
+
+### Diagrama — Re-login (empresa já vinculada)
+
+```mermaid
+sequenceDiagram
+    participant Empresa
+    participant WAHA
+    participant BotService
+    participant CompanyAuthService
+
+    Empresa->>WAHA: "empresa"
+    WAHA->>BotService: process_message(chat_id, "empresa")
+    BotService->>BotService: _start_company_onboarding()
+    Note over BotService: company != None → reauth automático
+    BotService->>CompanyAuthService: reauth_company(phone)
+    BotService->>MenuHandler: send_menu()
+    MenuHandler-->>Empresa: Menu Empresa direto (sem e-mail)
+```
+
+### Menu Empresa (opções)
+
+| Opção | Ação |
+|-------|------|
+| 1 | Ver vagas cadastradas (leitura — `Job.objects.filter(company=...)`) |
+| 2 | Link portal da empresa (`/empresas/perfil/`) |
+| 3 | Link para cadastrar nova vaga (`/empresas/vagas/nova/`) |
+| 0 | Sair da conta empresa (`is_company_authenticated=False`) |
+
+### Switch entre modos (aluno + empresa no mesmo número)
+
+- Usuário com ambas as contas autenticadas: empresa tem prioridade no menu.
+- Digitar `aluno` → `_handle_switch_to_student()` → desloga empresa temporariamente → mostra menu aluno.
+- Digitar `empresa` em modo aluno → re-autentica empresa → mostra menu empresa.
+- Opção `5` no menu aluno aparece quando `user.company is not None`.
+
+### Passos (primeiro login)
+
+1. "empresa" → `_start_company_onboarding()` verifica `is_company_authenticated` e `company` — `apps/bot/services.py`
+2. Se não vinculado: `STATE_COMPANY_ONBOARDING_SELECTION` → exibe opções — `apps/bot/handlers/menu.py:send_company_onboarding_menu()`
+3. "2" (já tenho conta) → `CompanyAuthHandler.start_company_login_flow()` — `apps/bot/handlers/company_auth.py:L33`; avança para `STATE_COMPANY_LOGIN_EMAIL`
+4. Empresa digita e-mail → `handle_company_login_email()` chama `CompanyAuthService.link_company_by_email()` — `apps/companies/company_auth_service.py:L17`
+5. Token gerado → `UserProfile.company` setado (pending) + `company_confirmation_token` gerado
+6. Email enviado via `dispatch_company_confirmation_email()` → task Celery `send_company_confirmation_email` — `apps/bot/tasks.py`
+7. Estado avança para `STATE_COMPANY_WAITING_CONFIRMATION`
+8. Empresa clica link `/confirmar-empresa/<token>/` → `ConfirmCompanyEmailView` → `CompanyAuthService.confirm_company_email()` seta `is_company_authenticated=True` — `apps/users/views.py`
+9. Próxima mensagem → `send_menu()` detecta `is_company_authenticated=True` → menu empresa
+
+---
+
+## 7. Task de Pré-fetching Diário de Vagas
 
 Executada todos os dias às 07:00 (horário de Brasília). Popula a tabela `DailyJob` para consulta sub-segundo pelo bot.
 

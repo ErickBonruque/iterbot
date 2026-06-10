@@ -12,6 +12,9 @@ class CeleryEmailConfirmationDispatcher:
     def dispatch_confirmation_email(self, user_id: int) -> None:
         send_confirmation_email.delay(user_id)
 
+    def dispatch_company_confirmation_email(self, user_id: int) -> None:
+        send_company_confirmation_email.delay(user_id)
+
 
 @shared_task(bind=True, max_retries=3, default_retry_delay=30)
 def process_webhook_message(self, chat_id: str, body: str) -> dict:
@@ -89,6 +92,31 @@ def clean_old_health_checks(self) -> dict:
             exc_info=True,
         )
         return {"error": str(exc)}
+
+
+@shared_task(bind=True, max_retries=3, default_retry_delay=60)
+def send_company_confirmation_email(self, user_id: int) -> dict:
+    """Send company WhatsApp-link confirmation email."""
+    from apps.bot.email_service import send_company_confirmation_email_to_user
+
+    try:
+        result = send_company_confirmation_email_to_user(user_id)
+        if result["status"] == "sent":
+            logger.info("company_confirmation_email_sent", user_id=user_id)
+        elif result["status"] == "skipped":
+            logger.info("company_already_authenticated_skipping", user_id=user_id)
+        else:
+            logger.warning(
+                "company_confirmation_email_service_rejected",
+                user_id=user_id,
+                reason=result.get("reason"),
+            )
+        return result
+    except Exception as exc:
+        logger.error(
+            "company_confirmation_email_failed", user_id=user_id, error=str(exc), exc_info=True
+        )
+        raise self.retry(exc=exc) from exc
 
 
 @shared_task(bind=True, max_retries=3, default_retry_delay=60)

@@ -3,6 +3,7 @@ from django.contrib.auth import login
 from django.shortcuts import redirect, render
 from django.views import View
 
+from apps.companies.company_auth_service import CompanyAuthService
 from apps.companies.services import CompaniesService
 from apps.users.services import UTFPRAuthService
 
@@ -103,3 +104,39 @@ class ConfirmEmailView(View):
                     "error": "Link expirado ou inválido. Solicite um novo código no bot.",
                 },
             )
+
+
+class ConfirmCompanyEmailView(View):
+    """Confirma o vínculo entre número WhatsApp e conta de empresa via token."""
+
+    def get(self, request, token):
+        service = CompanyAuthService()
+        profile = service.confirm_company_email(token)
+
+        if profile:
+            logger.info(
+                "company_email_confirmation_success",
+                user_id=profile.id,
+                company_id=profile.company_id,
+            )
+            return render(
+                request,
+                "account/email_confirmed.html",
+                {
+                    "success": True,
+                    "message": (
+                        "Conta empresa vinculada com sucesso! "
+                        "Volte ao WhatsApp e envie qualquer mensagem para acessar o menu da empresa."
+                    ),
+                },
+            )
+
+        logger.warning("company_email_confirmation_failed", token=token[:8])
+        return render(
+            request,
+            "account/email_confirmed.html",
+            {
+                "success": False,
+                "error": "Link expirado ou inválido. Solicite um novo link pelo WhatsApp.",
+            },
+        )
