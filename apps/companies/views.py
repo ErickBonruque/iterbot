@@ -96,12 +96,11 @@ class CompanyCreateView(LoginRequiredMixin, View):
     login_url = "/empresas/login/"
 
     def dispatch(self, request, *args, **kwargs):
-        if request.user.is_authenticated:
-            try:
-                _ = request.user.company
-                return redirect("/empresas/perfil/")
-            except Exception:
-                pass
+        if (
+            request.user.is_authenticated
+            and CompaniesService.get_user_company_or_none(request.user) is not None
+        ):
+            return redirect("/empresas/perfil/")
         return super().dispatch(request, *args, **kwargs)
 
     def get(self, request):

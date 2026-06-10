@@ -119,6 +119,45 @@ def send_company_confirmation_email(self, user_id: int) -> dict:
         raise self.retry(exc=exc) from exc
 
 
+@shared_task(bind=True, max_retries=3, default_retry_delay=10)
+def notify_company_confirmed_whatsapp(self, user_profile_id: int) -> dict:
+    """Envia mensagem proativa no WhatsApp após confirmação do magic link empresa."""
+    try:
+        from apps.bot.models import BotConfiguration, ConversationState
+        from apps.bot.state_machine import STATE_IDLE, apply_state_transition
+        from apps.users.models import UserProfile
+        from infra.waha.client import WahaClient
+
+        profile = UserProfile.objects.select_related("company").get(pk=user_profile_id)
+        if not profile.is_company_authenticated or profile.company is None:
+            return {"status": "skipped", "reason": "not_authenticated"}
+
+        waha_settings = BotConfiguration.get_active()
+        client = WahaClient(settings=waha_settings)
+
+        # Reseta estado para idle antes de enviar o menu.
+        conv, _ = ConversationState.objects.get_or_create(user=profile)
+        apply_state_transition(conversation_state=conv, next_state=STATE_IDLE, clear_flow_data=True)
+
+        company_name = profile.company.nome
+        client.send_message(
+            profile.phone_number,
+            f"✅ *Vínculo confirmado!*\n\n"
+            f"Sua conta *{company_name}* está conectada ao IterBot.\n\n"
+            f"Digite *menu* para acessar o painel da empresa.",
+        )
+        logger.info("company_confirmed_whatsapp_sent", user_id=user_profile_id)
+        return {"status": "sent", "user_id": user_profile_id}
+    except Exception as exc:
+        logger.error(
+            "company_confirmed_whatsapp_failed",
+            user_id=user_profile_id,
+            error=str(exc),
+            exc_info=True,
+        )
+        raise self.retry(exc=exc) from exc
+
+
 @shared_task(bind=True, max_retries=3, default_retry_delay=60)
 def send_confirmation_email(self, user_id: int) -> dict:
     """Send email confirmation via dedicated email service."""

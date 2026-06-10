@@ -11,7 +11,14 @@ class CompaniesService:
         try:
             return user.company
         except Exception:
-            return None
+            pass
+        # Fallback: empresa criada no admin com mesmo email, sem user vinculado.
+        # Auto-linka para que acessos futuros usem a FK reversa normal.
+        company = Company.objects.filter(email=user.email, user__isnull=True).first()
+        if company is not None:
+            company.user = user
+            company.save(update_fields=["user"])
+        return company
 
     @staticmethod
     @transaction.atomic

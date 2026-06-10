@@ -119,6 +119,9 @@ class ConfirmCompanyEmailView(View):
                 user_id=profile.id,
                 company_id=profile.company_id,
             )
+            from apps.bot.tasks import notify_company_confirmed_whatsapp
+
+            notify_company_confirmed_whatsapp.delay(profile.id)
             return render(
                 request,
                 "account/email_confirmed.html",
@@ -126,7 +129,7 @@ class ConfirmCompanyEmailView(View):
                     "success": True,
                     "message": (
                         "Conta empresa vinculada com sucesso! "
-                        "Volte ao WhatsApp e envie qualquer mensagem para acessar o menu da empresa."
+                        "Você receberá uma mensagem no WhatsApp em instantes."
                     ),
                 },
             )
