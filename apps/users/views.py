@@ -89,6 +89,11 @@ class ConfirmEmailView(View):
             # Log the user in using Django's session auth
             login(request, user, backend="django.contrib.auth.backends.ModelBackend")
 
+            # Notifica o aluno proativamente via WhatsApp (reseta estado e envia mensagem).
+            from apps.bot.tasks import notify_student_confirmed_whatsapp
+
+            notify_student_confirmed_whatsapp.delay(profile.id)
+
             # Redirect based on user type
             company = CompaniesService.get_user_company_or_none(user)
             if company:

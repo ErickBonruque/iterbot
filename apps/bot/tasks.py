@@ -158,6 +158,48 @@ def notify_company_confirmed_whatsapp(self, user_profile_id: int) -> dict:
         raise self.retry(exc=exc) from exc
 
 
+@shared_task(bind=True, max_retries=3, default_retry_delay=10)
+def notify_student_confirmed_whatsapp(self, user_profile_id: int) -> dict:
+    """Envia mensagem proativa no WhatsApp após confirmação de e-mail do aluno.
+
+    Reseta o ConversationState preso em login_step_waiting_confirmation e
+    notifica o aluno pelo WhatsApp de que seu e-mail foi verificado.
+    """
+    try:
+        from apps.bot.models import BotConfiguration, ConversationState
+        from apps.bot.state_machine import STATE_IDLE, apply_state_transition
+        from apps.users.models import UserProfile
+        from infra.waha.client import WahaClient
+
+        profile = UserProfile.objects.get(pk=user_profile_id)
+        if not profile.is_authenticated_utfpr or not profile.email_verified:
+            return {"status": "skipped", "reason": "not_confirmed"}
+
+        # Reseta estado preso em waiting_confirmation.
+        conv, _ = ConversationState.objects.get_or_create(user=profile)
+        apply_state_transition(conversation_state=conv, next_state=STATE_IDLE, clear_flow_data=True)
+
+        waha_settings = BotConfiguration.get_active()
+        client = WahaClient(settings=waha_settings)
+        client.send_message(
+            profile.phone_number,
+            f"✅ *E-mail confirmado!*\n\n"
+            f"Seu e-mail `{profile.email}` foi verificado com sucesso.\n\n"
+            f"Agora você tem acesso completo ao IterBot.\n\n"
+            f"Digite *menu* para ver as opções disponíveis.",
+        )
+        logger.info("student_confirmed_whatsapp_sent", user_id=user_profile_id)
+        return {"status": "sent", "user_id": user_profile_id}
+    except Exception as exc:
+        logger.error(
+            "student_confirmed_whatsapp_failed",
+            user_id=user_profile_id,
+            error=str(exc),
+            exc_info=True,
+        )
+        raise self.retry(exc=exc) from exc
+
+
 @shared_task(bind=True, max_retries=3, default_retry_delay=60)
 def send_confirmation_email(self, user_id: int) -> dict:
     """Send email confirmation via dedicated email service."""
