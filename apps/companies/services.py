@@ -1,6 +1,7 @@
 from django.core.exceptions import PermissionDenied
 from django.db import transaction
 from django.http import Http404
+from django.shortcuts import get_object_or_404
 
 from apps.jobs.models import Company, CompanyStatus, Job, JobStatus
 
@@ -56,7 +57,7 @@ class CompaniesService:
 
     @staticmethod
     def get_deletable_job_or_404(pk):
-        job = Job.objects.get(pk=pk)
+        job = get_object_or_404(Job, pk=pk)
         if job.status == JobStatus.REMOVED:
             raise Http404("Vaga ja removida.")
         return job
