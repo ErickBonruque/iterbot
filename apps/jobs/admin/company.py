@@ -91,3 +91,25 @@ class CompanyAdmin(ModelAdmin):
             )
 
     block_companies.short_description = "Bloquear empresas selecionadas"
+
+    def delete_model(self, request, obj):
+        """Deleta a empresa e o auth.User vinculado (limpa allauth EmailAddress por cascade)."""
+        user = obj.user
+        obj.delete()
+        if user is not None:
+            user.delete()
+            logger.info("company_user_deleted_with_company", admin_user=request.user.username)
+
+    def delete_queryset(self, request, queryset):
+        """Deleta em lote: remove auth.User de cada empresa antes de deletar."""
+        user_ids = list(queryset.filter(user__isnull=False).values_list("user_id", flat=True))
+        queryset.delete()
+        if user_ids:
+            from django.contrib.auth.models import User as AuthUser
+
+            deleted, _ = AuthUser.objects.filter(pk__in=user_ids).delete()
+            logger.info(
+                "company_users_deleted_bulk",
+                count=deleted,
+                admin_user=request.user.username,
+            )
