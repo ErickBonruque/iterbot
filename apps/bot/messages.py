@@ -25,7 +25,7 @@ class AuthMessages:
     )
     login_prompt_password: MessageTemplate = MessageTemplate(
         "auth.login_prompt_password",
-        "🔑 Agora digite sua **Senha** do Portal do Aluno:\n\n_(Seus dados são criptografados e usados apenas para validação)_",
+        "🔑 *Crie sua senha de acesso ao IterBot:*\n\nVocê pode usar qualquer senha, mas sugerimos usar a *mesma do Portal do Aluno* — assim fica mais fácil de lembrar!\n\n_(Seus dados são criptografados e armazenados com segurança)_",
     )
     login_validating_credentials: MessageTemplate = MessageTemplate(
         "auth.login_validating_credentials",
