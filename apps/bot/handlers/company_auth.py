@@ -98,6 +98,20 @@ class CompanyAuthHandler(BaseHandler):
         profile = self.company_auth.authenticate_company(user.phone_number, email, text)
 
         if profile is None:
+            flow_data = conv.flow_data or {}
+            attempts = flow_data.get("company_attempts", 0) + 1
+            if attempts >= 3:
+                apply_state_transition(
+                    conversation_state=conv, next_state=STATE_IDLE, clear_flow_data=True
+                )
+                self.send_msg(
+                    user,
+                    chat_id,
+                    "❌ Muitas tentativas incorretas. Use *empresa* para recomeçar.",
+                )
+                return
+            conv.flow_data = {**flow_data, "company_attempts": attempts}
+            conv.save(update_fields=["flow_data"])
             self.send_msg(
                 user,
                 chat_id,
