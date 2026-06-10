@@ -61,12 +61,12 @@ class JobSearchHandlerCourseSelectionTests(TestCase):
         self.service.process_message(chat_id, "3", from_me=False)
         self.assertTrue(self.waha_client.send_message.called)
 
-    def test_unauthenticated_user_option_3_sends_login_prompt(self):
-        """Usuário não autenticado na opção 3 deve receber pedido para se cadastrar."""
+    def test_unauthenticated_user_option_3_sends_unknown_command(self):
+        """Opção 3 foi removida do menu não autenticado — retorna comando desconhecido."""
         chat_id = "5522555555555@c.us"
         self.service.process_message(chat_id, "3", from_me=False)
         sent_text = self.waha_client.send_message.call_args[0][1]
-        self.assertIn("cadastrar", sent_text.lower())
+        self.assertIn("não reconhecido", sent_text.lower())
 
     def test_course_selection_with_invalid_number_sends_error(self):
         """Seleção de curso com número inválido deve exibir mensagem de erro."""

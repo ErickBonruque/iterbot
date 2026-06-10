@@ -21,7 +21,7 @@ class BotServiceMenuTests(TestCase):
 
         sent_text = self.waha_client.send_message.call_args[0][1]
         self.assertIn("IterBot", sent_text)
-        self.assertIn("1️⃣ Fazer Cadastro/Login", sent_text)
+        self.assertIn("1️⃣ Cadastro/Login de aluno", sent_text)
 
     def test_logout_clears_state(self):
         user = UserProfile.objects.create(
@@ -102,18 +102,17 @@ class BotServiceFlowTests(TestCase):
         self.assertIn("Engenharia", sent_text)
         self.assertIn("Python", sent_text)
 
-    def test_option_three_requires_authentication_before_listing_courses(self):
+    def test_option_three_not_in_unauthenticated_menu(self):
         chat_id = "5511000000000@c.us"
 
-        # No menu nao-autenticado, opcao 3 = Buscar Vagas (cai no auth gate).
+        # Opção 3 foi removida do menu não autenticado — retorna comando desconhecido.
         self.service.process_message(chat_id, "3", from_me=False)
 
         user = UserProfile.objects.get(phone_number=chat_id)
         self.assertFalse(user.is_authenticated_utfpr)
 
-        # Deve enviar mensagem pedindo cadastro antes de listar cursos
         sent_text = self.waha_client.send_message.call_args[0][1]
-        self.assertIn("precisa se cadastrar", sent_text)
+        self.assertIn("Comando não reconhecido", sent_text)
 
     def test_option_three_lists_all_active_courses(self):
         course1 = Course.objects.create(name="Engenharia de Software", is_active=True)
