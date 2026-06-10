@@ -118,6 +118,11 @@ class CompanyAuthHandler(BaseHandler):
                 company_name=profile.company.nome,
             ),
         )
+        # Envia o menu empresa completo após a mensagem de boas-vindas.
+        from .menu import MenuHandler
+
+        menu_handler = MenuHandler(self.waha_client)
+        menu_handler.send_menu(profile, chat_id)
         logger.info("company_login_success", user_id=user.id, company_id=profile.company_id)
 
     def handle(self, user: UserProfile, chat_id: str, text: str) -> bool:
