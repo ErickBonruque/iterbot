@@ -18,11 +18,14 @@ logger = structlog.get_logger(__name__)
 class CompanySignupView(SignupView):
     """View de registro de empresa.
 
-    When ACCOUNT_EMAIL_VERIFICATION = "mandatory", allauth redirects
-    to the email verification sent page after signup, not to success_url.
-    The success_url below is only used if email verification is disabled.
-    After email confirmation, ConfirmEmailView auto-logs in the user
-    and redirects to /empresas/perfil/ (company) or /accounts/success/ (student).
+    CompanySignupForm.save() cria User (allauth) + Company atomicamente.
+    Após signup, allauth envia e-mail de verificação e redireciona para a
+    página de 'verificação enviada'. Após confirmação pelo link do allauth,
+    UTFPRAccountAdapter.get_email_confirmation_redirect_url() redireciona
+    para /empresas/perfil/ quando o usuário possui Company vinculada.
+
+    /empresas/criar/ é fallback para usuários que chegaram sem Company
+    vinculada (ex: falha silenciosa em CompanySignupForm.save() durante signup).
     """
 
     template_name = "companies/signup.html"
