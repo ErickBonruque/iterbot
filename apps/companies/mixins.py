@@ -40,7 +40,12 @@ class ApprovedCompanyRequiredMixin(CompanyRequiredMixin):
         if hasattr(response, "status_code") and response.status_code == 302:
             return response
 
-        company = request.user.company
+        # super() (CompanyRequiredMixin) já garantiu que user.company existe.
+        # Guard explícito para proteger contra refatorações futuras que removam o check.
+        try:
+            company = request.user.company
+        except Exception as err:
+            raise PermissionDenied("Usuario nao possui empresa vinculada.") from err
         if company.status != CompanyStatus.APPROVED:
             if company.status == CompanyStatus.BLOCKED:
                 messages.error(
