@@ -296,18 +296,9 @@ class BotService:
             self.menu_handler.send_menu(fresh, chat_id)
             return
 
-        # Empresa já vinculada mas sessão encerrada → re-autentica sem e-mail.
+        # Empresa vinculada mas sessão encerrada → exige email + senha novamente.
         if fresh.company is not None:
-            self.company_auth_service.reauth_company(fresh.phone_number)
-            self._reset_state(user)
-            fresh_reloaded = UserProfile.objects.select_related("company").get(pk=user.pk)
-            msg = self.menu_handler.resolve_message(
-                BOT_MESSAGES.menu.company_reauth_success.key,
-                BOT_MESSAGES.menu.company_reauth_success.text,
-                company_name=fresh.company.nome,
-            )
-            self.waha_client.send_message(chat_id, msg)
-            self.menu_handler.send_menu(fresh_reloaded, chat_id)
+            self.company_auth_handler.start_company_login_flow(user, chat_id)
             return
 
         # Primeiro acesso → fluxo de onboarding (criar conta ou entrar).
