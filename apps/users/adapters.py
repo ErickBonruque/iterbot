@@ -45,6 +45,16 @@ class UTFPRAccountAdapter(DefaultAccountAdapter):
         validate_utfpr_email(email)
         return email
 
+    def get_email_confirmation_redirect_url(self, request):
+        """Redireciona empresas para o perfil após confirmação de e-mail."""
+        if request.user.is_authenticated:
+            from apps.companies.services import CompaniesService
+
+            company = CompaniesService.get_user_company_or_none(request.user)
+            if company is not None:
+                return "/empresas/perfil/"
+        return super().get_email_confirmation_redirect_url(request)
+
     def send_mail(self, template_prefix, email, context):
         """Renderiza o template do allauth e envia via provider transacional.
 
