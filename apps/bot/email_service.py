@@ -402,7 +402,7 @@ def send_company_confirmation_email_to_user(user_id: int) -> dict:
     base_url = (getattr(django_settings, "PORTAL_BASE_URL", "") or "http://localhost:8000").rstrip(
         "/"
     )
-    confirm_url = f"{base_url}/confirmar-empresa/{user.company_confirmation_token}"
+    confirm_url = f"{base_url}/accounts/confirmar-empresa/{user.company_confirmation_token}/"
 
     company_email = user.company.email
     company_name = user.company.nome

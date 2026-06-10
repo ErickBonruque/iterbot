@@ -284,15 +284,12 @@ class BotService:
         return False
 
     def _handle_numeric_unauthenticated(self, user: UserProfile, chat_id: str, text: str) -> bool:
-        # Menu não autenticado: 1=Cadastro/Login | 2=Empresa | 3=Buscar
+        # Menu não autenticado: 1=Cadastro/Login de aluno | 2=Cadastro/Login de empresa
         if text == "1":
             self.auth_handler.start_login_flow(user, chat_id)
             return True
         if text == "2":
             self._start_company_onboarding(user, chat_id)
-            return True
-        if text == "3":
-            self.job_handler.start_course_selection(user, chat_id)
             return True
         return False
 

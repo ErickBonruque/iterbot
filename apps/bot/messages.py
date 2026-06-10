@@ -89,7 +89,7 @@ class MenuMessages:
     )
     main_unauthenticated: MessageTemplate = MessageTemplate(
         "menu.main_unauthenticated",
-        "{brand_header}\n\n📋 *Menu Principal*:\n1️⃣ Fazer Cadastro/Login\n2️⃣ Sou empresa (cadastrar vaga)\n3️⃣ Buscar Vagas\n\nDigite o número da opção desejada.",
+        "{brand_header}\n\n📋 *Menu Principal*:\n1️⃣ Cadastro/Login de aluno\n2️⃣ Cadastro/Login de empresa\n\nDigite o número da opção desejada.",
     )
     company_onboarding_menu: MessageTemplate = MessageTemplate(
         "menu.company_onboarding_menu",
