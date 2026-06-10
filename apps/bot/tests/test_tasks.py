@@ -160,6 +160,52 @@ class TestSendConfirmationTask:
         assert result["status"] == "sent"
 
 
+class TestNotifyStudentConfirmedWhatsapp:
+    @patch("infra.waha.client.WahaClient")
+    @patch("apps.bot.models.BotConfiguration")
+    @patch("apps.bot.models.ConversationState")
+    @patch("apps.users.models.UserProfile")
+    def test_sends_message_when_student_confirmed(
+        self, mock_profile_cls, mock_conv_cls, mock_config_cls, mock_client_cls
+    ):
+        mock_profile = MagicMock()
+        mock_profile.pk = 1
+        mock_profile.phone_number = "5541999999999@c.us"
+        mock_profile.email = "aluno@alunos.utfpr.edu.br"
+        mock_profile.is_authenticated_utfpr = True
+        mock_profile.email_verified = True
+        mock_profile_cls.objects.get.return_value = mock_profile
+
+        mock_conv = MagicMock()
+        mock_conv_cls.objects.get_or_create.return_value = (mock_conv, False)
+
+        mock_config_cls.get_active.return_value = MagicMock()
+        mock_client = MagicMock()
+        mock_client_cls.return_value = mock_client
+
+        from apps.bot.tasks import notify_student_confirmed_whatsapp
+
+        result = notify_student_confirmed_whatsapp(user_profile_id=1)
+
+        mock_client.send_message.assert_called_once()
+        assert result["status"] == "sent"
+        assert result["user_id"] == 1
+
+    @patch("apps.users.models.UserProfile")
+    def test_skips_when_not_confirmed(self, mock_profile_cls):
+        mock_profile = MagicMock()
+        mock_profile.is_authenticated_utfpr = False
+        mock_profile.email_verified = False
+        mock_profile_cls.objects.get.return_value = mock_profile
+
+        from apps.bot.tasks import notify_student_confirmed_whatsapp
+
+        result = notify_student_confirmed_whatsapp(user_profile_id=1)
+
+        assert result["status"] == "skipped"
+        assert result["reason"] == "not_confirmed"
+
+
 class TestEmailService:
     @patch("apps.bot.email_service.send_transactional_email")
     def test_offline_alert_delegates_to_transactional_email(self, mock_send):
