@@ -62,16 +62,18 @@ services:
         max-file: "3"
 
   waha:
-    # WAHA nao expoe porta 3000 em producao — heranca do base (ja sem ports).
-    # Acesso unico via Traefik em waha.${DOMAIN} com BasicAuth + TLS.
+    # WAHA e servico INTERNO em producao — sem rota Traefik nem subdominio
+    # publico (nao depende de registro DNS waha.${DOMAIN}).
+    # Porta 3000 bindada apenas no loopback do host para permitir acesso ao
+    # dashboard (scan de QR code, gerenciamento de sessao) via tunel SSH:
+    #   ssh -L 3000:localhost:3000 <usuario>@<host>
+    #   -> abrir http://localhost:3000/dashboard no navegador local
+    # O loopback bind nao e alcancavel externamente (firewall/SG nem precisa
+    # da porta 3000 — o bind em 127.0.0.1 ja restringe ao proprio host).
+    ports:
+      - "127.0.0.1:3000:3000"
     labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.waha.rule=Host(`waha.${DOMAIN}`)"
-      - "traefik.http.routers.waha.entrypoints=websecure"
-      - "traefik.http.routers.waha.tls=true"
-      - "traefik.http.routers.waha.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.waha.middlewares=security-headers@file,waha-auth@file"
-      - "traefik.http.services.waha.loadbalancer.server.port=3000"
+      - "traefik.enable=false"
     logging:
       driver: json-file
       options:

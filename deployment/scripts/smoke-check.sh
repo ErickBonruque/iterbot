@@ -210,13 +210,17 @@ echo ""
 
 echo "[SEC-02] BasicAuth"
 if [ "$DOMAIN" != "localhost" ]; then
+    # WAHA e servico interno (sem rota Traefik) — dashboard NAO deve responder
+    # publicamente. 000 = DNS/conexao falhou (esperado, sem registro waha.*),
+    # 404 = Traefik sem router para o host. Qualquer resposta 2xx/3xx/401 indica
+    # que o WAHA ainda esta exposto (config antiga).
     WAHA_STATUS=$(curl -k -sS -o /dev/null -w '%{http_code}' "https://waha.${DOMAIN}/dashboard" 2>/dev/null || echo "000")
-    printf "  %-50s " "WAHA Dashboard requires auth (expect 401)"
-    if [ "$WAHA_STATUS" = "401" ] || [ "$WAHA_STATUS" = "403" ]; then
+    printf "  %-50s " "WAHA Dashboard NOT publicly routed (expect 000/404)"
+    if [ "$WAHA_STATUS" = "000" ] || [ "$WAHA_STATUS" = "404" ]; then
         echo "[OK] (${WAHA_STATUS})"
         pass
     else
-        echo "[FAIL] (got ${WAHA_STATUS})"
+        echo "[FAIL] (got ${WAHA_STATUS} - WAHA ainda exposto publicamente!)"
         fail
     fi
 
@@ -230,19 +234,9 @@ if [ "$DOMAIN" != "localhost" ]; then
         fail
     fi
 
-    WAHA_WRONG=$(curl -k -sS -o /dev/null -w '%{http_code}' -u "admin:wrongpassword" "https://waha.${DOMAIN}/dashboard" 2>/dev/null || echo "000")
-    printf "  %-50s " "WAHA Dashboard rejects wrong password (expect 401)"
-    if [ "$WAHA_WRONG" = "401" ] || [ "$WAHA_WRONG" = "403" ]; then
-        echo "[OK] (${WAHA_WRONG})"
-        pass
-    else
-        echo "[FAIL] (got ${WAHA_WRONG})"
-        fail
-    fi
 else
-    check_skip "WAHA Dashboard requires auth" "localhost"
+    check_skip "WAHA Dashboard NOT publicly routed" "localhost"
     check_skip "Django Admin requires auth" "localhost"
-    check_skip "WAHA rejects wrong password" "localhost"
 fi
 echo ""
 

@@ -145,8 +145,8 @@ As variáveis essenciais para produção estão documentadas em `.env.example` e
 
 | Variável | Descrição | Exemplo |
 |----------|-----------|---------|
-| `DOMAIN` | Domínio principal da aplicação | `54-123-45-67.sslip.io` |
-| `ALLOWED_HOSTS` | Hosts permitidos (separados por vírgula) | `${DOMAIN},www.${DOMAIN},waha.${DOMAIN},backend` |
+| `DOMAIN` | Domínio principal da aplicação | `chat-universitario.sh.utfpr.edu.br` |
+| `ALLOWED_HOSTS` | Hosts permitidos (separados por vírgula) | `${DOMAIN},backend` |
 | `DEBUG` | Modo debug (**sempre** `False` em produção) | `False` |
 | `POSTGRES_DB` | Nome do banco PostgreSQL | `iterbot` <!-- VERIFY: .env.example ainda usa o nome legado `capyvagas`; docker-compose.yml usa `iterbot` como padrão --> |
 | `POSTGRES_USER` | Usuário do PostgreSQL | `iterbot_user` <!-- VERIFY: .env.example ainda usa o nome legado `capyvagas_user`; docker-compose.yml usa `iterbot_user` como padrão --> |
@@ -202,7 +202,6 @@ openssl rand -base64 32 > secrets/waha_swagger_password.txt
 
 O Traefik protege rotas sensíveis com BasicAuth:
 
-- **WAHA Dashboard** (`waha.${DOMAIN}`) → `waha-auth@file`
 - **Django Admin e Portal de Empresas** (`${DOMAIN}/admin`, `${DOMAIN}/portal`) → `admin-auth@file`
 
 Gere os arquivos htpasswd:
@@ -212,6 +211,19 @@ bash ./deployment/scripts/setup-htpasswd.sh
 ```
 
 Os arquivos são salvos em `secrets/users/waha-users.txt` e `secrets/users/admin-users.txt` com permissão 600.
+
+### WAHA Dashboard (acesso via túnel SSH)
+
+O WAHA é serviço **interno** em produção — sem rota Traefik nem subdomínio
+público. A porta 3000 fica bindada apenas no loopback do host
+(`127.0.0.1:3000:3000`). Para acessar o dashboard (scan de QR code,
+gerenciamento de sessão):
+
+```bash
+ssh -L 3000:localhost:3000 <usuario>@<host>
+# Abrir http://localhost:3000/dashboard no navegador local
+# Login com WAHA_DASHBOARD_USERNAME / WAHA_DASHBOARD_PASSWORD
+```
 
 ### Validação do Ambiente
 

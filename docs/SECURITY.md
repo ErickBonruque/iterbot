@@ -46,8 +46,9 @@ Em `iterbot_traefik`, apenas `0.0.0.0:80->80/tcp, 0.0.0.0:443->443/tcp`.
 - **Rotas admin (`/admin`, `/portal`)**: BasicAuth no Traefik
   (`admin-auth@file`, `usersFile: /etc/traefik/users/admin-users.txt`)
   **mais** login/session do Django.
-- **WAHA (`waha.${DOMAIN}`)**: BasicAuth no Traefik
-  (`waha-auth@file`).
+- **WAHA**: servico interno sem rota publica (`traefik.enable=false`);
+  dashboard acessivel apenas via tunel SSH (`ssh -L 3000:localhost:3000`)
+  + autenticacao propria do WAHA (`WAHA_DASHBOARD_USERNAME/PASSWORD`).
 - Usuarios gerados em `secrets/users/` via `setup-htpasswd.sh`.
 - **API REST (`/api/*`)**: Todos os ViewSets exigem `IsAdminUser`
   (Django REST Framework). Apenas usuarios com `is_staff=True` tem acesso.
