@@ -222,3 +222,89 @@ class TestEmailService:
 
         mock_send.assert_called_once()
         assert mock_send.call_args.kwargs.get("event_type") == "offline_alert"
+
+
+class TestNotifyCompanyApprovedTask:
+    @patch("apps.bot.proactive.ProactiveNotifier")
+    def test_delegates_to_notifier(self, mock_notifier_cls):
+        mock_notifier = MagicMock()
+        mock_notifier.notify_company_approved.return_value = {
+            "status": "sent",
+            "company_id": 5,
+            "notified": 1,
+        }
+        mock_notifier_cls.return_value = mock_notifier
+
+        from apps.bot.tasks import notify_company_approved_whatsapp
+
+        result = notify_company_approved_whatsapp(company_id=5)
+
+        mock_notifier.notify_company_approved.assert_called_once()
+        assert result["status"] == "sent"
+        assert result["notified"] == 1
+
+
+class TestProactiveNotifierCompanyApproved:
+    @patch("infra.waha.client.WahaClient")
+    @patch("apps.bot.models.BotConfiguration")
+    @patch("apps.users.models.UserProfile")
+    @patch("apps.jobs.models.company.Company")
+    def test_sends_to_linked_whatsapp(
+        self, mock_company_cls, mock_profile_cls, mock_config_cls, mock_client_cls
+    ):
+        mock_company = MagicMock()
+        mock_company.nome = "ACME"
+        mock_company_cls.objects.get.return_value = mock_company
+
+        mock_profile = MagicMock()
+        mock_profile.phone_number = "5541999999999@c.us"
+
+        qs = MagicMock()
+        qs.exists.return_value = True
+        qs.__iter__.return_value = iter([mock_profile])
+        mock_profile_cls.objects.filter.return_value.exclude.return_value = qs
+
+        mock_config_cls.get_active.return_value = MagicMock()
+        mock_client = MagicMock()
+        mock_client_cls.return_value = mock_client
+
+        from apps.bot.proactive import ProactiveNotifier
+
+        result = ProactiveNotifier().notify_company_approved(
+            company_id=5, portal_base_url="https://portal.example"
+        )
+
+        mock_client.send_message.assert_called_once()
+        assert result["status"] == "sent"
+        assert result["notified"] == 1
+
+    @patch("apps.users.models.UserProfile")
+    @patch("apps.jobs.models.company.Company")
+    def test_skips_when_no_whatsapp_linked(self, mock_company_cls, mock_profile_cls):
+        mock_company_cls.objects.get.return_value = MagicMock()
+
+        qs = MagicMock()
+        qs.exists.return_value = False
+        mock_profile_cls.objects.filter.return_value.exclude.return_value = qs
+
+        from apps.bot.proactive import ProactiveNotifier
+
+        result = ProactiveNotifier().notify_company_approved(company_id=5)
+
+        assert result["status"] == "skipped"
+        assert result["reason"] == "no_whatsapp_linked"
+
+    @patch("apps.jobs.models.company.Company")
+    def test_skips_when_company_not_found(self, mock_company_cls):
+        class CompanyDoesNotExistError(Exception):
+            pass
+
+        mock_company_cls.DoesNotExist = CompanyDoesNotExistError
+        mock_company_cls.objects.get.side_effect = CompanyDoesNotExistError()
+
+        from apps.bot.proactive import ProactiveNotifier
+
+        result = ProactiveNotifier().notify_company_approved(company_id=999)
+
+        assert result["status"] == "skipped"
+        assert result["reason"] == "company_not_found"

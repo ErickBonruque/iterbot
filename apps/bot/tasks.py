@@ -200,6 +200,33 @@ def notify_student_confirmed_whatsapp(self, user_profile_id: int) -> dict:
         raise self.retry(exc=exc) from exc
 
 
+@shared_task(bind=True, max_retries=3, default_retry_delay=10)
+def notify_company_approved_whatsapp(self, company_id: int) -> dict:
+    """Envia mensagem proativa no WhatsApp quando admin aprova o cadastro da empresa."""
+    try:
+        from django.conf import settings
+
+        from apps.bot.proactive import ProactiveNotifier
+
+        portal_base_url = getattr(settings, "PORTAL_BASE_URL", "")
+        result = ProactiveNotifier().notify_company_approved(company_id, portal_base_url)
+        logger.info(
+            "company_approved_whatsapp_task_done",
+            company_id=company_id,
+            status=result.get("status"),
+            notified=result.get("notified", 0),
+        )
+        return result
+    except Exception as exc:
+        logger.error(
+            "company_approved_whatsapp_task_failed",
+            company_id=company_id,
+            error=str(exc),
+            exc_info=True,
+        )
+        raise self.retry(exc=exc) from exc
+
+
 @shared_task(bind=True, max_retries=3, default_retry_delay=60)
 def send_confirmation_email(self, user_id: int) -> dict:
     """Send email confirmation via dedicated email service."""
