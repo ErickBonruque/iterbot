@@ -67,10 +67,11 @@ Guias de deploy e configuracao de infraestrutura.
 
 ### BasicAuth (Traefik)
 
-O WAHA Dashboard e Django Admin/Portal sao protegidos por BasicAuth via Traefik middleware:
+O Django Admin/Portal e protegido por BasicAuth via Traefik middleware:
 
-- **WAHA Dashboard:** `https://waha.${DOMAIN}/dashboard` — requer `waha-auth`
 - **Django Admin/Portal:** `https://${DOMAIN}/admin/` e `https://${DOMAIN}/portal/` — requer `admin-auth`
+- **WAHA Dashboard:** servico interno, sem rota publica — acesso via tunel SSH:
+  `ssh -L 3000:localhost:3000 <usuario>@<host>` e abrir `http://localhost:3000/dashboard`
 
 Para configurar usuarios BasicAuth:
 ```bash

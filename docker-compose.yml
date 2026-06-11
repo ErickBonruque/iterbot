@@ -150,9 +150,10 @@ services:
   # ==========================================================================
   # WAHA - WhatsApp HTTP API
   # ==========================================================================
-  # Acesso apenas via Traefik (waha.${DOMAIN}) com HTTPS + BasicAuth.
-  # Nao exponha a porta 3000 publicamente — se precisar em dev, use
-  # docker-compose.override.yml com bind 127.0.0.1:3000:3000.
+  # Em dev, acesso via Traefik (waha.localhost). Em PRODUCAO o override
+  # docker-compose.prod.yml desabilita a rota Traefik (traefik.enable=false)
+  # e binda a porta 3000 apenas no loopback do host — acesso ao dashboard
+  # somente via tunel SSH (ssh -L 3000:localhost:3000).
   # ==========================================================================
   waha:
     image: devlikeapro/waha

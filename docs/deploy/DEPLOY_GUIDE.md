@@ -46,8 +46,8 @@ nano .env
 
 | Variavel | O que colocar |
 |----------|---------------|
-| `DOMAIN` | `SEU-IP-COM-HIFENS.sslip.io` (ex: `54-123-45-67.sslip.io`) |
-| `ALLOWED_HOSTS` | `${DOMAIN},www.${DOMAIN},waha.${DOMAIN}` |
+| `DOMAIN` | Dominio fixo da aplicacao (ex: `chat-universitario.sh.utfpr.edu.br`) |
+| `ALLOWED_HOSTS` | `${DOMAIN},backend` |
 | `WAHA_API_KEY` | Gerar senha segura |
 | `WAHA_DASHBOARD_PASSWORD` | Gerar senha segura |
 | `EMAIL_HOST_USER` | SMTP username do SES (passo 6) |
