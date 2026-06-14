@@ -88,3 +88,50 @@ class UserProfile(TimeStampedModel):
 
     def __str__(self):
         return f"{self.phone_number} ({self.ra if self.ra else 'Sem RA'})"
+
+
+class StudentProfile(TimeStampedModel):
+    """Mini-perfil do aluno, coletado no bot e reutilizável entre candidaturas.
+
+    Mantido separado do `UserProfile` (que guarda identidade/credenciais) por ser
+    uma preocupação distinta: dados que o aluno consente em compartilhar com as
+    empresas ao se candidatar. Por isso **não** usa `EncryptedCharField` — esse
+    conteúdo é exibido à empresa por design (no portal/e-mail); apenas evitamos
+    logar o conteúdo (structlog usa IDs, não os campos).
+    """
+
+    user = models.OneToOneField(
+        UserProfile,
+        on_delete=models.CASCADE,
+        related_name="student_profile",
+        help_text="Aluno dono do mini-perfil",
+    )
+    periodo = models.CharField(
+        max_length=40, blank=True, help_text="Período/semestre atual do aluno"
+    )
+    skills = models.TextField(blank=True, help_text="Principais habilidades/competências")
+    linkedin_url = models.URLField(blank=True, help_text="Perfil do LinkedIn")
+    cv_url = models.URLField(blank=True, help_text="Link para currículo/portfólio")
+    bio = models.TextField(blank=True, help_text="Breve apresentação")
+
+    class Meta:
+        verbose_name = "Mini-perfil do aluno"
+        verbose_name_plural = "Mini-perfis dos alunos"
+
+    def __str__(self):
+        return f"Perfil de {self.user}"
+
+    @property
+    def is_complete(self) -> bool:
+        """Perfil utilizável para candidatura: período e skills preenchidos."""
+        return bool(self.periodo and self.skills)
+
+    def to_snapshot(self) -> dict:
+        """Congela o perfil para anexar à candidatura (histórico imutável)."""
+        return {
+            "periodo": self.periodo,
+            "skills": self.skills,
+            "linkedin_url": self.linkedin_url,
+            "cv_url": self.cv_url,
+            "bio": self.bio,
+        }

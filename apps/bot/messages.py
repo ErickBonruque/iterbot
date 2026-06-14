@@ -85,7 +85,7 @@ class MenuMessages:
     )
     main_authenticated: MessageTemplate = MessageTemplate(
         "menu.main_authenticated",
-        "{brand_header}\n\n👤 *Usuário*: {ra}\n\n📋 *Menu Principal*:\n1️⃣ Buscar Vagas\n2️⃣ Ver Review de Vagas\n3️⃣ Sair da Conta\n4️⃣ Trocar Curso Preferido{switch_empresa}\n\nDigite o número da opção desejada.",
+        "{brand_header}\n\n👤 *Usuário*: {ra}\n\n📋 *Menu Principal*:\n1️⃣ Buscar Vagas\n2️⃣ Ver Review de Vagas\n3️⃣ Vagas do meu curso\n4️⃣ Sair da Conta\n5️⃣ Trocar Curso Preferido{switch_empresa}\n\nDigite o número da opção desejada.",
     )
     main_unauthenticated: MessageTemplate = MessageTemplate(
         "menu.main_unauthenticated",
@@ -259,6 +259,94 @@ class ReviewMessages:
         "review.weekly_footer",
         '_Para ver mais vagas, acesse o menu e escolha "Buscar Vagas"._',
     )
+    weekly_local_header: MessageTemplate = MessageTemplate(
+        "review.weekly_local_header",
+        "📍 *Vagas locais — {course_name}*",
+    )
+    weekly_local_summary: MessageTemplate = MessageTemplate(
+        "review.weekly_local_summary",
+        "Encontrei *{count}* vaga(s) local(is) para a sua área esta semana:",
+    )
+    weekly_no_local_jobs: MessageTemplate = MessageTemplate(
+        "review.weekly_no_local_jobs",
+        "📭 *Vagas locais — {course_name}*\n\nEsta semana não há vagas locais novas para a sua área.\n\nUse a opção *1 - Buscar Vagas* no menu para ver oportunidades online.",
+    )
+
+
+@dataclass(frozen=True)
+class LocalJobsMessages:
+    no_course: MessageTemplate = MessageTemplate(
+        "local_jobs.no_course",
+        "🎓 Você ainda não escolheu um curso.\n\nUse a opção *1 - Buscar Vagas* ou *Trocar Curso Preferido* para definir seu curso e ver as vagas locais da sua área.",
+    )
+    list_intro: MessageTemplate = MessageTemplate(
+        "local_jobs.list_intro",
+        "📍 *Vagas locais para {course_name}*:\n\n{jobs_menu}\n\nDigite o *número* da vaga para ver os detalhes (ou *menu* para voltar).",
+    )
+    empty: MessageTemplate = MessageTemplate(
+        "local_jobs.empty",
+        "📭 No momento não há vagas locais para a área do curso *{course_name}*.\n\nVolte em breve ou use a opção *1 - Buscar Vagas* para ver oportunidades online.",
+    )
+    invalid_selection: MessageTemplate = MessageTemplate(
+        "local_jobs.invalid_selection",
+        "❌ Número inválido. Digite o número de uma vaga da lista (ou *menu* para voltar).",
+    )
+    job_unavailable: MessageTemplate = MessageTemplate(
+        "local_jobs.job_unavailable",
+        "⚠️ Essa vaga não está mais disponível.\n\nDigite *menu* para voltar ao início.",
+    )
+    detail: MessageTemplate = MessageTemplate(
+        "local_jobs.detail",
+        "💼 *{titulo}*\n🏢 {company}\n💰 {salario}\n🧩 {tipo}\n\n📝 *Descrição*\n{descricao}\n\n✅ *Requisitos*\n{requisitos}\n\n_Digite *candidatar* para se candidatar a esta vaga, ou *menu* para voltar._",
+    )
+    apply_coming_soon: MessageTemplate = MessageTemplate(
+        "local_jobs.apply_coming_soon",
+        "🚧 A candidatura pelo WhatsApp estará disponível em breve!\n\nPor enquanto, anote a vaga e entre em contato com a empresa. Digite *menu* para voltar ao início.",
+    )
+
+
+@dataclass(frozen=True)
+class ApplicationMessages:
+    already_applied: MessageTemplate = MessageTemplate(
+        "application.already_applied",
+        "✅ Você já se candidatou a esta vaga. Aguarde o contato da empresa.\n\nDigite *menu* para voltar.",
+    )
+    prompt_periodo: MessageTemplate = MessageTemplate(
+        "application.prompt_periodo",
+        "📝 *Mini-perfil* (1/3)\n\nEm que *período/semestre* você está? (ex.: 5º período)\n\n_(Digite 'cancelar' para desistir)_",
+    )
+    prompt_skills: MessageTemplate = MessageTemplate(
+        "application.prompt_skills",
+        "📝 *Mini-perfil* (2/3)\n\nQuais suas principais *habilidades/competências*? (ex.: Python, Django, SQL)",
+    )
+    prompt_link: MessageTemplate = MessageTemplate(
+        "application.prompt_link",
+        "📝 *Mini-perfil* (3/3)\n\nEnvie um *link* do seu LinkedIn ou currículo.\n\n_(Digite 'pular' se não tiver)_",
+    )
+    invalid_field: MessageTemplate = MessageTemplate(
+        "application.invalid_field",
+        "❌ Resposta inválida. Tente novamente ou digite 'cancelar'.",
+    )
+    invalid_link: MessageTemplate = MessageTemplate(
+        "application.invalid_link",
+        "❌ Link inválido. Envie uma URL válida (ex.: https://linkedin.com/in/voce) ou digite 'pular'.",
+    )
+    confirm: MessageTemplate = MessageTemplate(
+        "application.confirm",
+        "📋 *Confirme sua candidatura*\n\n💼 *Vaga*: {titulo}\n🏢 *Empresa*: {company}\n\n*Seu perfil*:\n🎓 Período: {periodo}\n🧩 Skills: {skills}\n🔗 Link: {link}\n\nDigite *confirmar* para enviar sua candidatura ou *cancelar* para desistir.",
+    )
+    success: MessageTemplate = MessageTemplate(
+        "application.success",
+        "🎉 *Candidatura enviada!*\n\nA empresa *{company}* recebeu seu interesse pela vaga *{titulo}* e seu mini-perfil.\n\nBoa sorte! Digite *menu* para voltar.",
+    )
+    error: MessageTemplate = MessageTemplate(
+        "application.error",
+        "❌ Não foi possível registrar sua candidatura agora. Tente novamente mais tarde.\n\nDigite *menu* para voltar.",
+    )
+    job_unavailable: MessageTemplate = MessageTemplate(
+        "application.job_unavailable",
+        "⚠️ Esta vaga não está mais disponível para candidatura.\n\nDigite *menu* para voltar.",
+    )
 
 
 @dataclass(frozen=True)
@@ -319,6 +407,8 @@ class BotMessages:
     menu: MenuMessages = MenuMessages()
     search: SearchMessages = SearchMessages()
     review: ReviewMessages = ReviewMessages()
+    local_jobs: LocalJobsMessages = LocalJobsMessages()
+    application: ApplicationMessages = ApplicationMessages()
     system: SystemMessages = SystemMessages()
     tasks: TaskMessages = TaskMessages()
 

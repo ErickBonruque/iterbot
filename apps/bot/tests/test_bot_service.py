@@ -184,13 +184,16 @@ class BotServiceFlowTests(TestCase):
         self.assertNotIn("localhost:8000", sent_text)
 
     def test_authenticated_menu_routes_match_displayed_options(self):
-        """Menu autenticado: 1=Buscar | 2=Review | 3=Logout. Aliases textuais coexistem."""
+        """Menu autenticado: 1=Buscar | 2=Review | 3=Vagas do meu curso | 4=Logout |
+        5=Trocar Curso. Aliases textuais coexistem."""
         chat_id = "5511999000555@c.us"
         user = self._authenticate_user(chat_id)
 
         self.service.job_handler.start_course_selection = MagicMock()
         self.service.review_handler.send_review = MagicMock()
+        self.service.local_jobs_handler.send_local_jobs_list = MagicMock()
         self.service.auth_handler.handle_logout = MagicMock()
+        self.service.job_handler.start_course_change = MagicMock()
 
         self.service.process_message(chat_id, "1", from_me=False)
         self.service.job_handler.start_course_selection.assert_called_once_with(user, chat_id)
@@ -199,4 +202,10 @@ class BotServiceFlowTests(TestCase):
         self.service.review_handler.send_review.assert_called_once_with(user, chat_id)
 
         self.service.process_message(chat_id, "3", from_me=False)
+        self.service.local_jobs_handler.send_local_jobs_list.assert_called_once_with(user, chat_id)
+
+        self.service.process_message(chat_id, "4", from_me=False)
         self.service.auth_handler.handle_logout.assert_called_once_with(user, chat_id)
+
+        self.service.process_message(chat_id, "5", from_me=False)
+        self.service.job_handler.start_course_change.assert_called_once_with(user, chat_id)

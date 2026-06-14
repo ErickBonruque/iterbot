@@ -5,6 +5,13 @@ from apps.jobs.models.job import Job
 from apps.users.models import UserProfile
 
 
+class ApplicationStatus(models.TextChoices):
+    PENDING = "pending", "Pendente"
+    VISTA = "vista", "Vista"
+    CONTATADO = "contatado", "Contatado"
+    REJEITADA = "rejeitada", "Rejeitada"
+
+
 class JobApplication(TimeStampedModel):
     """
     Candidatura de um aluno a uma vaga.
@@ -21,6 +28,21 @@ class JobApplication(TimeStampedModel):
         on_delete=models.CASCADE,
         related_name="applications",
         help_text="Vaga para qual o aluno se candidatou",
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=ApplicationStatus.choices,
+        default=ApplicationStatus.PENDING,
+        help_text="Status da candidatura no acompanhamento da empresa",
+    )
+    message = models.TextField(
+        blank=True,
+        help_text="Recado opcional do aluno para a empresa",
+    )
+    profile_snapshot = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="Cópia do mini-perfil do aluno no momento da candidatura (histórico imutável)",
     )
 
     class Meta:

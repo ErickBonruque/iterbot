@@ -221,6 +221,26 @@ class TestJobCreateView(TestCase):
         if job:
             self.assertEqual(job.status, JobStatus.PENDING)
 
+    def test_create_job_persists_areas_m2m(self):
+        from apps.courses.models import Area
+
+        area = Area.objects.create(name="Área View Create")
+        self.client.force_login(self.user)
+        response = self.client.post(
+            "/empresas/vagas/nova/",
+            {
+                "titulo": "Estagiario com Area",
+                "descricao": "Desenvolvimento web",
+                "requisitos": "Cursando CC",
+                "salario": "R$ 1.200,00",
+                "tipo": "estagio",
+                "areas": [area.pk],
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        job = Job.objects.get(titulo="Estagiario com Area")
+        self.assertEqual(list(job.areas.all()), [area])
+
 
 @override_settings(CACHES=CACHES_LOCMEM)
 class TestJobUpdateView(TestCase):

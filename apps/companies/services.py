@@ -3,7 +3,14 @@ from django.db import transaction
 from django.http import Http404
 from django.shortcuts import get_object_or_404
 
-from apps.jobs.models import Company, CompanyStatus, Job, JobStatus
+from apps.jobs.models import (
+    ApplicationStatus,
+    Company,
+    CompanyStatus,
+    Job,
+    JobApplication,
+    JobStatus,
+)
 
 
 class CompaniesService:
@@ -78,6 +85,34 @@ class CompaniesService:
         job.status = JobStatus.REMOVED
         job.save(update_fields=["status"])
         return job
+
+    @staticmethod
+    def list_company_applications(user):
+        """Candidaturas das vagas da empresa do `user`, mais recentes primeiro."""
+        company = CompaniesService.get_user_company_or_none(user)
+        if company is None:
+            return JobApplication.objects.none()
+        return (
+            JobApplication.objects.filter(job__company=company)
+            .select_related("user", "job")
+            .order_by("-created_at")
+        )
+
+    @staticmethod
+    @transaction.atomic
+    def update_application_status(pk, user, new_status):
+        """Atualiza o status de uma candidatura, validando a posse pela empresa."""
+        if new_status not in ApplicationStatus.values:
+            raise PermissionDenied("Status inválido.")
+        company = CompaniesService.get_user_company_or_none(user)
+        application = get_object_or_404(
+            JobApplication.objects.select_related("job__company"), pk=pk
+        )
+        if company is None or application.job.company_id != company.id:
+            raise PermissionDenied("Você não tem permissão para alterar esta candidatura.")
+        application.status = new_status
+        application.save(update_fields=["status", "updated_at"])
+        return application
 
     @staticmethod
     def _validate_job_ownership(job, user, error_message):

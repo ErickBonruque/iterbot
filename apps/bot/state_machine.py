@@ -17,6 +17,12 @@ STATE_COMPANY_ONBOARDING_SELECTION = "company_onboarding_selection"
 STATE_COMPANY_LOGIN_EMAIL = "company_login_email"
 STATE_COMPANY_LOGIN_PASSWORD = "company_login_password"
 STATE_COMPANY_WAITING_CONFIRMATION = "company_waiting_confirmation"  # legacy
+STATE_LOCAL_JOBS_LIST = "local_jobs_list"
+STATE_LOCAL_JOB_DETAIL = "local_job_detail"
+STATE_PROFILE_PERIODO = "profile_periodo"
+STATE_PROFILE_SKILLS = "profile_skills"
+STATE_PROFILE_LINK = "profile_link"
+STATE_CONFIRM_APPLICATION = "confirm_application"
 
 CANONICAL_STATES = {
     STATE_LOGIN_STEP_RA,
@@ -28,6 +34,12 @@ CANONICAL_STATES = {
     STATE_COMPANY_ONBOARDING_SELECTION,
     STATE_COMPANY_LOGIN_EMAIL,
     STATE_COMPANY_LOGIN_PASSWORD,
+    STATE_LOCAL_JOBS_LIST,
+    STATE_LOCAL_JOB_DETAIL,
+    STATE_PROFILE_PERIODO,
+    STATE_PROFILE_SKILLS,
+    STATE_PROFILE_LINK,
+    STATE_CONFIRM_APPLICATION,
 }
 
 LEGACY_STATE_ALIASES = {
@@ -43,6 +55,8 @@ ROUTE_IDLE = "idle"
 ROUTE_AUTH = "auth"
 ROUTE_JOB_SEARCH = "job_search"
 ROUTE_COMPANY = "company_onboarding"
+ROUTE_LOCAL_JOBS = "local_jobs"
+ROUTE_APPLICATION = "application"
 
 AUTH_ROUTE_STATES = {
     STATE_LOGIN_STEP_RA,
@@ -59,6 +73,16 @@ COMPANY_ROUTE_STATES = {
     STATE_COMPANY_LOGIN_EMAIL,
     STATE_COMPANY_LOGIN_PASSWORD,
 }
+LOCAL_JOBS_ROUTE_STATES = {
+    STATE_LOCAL_JOBS_LIST,
+    STATE_LOCAL_JOB_DETAIL,
+}
+APPLICATION_ROUTE_STATES = {
+    STATE_PROFILE_PERIODO,
+    STATE_PROFILE_SKILLS,
+    STATE_PROFILE_LINK,
+    STATE_CONFIRM_APPLICATION,
+}
 
 
 class ConversationFlowStateMachine(StateMachine):
@@ -74,6 +98,12 @@ class ConversationFlowStateMachine(StateMachine):
     company_onboarding_selection = State(STATE_COMPANY_ONBOARDING_SELECTION)
     company_login_email = State(STATE_COMPANY_LOGIN_EMAIL)
     company_login_password = State(STATE_COMPANY_LOGIN_PASSWORD)
+    local_jobs_list = State(STATE_LOCAL_JOBS_LIST)
+    local_job_detail = State(STATE_LOCAL_JOB_DETAIL)
+    profile_periodo = State(STATE_PROFILE_PERIODO)
+    profile_skills = State(STATE_PROFILE_SKILLS)
+    profile_link = State(STATE_PROFILE_LINK)
+    confirm_application = State(STATE_CONFIRM_APPLICATION)
 
     begin_login = (
         idle.to(login_step_ra)
@@ -96,6 +126,17 @@ class ConversationFlowStateMachine(StateMachine):
         idle
     )
 
+    open_local_jobs = idle.to(local_jobs_list)
+    open_local_job_detail = local_jobs_list.to(local_job_detail)
+    finish_local_jobs = local_jobs_list.to(idle) | local_job_detail.to(idle)
+
+    start_profile_collection = local_job_detail.to(profile_periodo)
+    submit_periodo = profile_periodo.to(profile_skills)
+    submit_skills = profile_skills.to(profile_link)
+    submit_link = profile_link.to(confirm_application)
+    skip_to_confirmation = local_job_detail.to(confirm_application)
+    finish_application = confirm_application.to(idle)
+
     cancel = (
         login_step_ra.to(idle)
         | login_step_password.to(idle)
@@ -106,6 +147,12 @@ class ConversationFlowStateMachine(StateMachine):
         | company_onboarding_selection.to(idle)
         | company_login_email.to(idle)
         | company_login_password.to(idle)
+        | local_jobs_list.to(idle)
+        | local_job_detail.to(idle)
+        | profile_periodo.to(idle)
+        | profile_skills.to(idle)
+        | profile_link.to(idle)
+        | confirm_application.to(idle)
     )
 
 
@@ -149,6 +196,10 @@ def route_for_action(current_action: str | None) -> str:
         return ROUTE_JOB_SEARCH
     if normalized in COMPANY_ROUTE_STATES:
         return ROUTE_COMPANY
+    if normalized in LOCAL_JOBS_ROUTE_STATES:
+        return ROUTE_LOCAL_JOBS
+    if normalized in APPLICATION_ROUTE_STATES:
+        return ROUTE_APPLICATION
     return ROUTE_IDLE
 
 

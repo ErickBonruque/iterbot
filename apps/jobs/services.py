@@ -16,6 +16,26 @@ from infra.waha.protocols import JobSearcher, MessageSender
 logger = structlog.get_logger(__name__)
 
 
+def _serialize_local_job(job) -> dict[str, Any]:
+    """Converte um `Job` no dict canônico usado pelas reviews do bot."""
+    job_url = build_portal_url(settings.PORTAL_BASE_URL, f"/empresas/vagas/{job.pk}/")
+    if job_url is None:
+        logger.error(
+            "invalid_portal_base_url_for_review",
+            portal_base_url=settings.PORTAL_BASE_URL,
+            job_id=job.pk,
+        )
+
+    return {
+        "title": job.titulo,
+        "company": job.company.nome,
+        "location": job.company.endereco or "Curitiba, PR",
+        "job_type": job.tipo,
+        "job_url": job_url,
+        "source": "local",
+    }
+
+
 def get_local_jobs_for_course(course) -> list[dict[str, Any]]:
     """Return approved local jobs relevant to the given course."""
     terms = list(
@@ -41,28 +61,42 @@ def get_local_jobs_for_course(course) -> list[dict[str, Any]]:
         .select_related("company")
         .order_by("-created_at")[:10]
     )
-    local_jobs: list[dict[str, Any]] = []
-    for job in jobs:
-        job_url = build_portal_url(settings.PORTAL_BASE_URL, f"/empresas/vagas/{job.pk}/")
-        if job_url is None:
-            logger.error(
-                "invalid_portal_base_url_for_review",
-                portal_base_url=settings.PORTAL_BASE_URL,
-                job_id=job.pk,
-            )
+    return [_serialize_local_job(job) for job in jobs]
 
-        local_jobs.append(
-            {
-                "title": job.titulo,
-                "company": job.company.nome,
-                "location": job.company.endereco or "Curitiba, PR",
-                "job_type": job.tipo,
-                "job_url": job_url,
-                "source": "local",
-            }
-        )
 
-    return local_jobs
+def get_local_jobs_queryset_for_area(area):
+    """QuerySet de `Job` aprovadas ofertadas para `area` (convenção "vazio = todas").
+
+    Fonte única da regra de filtragem por área para os fluxos locais (resumo
+    semanal e menu "Vagas do meu curso"). Reutiliza `Job.objects.for_area`
+    (Fase 1) para não reimplementar a regra. Se `area` for `None` (curso do
+    aluno sem área), retorna apenas as vagas ofertadas para todas as áreas.
+    Retorna o queryset (sem corte) para que cada chamador defina seu próprio
+    `limit` e escolha entre dicts serializados ou objetos `Job` completos.
+    """
+    return (
+        Job.objects.for_area(area)
+        .filter(status=JobStatus.APPROVED)
+        .select_related("company")
+        .order_by("-created_at")
+    )
+
+
+def get_local_jobs_for_area(area, limit: int = 5) -> list[dict[str, Any]]:
+    """Vagas locais aprovadas ofertadas para `area`, serializadas para review."""
+    jobs = get_local_jobs_queryset_for_area(area)[:limit]
+    return [_serialize_local_job(job) for job in jobs]
+
+
+def build_weekly_local_review(course, limit: int = 5) -> list[dict[str, Any]]:
+    """Review semanal **só com vagas locais** da área do curso. NÃO chama jobspy.
+
+    Usa `course.area` e a regra centralizada de áreas. Diferente de
+    `build_review_for_user` (review sob demanda), aqui não há busca online —
+    o envio semanal fica rápido e confiável (sem scraping ao vivo no loop).
+    """
+    area = getattr(course, "area", None)
+    return get_local_jobs_for_area(area, limit=limit)
 
 
 def search_with_config(
@@ -199,14 +233,9 @@ def fetch_and_save_daily_jobs(job_searcher) -> dict[str, int]:
     return stats
 
 
-def format_review_message(course_name: str, jobs: list[dict[str, Any]]) -> str:
-    """Format a weekly review message for WhatsApp delivery."""
-    lines = [
-        BOT_MESSAGES.review.weekly_header.text.format(course_name=course_name),
-        "",
-        BOT_MESSAGES.review.weekly_summary.text.format(count=len(jobs)),
-        "",
-    ]
+def _format_job_lines(jobs: list[dict[str, Any]]) -> list[str]:
+    """Linhas formatadas (uma vaga por bloco) compartilhadas pelas reviews."""
+    lines: list[str] = []
     for i, job in enumerate(jobs, 1):
         title = job.get("title") or job.get("titulo") or "Vaga"
         company = job.get("company") or "Empresa"
@@ -225,6 +254,31 @@ def format_review_message(course_name: str, jobs: list[dict[str, Any]]) -> str:
             lines.append(f"🔗 {url}")
         lines.append("")
 
+    return lines
+
+
+def format_review_message(course_name: str, jobs: list[dict[str, Any]]) -> str:
+    """Format an on-demand review message (local + online) for WhatsApp."""
+    lines = [
+        BOT_MESSAGES.review.weekly_header.text.format(course_name=course_name),
+        "",
+        BOT_MESSAGES.review.weekly_summary.text.format(count=len(jobs)),
+        "",
+    ]
+    lines.extend(_format_job_lines(jobs))
+    lines.append(BOT_MESSAGES.review.weekly_footer.text)
+    return "\n".join(lines)
+
+
+def format_weekly_local_review_message(course_name: str, jobs: list[dict[str, Any]]) -> str:
+    """Format the weekly **local-only** review message for WhatsApp delivery."""
+    lines = [
+        BOT_MESSAGES.review.weekly_local_header.text.format(course_name=course_name),
+        "",
+        BOT_MESSAGES.review.weekly_local_summary.text.format(count=len(jobs)),
+        "",
+    ]
+    lines.extend(_format_job_lines(jobs))
     lines.append(BOT_MESSAGES.review.weekly_footer.text)
     return "\n".join(lines)
 
@@ -232,54 +286,66 @@ def format_review_message(course_name: str, jobs: list[dict[str, Any]]) -> str:
 def send_weekly_reviews(
     *,
     message_sender: MessageSender,
-    job_searcher: JobSearcher,
     interval_seconds: float = 1.0,
 ) -> dict[str, int]:
-    """Envia review semanal para usuarios elegiveis, com stats consolidadas."""
+    """Envia o resumo semanal **só de vagas locais** para usuários elegíveis.
+
+    Diferente do review sob demanda, o caminho semanal:
+    - usa apenas vagas locais da área do curso (`build_weekly_local_review`),
+      **sem chamar jobspy** — envio rápido e confiável;
+    - **sempre envia algo**: se não há vaga local nova, manda um aviso amigável
+      (não fica em silêncio como antes).
+
+    Stats: `sent` (lista de vagas enviada), `empty_notice` (aviso de vazio
+    enviado) e `errors`.
+    """
     users = (
         UserProfile.objects.filter(
             conversation_state__selected_course__isnull=False,
             phone_number__isnull=False,
         )
         .exclude(phone_number="")
-        .select_related("conversation_state__selected_course")
+        .select_related("conversation_state__selected_course__area")
     )
 
-    stats: dict[str, int] = {"sent": 0, "no_jobs": 0, "errors": 0}
+    stats: dict[str, int] = {"sent": 0, "empty_notice": 0, "errors": 0}
     logger.info("weekly_review_started", total_users=users.count())
 
     for user in users:
         selected_course = user.conversation_state.selected_course
+        area = getattr(selected_course, "area", None)
         try:
-            jobs = build_review_for_user(selected_course, job_searcher)
+            jobs = build_weekly_local_review(selected_course)
             if not jobs:
-                stats["no_jobs"] += 1
-                logger.debug(
-                    "review_no_jobs",
-                    user_id=user.id,
-                    course=selected_course.name,
+                msg = BOT_MESSAGES.review.weekly_no_local_jobs.text.format(
+                    course_name=selected_course.name
                 )
-                continue
-
-            msg = format_review_message(selected_course.name, jobs)
-            message_sender.send_message(user.phone_number, msg)
-            JobSearchLog.objects.create(
-                user=None,
-                search_term=selected_course.name,
-                location=None,
-                job_type=None,
-                results_count=len(jobs),
-                filters={},
-                results_preview=jobs[:5],
-            )
-            stats["sent"] += 1
-
-            logger.info(
-                "review_sent",
-                user_id=user.id,
-                course=selected_course.name,
-                jobs_count=len(jobs),
-            )
+                message_sender.send_message(user.phone_number, msg)
+                stats["empty_notice"] += 1
+                logger.info(
+                    "weekly_review_empty_notice",
+                    user_id=user.id,
+                    area=area.name if area else None,
+                )
+            else:
+                msg = format_weekly_local_review_message(selected_course.name, jobs)
+                message_sender.send_message(user.phone_number, msg)
+                JobSearchLog.objects.create(
+                    user=None,
+                    search_term=selected_course.name,
+                    location=None,
+                    job_type=None,
+                    results_count=len(jobs),
+                    filters={},
+                    results_preview=jobs[:5],
+                )
+                stats["sent"] += 1
+                logger.info(
+                    "weekly_review_sent",
+                    user_id=user.id,
+                    area=area.name if area else None,
+                    jobs_count=len(jobs),
+                )
 
             if interval_seconds > 0:
                 time.sleep(interval_seconds)

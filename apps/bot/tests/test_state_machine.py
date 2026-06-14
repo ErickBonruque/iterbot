@@ -28,6 +28,12 @@ class ConversationStateMachineContractTests(TestCase):
         from apps.bot.state_machine import (
             STATE_COMPANY_LOGIN_EMAIL,
             STATE_COMPANY_LOGIN_PASSWORD,
+            STATE_CONFIRM_APPLICATION,
+            STATE_LOCAL_JOB_DETAIL,
+            STATE_LOCAL_JOBS_LIST,
+            STATE_PROFILE_LINK,
+            STATE_PROFILE_PERIODO,
+            STATE_PROFILE_SKILLS,
         )
 
         expected = {
@@ -40,6 +46,12 @@ class ConversationStateMachineContractTests(TestCase):
             STATE_COMPANY_ONBOARDING_SELECTION,
             STATE_COMPANY_LOGIN_EMAIL,
             STATE_COMPANY_LOGIN_PASSWORD,
+            STATE_LOCAL_JOBS_LIST,
+            STATE_LOCAL_JOB_DETAIL,
+            STATE_PROFILE_PERIODO,
+            STATE_PROFILE_SKILLS,
+            STATE_PROFILE_LINK,
+            STATE_CONFIRM_APPLICATION,
         }
         self.assertSetEqual(CANONICAL_STATES, expected)
 

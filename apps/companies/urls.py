@@ -13,4 +13,10 @@ urlpatterns = [
     path("vagas/nova/", views.JobCreateView.as_view(), name="job_create"),
     path("vagas/<int:pk>/editar/", views.JobUpdateView.as_view(), name="job_update"),
     path("vagas/<int:pk>/deletar/", views.JobDeleteView.as_view(), name="job_delete"),
+    path("candidaturas/", views.JobApplicationsListView.as_view(), name="applications"),
+    path(
+        "candidaturas/<int:pk>/status/",
+        views.JobApplicationStatusUpdateView.as_view(),
+        name="application_status",
+    ),
 ]

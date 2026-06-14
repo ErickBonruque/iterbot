@@ -113,6 +113,26 @@
                         {% endif %}
                     </div>
 
+                    <div class="mb-3">
+                        <label class="form-label">{{ form.areas.label }}</label>
+                        <div class="border rounded p-3">
+                            {% for checkbox in form.areas %}
+                            <div class="form-check">
+                                {{ checkbox.tag }}
+                                <label class="form-check-label" for="{{ checkbox.id_for_label }}">
+                                    {{ checkbox.choice_label }}
+                                </label>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        <small class="form-text text-muted">{{ form.areas.help_text }}</small>
+                        {% if form.areas.errors %}
+                        <div class="text-danger">
+                            <small>{{ form.areas.errors.0 }}</small>
+                        </div>
+                        {% endif %}
+                    </div>
+
                     <div class="alert alert-info">
                         <small>Sua vaga sera analisada antes de ser publicada.</small>
                     </div>

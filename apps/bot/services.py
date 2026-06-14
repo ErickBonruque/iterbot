@@ -6,10 +6,12 @@ import structlog
 from django.conf import settings
 
 from apps.bot.handlers import (
+    ApplicationHandler,
     AuthenticationHandler,
     CompanyAuthHandler,
     JobReviewHandler,
     JobSearchHandler,
+    LocalJobsHandler,
     MenuHandler,
 )
 from apps.bot.messages import BOT_MESSAGES
@@ -70,6 +72,10 @@ class BotService:
         self.job_handler = JobSearchHandler(self.waha_client, self.job_service)
         self.menu_handler = MenuHandler(self.waha_client)
         self.review_handler = JobReviewHandler(self.waha_client, self.job_service)
+        self.application_handler = ApplicationHandler(self.waha_client)
+        self.local_jobs_handler = LocalJobsHandler(
+            self.waha_client, application_handler=self.application_handler
+        )
 
     def process_message(self, chat_id: str, message: str, from_me: bool) -> None:
         if from_me:
@@ -78,7 +84,8 @@ class BotService:
         if not message or not message.strip():
             return
 
-        text = message.strip().lower()
+        raw_text = message.strip()
+        text = raw_text.lower()
         start = time.time()
 
         try:
@@ -91,7 +98,7 @@ class BotService:
         self._log_received(user, message)
 
         try:
-            self._dispatch(user, chat_id, text, conversation_state)
+            self._dispatch(user, chat_id, text, conversation_state, raw_text=raw_text)
 
             from apps.bot.models.bot_action_log import BotActionLog
 
@@ -132,7 +139,12 @@ class BotService:
     )
 
     def _dispatch(
-        self, user: UserProfile, chat_id: str, text: str, conversation_state: ConversationState
+        self,
+        user: UserProfile,
+        chat_id: str,
+        text: str,
+        conversation_state: ConversationState,
+        raw_text: str | None = None,
     ) -> None:
         if text in self._GREETINGS:
             self._reset_state(user)
@@ -154,7 +166,7 @@ class BotService:
         elif is_waiting_confirmation(conversation_state.current_action):
             self.auth_handler.handle_login_waiting_confirmation(user, chat_id, text)
         elif has_active_flow(conversation_state.current_action) and self._handle_pending_action(
-            user, chat_id, text
+            user, chat_id, text, raw_text=raw_text
         ):
             pass
         else:
@@ -166,6 +178,7 @@ class BotService:
     _ALIAS_SEARCH = frozenset({"vagas", "buscar", "cursos"})
     _ALIAS_REVIEW = frozenset({"review", "vagas da semana"})
     _ALIAS_CHANGE_COURSE = frozenset({"trocar curso", "mudar curso", "alterar curso"})
+    _ALIAS_LOCAL_JOBS = frozenset({"minhas vagas", "vagas do curso", "vagas do meu curso"})
 
     def _handle_sair(self, user: UserProfile, chat_id: str) -> None:
         """'sair' desloga a sessão ativa: empresa tem prioridade, depois aluno."""
@@ -233,6 +246,9 @@ class BotService:
         if text in self._ALIAS_REVIEW:
             self.review_handler.send_review(user, chat_id)
             return True
+        if text in self._ALIAS_LOCAL_JOBS:
+            self.local_jobs_handler.send_local_jobs_list(user, chat_id)
+            return True
         if text in self._ALIAS_CHANGE_COURSE:
             self.job_handler.start_course_change(user, chat_id)
             return True
@@ -255,7 +271,8 @@ class BotService:
         return False
 
     def _handle_numeric_authenticated(self, user: UserProfile, chat_id: str, text: str) -> bool:
-        # Menu autenticado: 1=Buscar | 2=Review | 3=Logout | 4=Trocar Curso | 5=Empresa (se vinculada)
+        # Menu autenticado: 1=Buscar | 2=Review | 3=Vagas do meu curso | 4=Logout |
+        # 5=Trocar Curso | 6=Empresa (se vinculada)
         if text == "1":
             self.job_handler.start_course_selection(user, chat_id)
             return True
@@ -263,12 +280,15 @@ class BotService:
             self.review_handler.send_review(user, chat_id)
             return True
         if text == "3":
-            self.auth_handler.handle_logout(user, chat_id)
+            self.local_jobs_handler.send_local_jobs_list(user, chat_id)
             return True
         if text == "4":
+            self.auth_handler.handle_logout(user, chat_id)
+            return True
+        if text == "5":
             self.job_handler.start_course_change(user, chat_id)
             return True
-        if text == "5" and user.company is not None:
+        if text == "6" and user.company is not None:
             # Switch para modo empresa (re-autentica empresa sem e-mail)
             self.company_auth_service.reauth_company(user.phone_number)
             self._reset_state(user)
@@ -319,44 +339,57 @@ class BotService:
         )
         self.menu_handler.send_company_onboarding_menu(user, chat_id)
 
-    def _handle_pending_action(self, user: UserProfile, chat_id: str, text: str) -> bool:
-        if self.auth_handler.handle(user, chat_id, text):
-            return True
-
-        if self.company_auth_handler.handle(user, chat_id, text):
-            return True
-
-        if self.job_handler.handle(user, chat_id, text):
-            return True
-
-        conversation_state = self._get_conversation_state(user)
-        if route_for_action(conversation_state.current_action) == ROUTE_COMPANY:
-            action = normalize_current_action(conversation_state.current_action)
-
-            if action == STATE_COMPANY_ONBOARDING_SELECTION:
-                if text == "1":
-                    sent = self.menu_handler.send_company_onboarding_signup_link(
-                        user, chat_id, settings.PORTAL_BASE_URL
-                    )
-                    if not sent:
-                        self.waha_client.send_message(
-                            chat_id,
-                            self.auth_handler.resolve_message(
-                                "system.portal_unavailable",
-                                BOT_MESSAGES.system.portal_unavailable.text,
-                            ),
-                        )
-                    self._reset_state(user)
-                    return True
-
-                if text == "2":
-                    self.company_auth_handler.start_company_login_flow(user, chat_id)
-                    return True
-
-                self.menu_handler.send_company_onboarding_menu(user, chat_id)
+    def _handle_pending_action(
+        self, user: UserProfile, chat_id: str, text: str, raw_text: str | None = None
+    ) -> bool:
+        for handler in (
+            self.auth_handler,
+            self.company_auth_handler,
+            self.job_handler,
+            self.local_jobs_handler,
+        ):
+            if handler.handle(user, chat_id, text):
                 return True
 
-        return False
+        # ApplicationHandler recebe o texto original (sem lower) para preservar
+        # a grafia dos campos livres do mini-perfil (skills, período, link).
+        if self.application_handler.handle(user, chat_id, text, raw_text=raw_text):
+            return True
+
+        return self._handle_company_onboarding_selection(user, chat_id, text)
+
+    def _handle_company_onboarding_selection(
+        self, user: UserProfile, chat_id: str, text: str
+    ) -> bool:
+        conversation_state = self._get_conversation_state(user)
+        if route_for_action(conversation_state.current_action) != ROUTE_COMPANY:
+            return False
+        if normalize_current_action(conversation_state.current_action) != (
+            STATE_COMPANY_ONBOARDING_SELECTION
+        ):
+            return False
+
+        if text == "1":
+            sent = self.menu_handler.send_company_onboarding_signup_link(
+                user, chat_id, settings.PORTAL_BASE_URL
+            )
+            if not sent:
+                self.waha_client.send_message(
+                    chat_id,
+                    self.auth_handler.resolve_message(
+                        "system.portal_unavailable",
+                        BOT_MESSAGES.system.portal_unavailable.text,
+                    ),
+                )
+            self._reset_state(user)
+            return True
+
+        if text == "2":
+            self.company_auth_handler.start_company_login_flow(user, chat_id)
+            return True
+
+        self.menu_handler.send_company_onboarding_menu(user, chat_id)
+        return True
 
     def _reset_state(self, user: UserProfile) -> None:
         conversation_state = self._get_conversation_state(user)

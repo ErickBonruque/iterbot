@@ -10,9 +10,10 @@ from apps.jobs.models.job import Job, JobStatus
 @admin.register(Job)
 class JobAdmin(ModelAdmin):
     list_display = ("titulo", "company", "tipo", "status_badge", "created_at")
-    list_filter = ("status", "tipo", "company", "created_at")
+    list_filter = ("status", "tipo", "areas", "company", "created_at")
     search_fields = ("titulo", "descricao", "company__nome")
     readonly_fields = ("created_at", "updated_at")
+    filter_horizontal = ("areas",)
     ordering = ("-created_at",)
     actions_submit_line = ["approve_job", "reject_job"]
     change_form_show_cancel_button = True
@@ -34,7 +35,20 @@ class JobAdmin(ModelAdmin):
 
     status_badge.short_description = "Status"
     fieldsets = (
-        (None, {"fields": ("company", "titulo", "descricao", "requisitos", "salario", "tipo")}),
+        (
+            None,
+            {
+                "fields": (
+                    "company",
+                    "titulo",
+                    "descricao",
+                    "requisitos",
+                    "salario",
+                    "tipo",
+                    "areas",
+                )
+            },
+        ),
         (
             "Status",
             {
