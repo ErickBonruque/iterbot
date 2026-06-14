@@ -3,6 +3,7 @@ from django import forms
 from django.core.exceptions import ValidationError
 
 from apps.companies.services import CompaniesService
+from apps.courses.models import Area
 from apps.jobs.models import Company, Job
 from apps.jobs.validators import validate_cnpj
 
@@ -192,9 +193,18 @@ class JobForm(forms.ModelForm):
         widget=forms.Select(attrs={"class": "form-control"}),
     )
 
+    areas = forms.ModelMultipleChoiceField(
+        queryset=Area.objects.filter(is_active=True),
+        required=False,
+        label="Áreas de interesse",
+        help_text="Marque as áreas para as quais a vaga é direcionada. "
+        "Se não marcar nenhuma, a vaga será ofertada para todas as áreas.",
+        widget=forms.CheckboxSelectMultiple,
+    )
+
     class Meta:
         model = Job
-        fields = ["titulo", "descricao", "requisitos", "salario", "tipo"]
+        fields = ["titulo", "descricao", "requisitos", "salario", "tipo", "areas"]
         widgets = {
             "titulo": forms.TextInput(
                 attrs={

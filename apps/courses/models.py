@@ -3,6 +3,57 @@ from django.db import models
 from apps.core.models import TimeStampedModel
 
 
+class Area(TimeStampedModel):
+    """
+    Representa uma grande área de conhecimento (ex.: Tecnologia da Informação,
+    Engenharias, Gestão/Negócios, Saúde). Cada curso pertence a uma área e cada
+    vaga é ofertada para uma ou mais áreas (vazio = todas as áreas).
+    """
+
+    name = models.CharField(
+        max_length=100,
+        unique=True,
+        verbose_name="Nome da área",
+        help_text="Nome da grande área (ex.: Tecnologia da Informação)",
+    )
+    code = models.SlugField(
+        max_length=30,
+        blank=True,
+        null=True,
+        verbose_name="Código",
+        help_text="Identificador curto opcional (ex.: ti, eng)",
+    )
+    description = models.TextField(
+        blank=True,
+        verbose_name="Descrição",
+        help_text="Descrição da área",
+    )
+    icon = models.CharField(
+        max_length=10,
+        blank=True,
+        verbose_name="Ícone",
+        help_text="Emoji usado no menu do bot (opcional)",
+    )
+    is_active = models.BooleanField(
+        default=True,
+        verbose_name="Ativa",
+        help_text="Área ativa no sistema",
+    )
+    order = models.IntegerField(
+        default=0,
+        verbose_name="Ordem",
+        help_text="Ordem de exibição",
+    )
+
+    class Meta:
+        ordering = ["order", "name"]
+        verbose_name = "Área"
+        verbose_name_plural = "Áreas"
+
+    def __str__(self):
+        return self.name
+
+
 class Course(TimeStampedModel):
     """
     Representa um curso da UTFPR ou área de interesse.
@@ -25,6 +76,15 @@ class Course(TimeStampedModel):
         max_length=50, blank=True, null=True, help_text="Modalidade do curso (ex: Presencial, EAD)"
     )
     duration = models.IntegerField(blank=True, null=True, help_text="Duração do curso em semestres")
+    area = models.ForeignKey(
+        Area,
+        null=True,
+        blank=True,
+        related_name="courses",
+        on_delete=models.SET_NULL,
+        verbose_name="Área",
+        help_text="Grande área de conhecimento do curso",
+    )
 
     class Meta:
         ordering = ["order", "name"]

@@ -1,4 +1,5 @@
 from django.db import models
+from django.db.models import Q
 
 from apps.core.models import TimeStampedModel
 from apps.jobs.models.company import Company
@@ -13,10 +14,32 @@ class JobStatus(models.TextChoices):
     REMOVED = "removed", "Removida"
 
 
+class JobQuerySet(models.QuerySet):
+    """QuerySet de `Job` com a regra centralizada de áreas.
+
+    Convenção do projeto (travada): uma vaga **sem nenhuma área** é ofertada
+    para **todas as áreas**. Toda filtragem por área (resumo semanal, menu do
+    aluno, etc.) deve passar por `for_area` para não reimplementar a regra.
+    """
+
+    def for_area(self, area):
+        """Vagas ofertadas para `area`: as que incluem a área **ou** as que não
+        têm nenhuma área (= todas).
+
+        Se `area` for `None` (ex.: curso do aluno sem área definida), retorna
+        apenas as vagas "para todas as áreas".
+        """
+        if area is None:
+            return self.filter(areas__isnull=True)
+        return self.filter(Q(areas=area) | Q(areas__isnull=True)).distinct()
+
+
 class Job(TimeStampedModel):
     """
     Vaga de estágio/emprego cadastrada por uma empresa.
     """
+
+    objects = JobQuerySet.as_manager()
 
     company = models.ForeignKey(
         Company,
@@ -41,6 +64,13 @@ class Job(TimeStampedModel):
         blank=True,
         null=True,
         help_text="Motivo da rejeição (preenchido automaticamente ao rejeitar)",
+    )
+    areas = models.ManyToManyField(
+        "courses.Area",
+        blank=True,
+        related_name="jobs",
+        verbose_name="Áreas",
+        help_text="Áreas para as quais a vaga é ofertada. Vazio = todas.",
     )
 
     class Meta:

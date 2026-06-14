@@ -454,3 +454,92 @@ def send_company_confirmation_email_to_user(user_id: int) -> dict:
         "user_id": user_id,
         "email": company_email,
     }
+
+
+def send_job_application_email_to_company(application_id: int) -> dict:
+    """Notifica a empresa por e-mail sobre uma nova candidatura.
+
+    Inclui os dados de contato do aluno e o mini-perfil congelado em
+    `profile_snapshot`. Idempotente por candidatura (a chave é o id da
+    `JobApplication`), então retries do Celery não duplicam o envio.
+    """
+    from apps.jobs.models import JobApplication
+
+    try:
+        application = JobApplication.objects.select_related("user", "job", "job__company").get(
+            id=application_id
+        )
+    except JobApplication.DoesNotExist:
+        return {
+            "status": "error",
+            "reason": "application_not_found",
+            "application_id": application_id,
+        }
+
+    job = application.job
+    company = job.company
+    student = application.user
+    snapshot = application.profile_snapshot or {}
+
+    if not company.email:
+        return {"status": "error", "reason": "no_company_email", "application_id": application_id}
+
+    link = snapshot.get("linkedin_url") or snapshot.get("cv_url") or "Não informado"
+
+    body_lines = [
+        f"Olá, {company.nome}!",
+        "",
+        f"Você recebeu uma nova candidatura para a vaga: {job.titulo}",
+        "",
+        "Dados do candidato:",
+        f"- RA: {student.ra or 'Não informado'}",
+        f"- E-mail: {student.email or 'Não informado'}",
+        f"- WhatsApp: {student.phone_number}",
+        "",
+        "Mini-perfil:",
+        f"- Período: {snapshot.get('periodo') or 'Não informado'}",
+        f"- Habilidades: {snapshot.get('skills') or 'Não informado'}",
+        f"- Link: {link}",
+    ]
+    if application.message:
+        body_lines += ["", f"Recado do candidato: {application.message}"]
+    body_lines += [
+        "",
+        "Acompanhe e atualize o status desta candidatura no portal:",
+        (getattr(django_settings, "PORTAL_BASE_URL", "") or "http://localhost:8000").rstrip("/")
+        + "/empresas/candidaturas/",
+        "",
+        "Atenciosamente,",
+        "Equipe IterBot UTFPR",
+    ]
+
+    idempotency_key = build_email_idempotency_key(
+        "job_application",
+        recipient=company.email,
+        event_token=str(application.id),
+        event_uid=str(application.id),
+    )
+
+    result = send_transactional_email(
+        subject=f"IterBot — Nova candidatura para {job.titulo}",
+        message="\n".join(body_lines),
+        recipient_list=[company.email],
+        idempotency_key=idempotency_key,
+        event_type="job_application",
+    )
+
+    if result["status"] != "sent":
+        return {
+            "status": "error",
+            "reason": "provider_error",
+            "provider": result.get("provider"),
+            "error_code": result.get("error_code"),
+            "application_id": application_id,
+        }
+
+    return {
+        "status": "sent",
+        "provider": result.get("provider"),
+        "message_id": result.get("message_id"),
+        "application_id": application_id,
+    }

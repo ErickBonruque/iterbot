@@ -230,3 +230,29 @@ def send_confirmation_email(self, user_id: int) -> dict:
             exc_info=True,
         )
         raise self.retry(exc=exc) from exc
+
+
+@shared_task(bind=True, max_retries=3, default_retry_delay=60)
+def send_job_application_email(self, application_id: int) -> dict:
+    """Notifica a empresa por e-mail sobre uma nova candidatura."""
+    from apps.bot.email_service import send_job_application_email_to_company
+
+    try:
+        result = send_job_application_email_to_company(application_id)
+        if result["status"] == "sent":
+            logger.info("job_application_email_sent", application_id=application_id)
+        else:
+            logger.warning(
+                "job_application_email_service_rejected",
+                application_id=application_id,
+                reason=result.get("reason"),
+            )
+        return result
+    except Exception as exc:
+        logger.error(
+            "job_application_email_failed",
+            application_id=application_id,
+            error=str(exc),
+            exc_info=True,
+        )
+        raise self.retry(exc=exc) from exc

@@ -6,7 +6,7 @@ from unfold.enums import ActionVariant
 from apps.jobs.models import JobSearchLog
 from infra.jobspy.service import JobSearchService
 
-from .models import Course, SearchTerm
+from .models import Area, Course, SearchTerm
 
 ACTION_KEY = "courses_searchterm_test_search"
 
@@ -17,19 +17,37 @@ class SearchTermInline(TabularInline):
     fields = ("term", "is_default", "priority")
 
 
+@admin.register(Area)
+class AreaAdmin(ModelAdmin):
+    """Admin para grandes áreas de conhecimento."""
+
+    list_display = ["name", "code", "icon", "is_active", "order"]
+    list_editable = ["order"]
+    list_filter = ["is_active"]
+    search_fields = ["name", "code", "description"]
+    readonly_fields = ["created_at", "updated_at"]
+    ordering = ["order", "name"]
+
+    fieldsets = (
+        (None, {"fields": ("name", "code", "icon", "description", "is_active", "order")}),
+        ("Datas", {"fields": ("created_at", "updated_at"), "classes": ("collapse",)}),
+    )
+
+
 @admin.register(Course)
 class CourseAdmin(ModelAdmin):
     """Admin para cursos da UTFPR."""
 
-    list_display = ["name", "code", "level", "modality", "is_active", "order"]
-    list_filter = ["is_active", "level", "modality", "created_at"]
+    list_display = ["name", "code", "area", "level", "modality", "is_active", "order"]
+    list_filter = ["is_active", "area", "level", "modality", "created_at"]
     search_fields = ["name", "code", "description"]
     readonly_fields = ["created_at", "updated_at"]
+    autocomplete_fields = ["area"]
     ordering = ["order"]
     inlines = [SearchTermInline]
 
     fieldsets = (
-        (None, {"fields": ("name", "code", "description", "is_active", "order")}),
+        (None, {"fields": ("name", "code", "area", "description", "is_active", "order")}),
         ("Detalhes", {"fields": ("level", "modality", "duration"), "classes": ("wide",)}),
         ("Datas", {"fields": ("created_at", "updated_at"), "classes": ("collapse",)}),
     )

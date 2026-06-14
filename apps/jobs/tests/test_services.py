@@ -174,13 +174,95 @@ class TestSendWeeklyReviewsService:
 
         with patch("apps.jobs.services.UserProfile.objects.filter") as mock_filter:
             mock_filter.return_value.exclude.return_value.select_related.return_value = users_qs
-            with patch("apps.jobs.services.build_review_for_user") as mock_build:
+            with patch("apps.jobs.services.build_weekly_local_review") as mock_build:
                 mock_build.return_value = [{"title": "Dev Python", "company": "TechCorp"}]
                 sender = MagicMock()
-                searcher = MagicMock()
                 with patch("apps.jobs.services.time.sleep"):
-                    send_weekly_reviews(message_sender=sender, job_searcher=searcher)
+                    send_weekly_reviews(message_sender=sender)
 
         # MagicMock user may not persist to DB, so we just verify no crash
         logs = JobSearchLog.objects.filter(search_term="Engenharia")
         assert logs.count() >= 0
+
+
+@pytest.mark.django_db
+class TestLocalAreaReview:
+    """Testes dos helpers de review semanal local por área (Fase 2)."""
+
+    @pytest.fixture
+    def area(self):
+        from apps.courses.models import Area
+
+        return Area.objects.create(name="Área Review Local")
+
+    @pytest.fixture
+    def course(self, area):
+        return Course.objects.create(name="Curso Review Local", area=area)
+
+    def test_get_local_jobs_for_area_returns_matching_and_universal(self, area, settings):
+        from apps.jobs.models import JobStatus
+        from apps.jobs.services import get_local_jobs_for_area
+        from apps.jobs.tests.factories import CompanyFactory, JobFactory
+
+        settings.PORTAL_BASE_URL = "https://portal.example.com"
+        company = CompanyFactory()
+        targeted = JobFactory(company=company, status=JobStatus.APPROVED)
+        targeted.areas.add(area)
+        universal = JobFactory(company=company, status=JobStatus.APPROVED)  # sem áreas
+
+        result = get_local_jobs_for_area(area)
+        titles = {j["title"] for j in result}
+        assert titles == {targeted.titulo, universal.titulo}
+        assert all(j["source"] == "local" for j in result)
+
+    def test_get_local_jobs_for_area_excludes_non_approved(self, area, settings):
+        from apps.jobs.models import JobStatus
+        from apps.jobs.services import get_local_jobs_for_area
+        from apps.jobs.tests.factories import CompanyFactory, JobFactory
+
+        settings.PORTAL_BASE_URL = "https://portal.example.com"
+        company = CompanyFactory()
+        pending = JobFactory(company=company, status=JobStatus.PENDING)
+        pending.areas.add(area)
+
+        assert get_local_jobs_for_area(area) == []
+
+    def test_build_weekly_local_review_uses_course_area(self, course, area, settings):
+        from apps.jobs.models import JobStatus
+        from apps.jobs.services import build_weekly_local_review
+        from apps.jobs.tests.factories import CompanyFactory, JobFactory
+
+        settings.PORTAL_BASE_URL = "https://portal.example.com"
+        job = JobFactory(company=CompanyFactory(), status=JobStatus.APPROVED)
+        job.areas.add(area)
+
+        result = build_weekly_local_review(course)
+        assert [j["title"] for j in result] == [job.titulo]
+
+    def test_build_weekly_local_review_course_without_area(self, settings):
+        """Curso sem área → só vagas 'para todas'."""
+        from apps.jobs.models import JobStatus
+        from apps.jobs.services import build_weekly_local_review
+        from apps.jobs.tests.factories import CompanyFactory, JobFactory
+
+        settings.PORTAL_BASE_URL = "https://portal.example.com"
+        course = Course.objects.create(name="Curso Sem Área Review")
+        company = CompanyFactory()
+        universal = JobFactory(company=company, status=JobStatus.APPROVED)  # sem áreas
+        from apps.courses.models import Area
+
+        other_area = Area.objects.create(name="Outra Área Review")
+        targeted = JobFactory(company=company, status=JobStatus.APPROVED)
+        targeted.areas.add(other_area)
+
+        result = build_weekly_local_review(course)
+        assert [j["title"] for j in result] == [universal.titulo]
+
+    def test_format_weekly_local_review_message_has_local_header(self):
+        from apps.jobs.services import format_weekly_local_review_message
+
+        msg = format_weekly_local_review_message(
+            "Engenharia", [{"title": "Dev", "company": "ACME"}]
+        )
+        assert "Vagas locais — Engenharia" in msg
+        assert "*1. Dev* — ACME" in msg

@@ -30,7 +30,7 @@ class MenuHandler(BaseHandler):
 
         if fresh.is_authenticated_utfpr:
             switch_empresa = (
-                "\n5️⃣ Mudar para conta empresa"
+                "\n6️⃣ Mudar para conta empresa"
                 if fresh.is_company_authenticated is False and fresh.company is not None
                 else ""
             )

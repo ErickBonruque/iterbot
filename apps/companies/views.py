@@ -5,12 +5,12 @@ from django.contrib.auth import logout as auth_logout
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.shortcuts import redirect, render
 from django.urls import reverse_lazy
-from django.views.generic import CreateView, UpdateView, View
+from django.views.generic import CreateView, ListView, UpdateView, View
 
 from apps.companies.forms import CompanyOnlyForm, CompanyProfileForm, CompanySignupForm, JobForm
 from apps.companies.mixins import ApprovedCompanyRequiredMixin
 from apps.companies.services import CompaniesService
-from apps.jobs.models import Company, Job
+from apps.jobs.models import ApplicationStatus, Company, Job
 
 logger = structlog.get_logger(__name__)
 
@@ -178,3 +178,31 @@ class JobDeleteView(ApprovedCompanyRequiredMixin, View):
         CompaniesService.soft_delete_job(self.kwargs["pk"], request.user)
         messages.success(request, "Vaga removida com sucesso.")
         return redirect(self.success_url)
+
+
+class JobApplicationsListView(ApprovedCompanyRequiredMixin, ListView):
+    """Lista as candidaturas recebidas pelas vagas da empresa."""
+
+    template_name = "companies/applications.html"
+    context_object_name = "applications"
+    login_url = "/empresas/login/"
+
+    def get_queryset(self):
+        return CompaniesService.list_company_applications(self.request.user)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["status_choices"] = ApplicationStatus.choices
+        return context
+
+
+class JobApplicationStatusUpdateView(ApprovedCompanyRequiredMixin, View):
+    """Atualiza o status de uma candidatura (POST)."""
+
+    login_url = "/empresas/login/"
+
+    def post(self, request, *args, **kwargs):
+        new_status = request.POST.get("status", "")
+        CompaniesService.update_application_status(self.kwargs["pk"], request.user, new_status)
+        messages.success(request, "Status da candidatura atualizado.")
+        return redirect("companies:applications")

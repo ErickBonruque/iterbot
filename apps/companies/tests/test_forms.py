@@ -106,3 +106,42 @@ class TestJobForm(TestCase):
         form = JobForm()
         self.assertNotIn("company", form.fields)
         self.assertNotIn("status", form.fields)
+
+    def test_areas_optional_empty_is_valid(self):
+        """Vaga sem nenhuma área marcada é válida (= todas as áreas)."""
+        data = {
+            "titulo": "Estagiario de TI",
+            "descricao": "Desenvolvimento web com Django",
+            "requisitos": "Cursando Ciencia da Computacao",
+            "salario": "R$ 1.200,00",
+            "tipo": "estagio",
+        }
+        form = JobForm(data=data)
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertFalse(form.cleaned_data["areas"])
+
+    def test_areas_with_selection_is_valid(self):
+        from apps.courses.models import Area
+
+        area = Area.objects.create(name="Área Form TI")
+        data = {
+            "titulo": "Estagiario de TI",
+            "descricao": "Desenvolvimento web com Django",
+            "requisitos": "Cursando Ciencia da Computacao",
+            "salario": "R$ 1.200,00",
+            "tipo": "estagio",
+            "areas": [area.pk],
+        }
+        form = JobForm(data=data)
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertEqual(list(form.cleaned_data["areas"]), [area])
+
+    def test_areas_only_active_in_queryset(self):
+        from apps.courses.models import Area
+
+        active = Area.objects.create(name="Área Form Ativa", is_active=True)
+        inactive = Area.objects.create(name="Área Form Inativa", is_active=False)
+        form = JobForm()
+        qs = form.fields["areas"].queryset
+        self.assertIn(active, qs)
+        self.assertNotIn(inactive, qs)
