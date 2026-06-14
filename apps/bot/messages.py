@@ -97,7 +97,14 @@ class MenuMessages:
     )
     company_onboarding_signup: MessageTemplate = MessageTemplate(
         "menu.company_onboarding_signup",
-        "✅ *Cadastro de Empresa*\n\nCrie sua conta no portal:\n{signup_url}\n\nApós o cadastro, volte e use a opção *2 — Já tenho conta* para entrar pelo WhatsApp.",
+        "✅ *Cadastro de Empresa*\n\nCrie sua conta no portal:\n{signup_url}\n\nApós o cadastro, volte e use a opção *2 — Já tenho conta* para entrar pelo WhatsApp.\n\n💡 Ao entrar pelo WhatsApp, você receberá notificações sobre suas vagas e estudantes interessados.",
+    )
+    company_approved_notification: MessageTemplate = MessageTemplate(
+        "menu.company_approved_notification",
+        "✅ *Empresa aprovada!*\n\n"
+        "Olá, *{company_name}*! Sua empresa foi aprovada no IterBot UTFPR.\n\n"
+        "Agora você pode cadastrar vagas para os alunos da UTFPR.{portal_line}\n"
+        "📱 Digite *menu* aqui no WhatsApp para acessar o painel da empresa e receber notificações.",
     )
     company_login_ask_email: MessageTemplate = MessageTemplate(
         "menu.company_login_ask_email",

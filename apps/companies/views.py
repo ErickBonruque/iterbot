@@ -44,7 +44,9 @@ class CompanyLoginView(LoginView):
     """View de login de empresa."""
 
     template_name = "companies/login.html"
-    success_url = "/empresas/perfil/"
+
+    def get_success_url(self):
+        return "/empresas/perfil/"
 
     def dispatch(self, request, *args, **kwargs):
         # Mesma razão: deslogar sessão de aluno para não redirecionar erroneamente.

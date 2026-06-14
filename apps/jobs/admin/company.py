@@ -44,6 +44,7 @@ class CompanyAdmin(ModelAdmin):
     status_badge.short_description = "Status"
 
     def approve_companies(self, request, queryset):
+        pending = list(queryset.filter(status=CompanyStatus.PENDING).values_list("pk", flat=True))
         updated = queryset.filter(status=CompanyStatus.PENDING).update(
             status=CompanyStatus.APPROVED,
             updated_at=timezone.now(),
@@ -65,6 +66,13 @@ class CompanyAdmin(ModelAdmin):
                 f"{updated} empresa(s) aprovada(s) com sucesso.",
                 level=messages.SUCCESS,
             )
+            try:
+                from apps.bot.tasks import notify_company_approved_whatsapp
+
+                for company_id in pending:
+                    notify_company_approved_whatsapp.delay(company_id)
+            except Exception as exc:
+                logger.error("company_approval_notify_dispatch_failed", error=str(exc))
 
     approve_companies.short_description = "Aprovar empresas selecionadas"
 
