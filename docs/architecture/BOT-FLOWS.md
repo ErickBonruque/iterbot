@@ -240,33 +240,36 @@ sequenceDiagram
     participant WAHA
 
     CeleryBeat->>Task: Dispara send_weekly_job_review (toda segunda, 08:00 BRT)
-    Task->>Service: send_weekly_reviews(message_sender, job_searcher)
+    Task->>Service: send_weekly_reviews(message_sender, interval_seconds=1)
     Service->>DB: UserProfile.objects.filter(conversation_state__selected_course__isnull=False)
     DB-->>Service: Lista de usuários com curso selecionado
 
     loop Para cada usuário elegível
-        Service->>JobsService: build_review_for_user(selected_course, job_searcher)
-        JobsService-->>Service: Top 5 vagas (local + online, deduplicadas)
-        Service->>JobsService: format_review_message(course_name, jobs)
-        Service->>WAHA: send_message(phone_number, msg)
-        Service->>DB: JobSearchLog.objects.create(user=None, ...)
+        Service->>JobsService: build_weekly_local_review(selected_course)
+        JobsService-->>Service: Vagas locais da área do curso (sem jobspy)
+        alt Há vagas locais
+            Service->>JobsService: format_weekly_local_review_message(course_name, jobs)
+            Service->>WAHA: send_message(phone_number, msg)
+            Service->>DB: JobSearchLog.objects.create(user=None, ...)
+        else Sem vagas locais novas
+            Service->>WAHA: send_message(phone_number, aviso amigável)
+        end
         Service->>Service: sleep(1.0s) — throttle de envios
     end
 
-    Service-->>Task: stats = {sent: N, no_jobs: M, errors: K}
+    Service-->>Task: stats = {sent: N, empty_notice: M, errors: K}
 ```
 
 ### Passos
 
 1. Celery Beat dispara `send_weekly_job_review` toda segunda às 08:00 BRT — `waha_bot/settings/celery.py:L23` (`crontab(hour=8, minute=0, day_of_week="monday")`)
-2. Task thin instancia `WahaClient` e `JobSearchService` e delega para `send_weekly_reviews()` — `apps/jobs/tasks.py:L9`
-3. `send_weekly_reviews()` filtra `UserProfile` com `selected_course` não nulo na sessão — `apps/jobs/services.py:L238`
-4. Para cada usuário: chama `build_review_for_user()` — mesma lógica do review sob demanda — `apps/jobs/services.py:L254`
-5. Se nenhuma vaga encontrada: incrementa `stats["no_jobs"]` e pula o usuário — `apps/jobs/services.py:L255`
-6. Formata e envia a mensagem via WAHA — `apps/jobs/services.py:L264`
-7. Cria `JobSearchLog` com `user=None` para rastreabilidade do envio em lote — `apps/jobs/services.py:L266`
-8. Aguarda 1 segundo entre envios para não sobrecarregar o WAHA — `apps/jobs/services.py:L283`
-9. Retorna dicionário com estatísticas `{sent, no_jobs, errors}` — `apps/jobs/services.py:L296`
+2. Task thin instancia apenas o `WahaClient` e delega para `send_weekly_reviews()` — o caminho semanal é **local-only** (não constrói `JobSearchService`/jobspy) — `apps/jobs/tasks.py`
+3. `send_weekly_reviews()` filtra `UserProfile` com `selected_course` não nulo na sessão — `apps/jobs/services.py`
+4. Para cada usuário: chama `build_weekly_local_review()` — só vagas locais da **área do curso** (regra centralizada `Job.objects.for_area`), sem busca online no loop — `apps/jobs/services.py`
+5. Se houver vagas: formata com `format_weekly_local_review_message()`, envia via WAHA, cria `JobSearchLog` (`user=None`) e incrementa `stats["sent"]` — `apps/jobs/services.py`
+6. Se não houver vagas locais novas: **sempre envia algo** — um aviso amigável (`review.weekly_no_local_jobs`) e incrementa `stats["empty_notice"]` (não fica em silêncio) — `apps/jobs/services.py`
+7. Aguarda 1 segundo entre envios para não sobrecarregar o WAHA — `apps/jobs/services.py`
+8. Retorna dicionário com estatísticas `{sent, empty_notice, errors}` — `apps/jobs/services.py`
 
 ---
 
