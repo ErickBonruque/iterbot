@@ -135,5 +135,4 @@ docker compose logs -f waha
 ## 📚 Documentação Adicional
 
 - [README Principal](../README.md)
-- [Credenciais](../development/CREDENCIAIS.md)
 - [Guia de Instalação Completa](COMO_RODAR_DOCKER.md)

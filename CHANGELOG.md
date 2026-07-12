@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.0] - 2026-07-12
+
+Primeira versão pública do IterBot (tag `v1.0`). Consolida as fases de
+desenvolvimento abaixo: bot WhatsApp com autenticação institucional, busca
+de vagas online (python-jobspy) e locais, portal de empresas com
+candidaturas, painel administrativo com métricas e e-mail multi-provider.
+Deploy em VM institucional da UTFPR com Docker Compose (ADR-005).
+
+---
+
 ## [Fase 2] - 2026-04-12
 
 ### Autenticação de Alunos

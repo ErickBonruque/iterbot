@@ -250,9 +250,7 @@ Para reverter para um commit anterior completo:
 bash deployment/scripts/rollback.sh --commit <HASH>
 ```
 
-Ou via GitHub Actions > Deploy > Run workflow com `rollback = true`.
-
-Referência: [DEPLOYMENT.md](DEPLOYMENT.md)
+Referência: [README.md](README.md)
 
 ---
 
