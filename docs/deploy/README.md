@@ -73,7 +73,7 @@ Guias de deploy e configuracao de infraestrutura.
 Para o passo a passo completo da migração (limites de memória, pareamento do
 WhatsApp, TLS), ver [MIGRACAO-GOSH-UTFPR.md](MIGRACAO-GOSH-UTFPR.md).
 
-## Security Hardening
+## Hardening de Segurança
 
 ### BasicAuth (Traefik)
 
@@ -94,7 +94,7 @@ A rede é gerida pela COGETI/UTFPR: apenas as portas 80/443 são públicas; a
 porta 22 (SSH) é filtrada de fora da rede institucional. Não há Security Group
 para configurar (diferente do deploy AWS antigo).
 
-## Backup & Restore
+## Backup e Restauração
 
 - **Backup diario:** `backup-postgres.sh` (dump local do PostgreSQL via crontab)
 - **Disk check:** `check-disk-space.sh` (alerta por e-mail se uso >80%)
@@ -102,7 +102,7 @@ para configurar (diferente do deploy AWS antigo).
   `restore-postgres.sh`) pertencem ao deploy AWS antigo e exigem adaptação
   antes de uso no host atual.
 
-## Monitoring & Alerts
+## Monitoramento e Alertas
 
 Os alertas sao enviados pelo provider de e-mail configurado em `EMAIL_PROVIDER`
 (Resend, Brevo, AWS SES, SMTP) — ver `infra/email/factory.py` e
@@ -130,7 +130,7 @@ bash deployment/scripts/rollback.sh [--commit HASH]
 
 O rollback faz checkout do commit, rebuild dos containers, e executa smoke-check.
 
-## Troubleshooting
+## Solução de Problemas
 
 | Problema | Solucao |
 |----------|---------|
