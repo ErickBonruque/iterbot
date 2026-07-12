@@ -29,7 +29,7 @@ Migrar o IterBot da EC2 AWS para uma **VM dedicada da UTFPR**:
 
 ## Estado atual (2026-07-01)
 
-- [x] EC2 antiga (`***REMOVED***`, conta `capyvagas`) **parada** (stopped), EBS preservado.
+- [x] EC2 antiga (conta `capyvagas`) **parada** (stopped), EBS preservado.
 - [x] Recon do host `gosh` feita: VM crua, sem Docker/orquestrador.
 - [x] **Gate 1 — Docker instalado:** Docker Engine 29.6.1 + Compose v5.2.0 (repositório oficial), rotação de log (`json-file` 10m×3), `live-restore`, usuário no grupo `docker`.
 - [ ] Gate 2/3 — Ajustar `docker-compose.prod.yml` ao recurso + `.env` de produção (domínio `gosh`, `ALLOWED_HOSTS`, `PORTAL_BASE_URL`).

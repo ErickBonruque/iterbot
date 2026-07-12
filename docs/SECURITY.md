@@ -137,10 +137,12 @@ Considerar se aparecerem tentativas persistentes nos logs.
 Nao configurado — iria em frente ao Traefik, porem adiciona custo e
 latencia. Rate-limit do Traefik basta para o volume atual.
 
-## AWS Security Group
+## Rede do host (legado: AWS Security Group)
 
-A instancia `***REMOVED***` deve ter Security Group permitindo
-apenas:
+No host institucional atual (`gosh`, ver ADR-005), o firewall e gerido pela
+COGETI/UTFPR: apenas `80/tcp` e `443/tcp` sao publicos e `22/tcp` (SSH) e
+filtrado de fora da rede da UTFPR. No deploy AWS antigo, o Security Group
+da EC2 permitia apenas:
 
 - **Inbound**: `80/tcp` e `443/tcp` de `0.0.0.0/0` (publico)
 - **Inbound**: `22/tcp` apenas via AWS SSM (sem porta SSH publica)
