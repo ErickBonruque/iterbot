@@ -7,7 +7,7 @@ from django.conf import settings as django_settings
 
 from apps.bot.messages import BOT_MESSAGES
 from apps.users.models import UserProfile
-from config.env import settings as app_settings
+from config.env import env, settings as app_settings
 from infra.email.factory import (
     EmailProviderConfigurationError,
     UnknownEmailProviderError,
@@ -18,8 +18,8 @@ from infra.email.idempotency import build_email_idempotency_key
 
 logger = structlog.get_logger(__name__)
 
-# E-mail de alerta fixo - nao configuravel via admin nesta milestone (D-05)
-ALERT_EMAIL = "***REMOVED***"
+# E-mail de alerta operacional - configuravel via env; fallback para o remetente padrao (D-05)
+ALERT_EMAIL = env("ALERT_EMAIL", default="") or env("DEFAULT_FROM_EMAIL")
 ALERT_SUBJECT = BOT_MESSAGES.tasks.alert_subject_offline.text
 
 
