@@ -1,104 +1,104 @@
-# Contributing to IterBot UTFPR
+# Contribuindo com o IterBot UTFPR
 
-Welcome! This guide covers how to contribute to the IterBot project.
+Bem-vindo! Este guia explica como contribuir com o projeto IterBot.
 
-## Branch Conventions
+## Convenções de Branch
 
-We use **GitHub Flow** for branch management:
+Usamos **GitHub Flow** para o gerenciamento de branches:
 
-| Prefix | Purpose | Example |
-|--------|---------|---------|
-| `feature/` | New features | `feature/login-oauth` |
-| `fix/` | Bug fixes | `fix/erro-timeout-api` |
-| `release/` | Release preparation (optional) | `release/v1.1` |
-| `hotfix/` | Urgent production fixes (optional) | `hotfix/erro-ssl-certificado` |
+| Prefixo | Propósito | Exemplo |
+|---------|-----------|---------|
+| `feature/` | Novas funcionalidades | `feature/login-oauth` |
+| `fix/` | Correções de bugs | `fix/erro-timeout-api` |
+| `release/` | Preparação de release (opcional) | `release/v1.1` |
+| `hotfix/` | Correções urgentes em produção (opcional) | `hotfix/erro-ssl-certificado` |
 
-### Naming Rules
+### Regras de Nomenclatura
 
-1. **Lowercase only** — all words in lowercase
-2. **Hyphens as separators** — use `-`, not `_` or spaces
-3. **No issue numbers** — keep names descriptive and clean
-4. **Short descriptions** — ideally under 50 characters
-5. **No special characters** — only letters, numbers, hyphens, and `/`
+1. **Apenas minúsculas** — todas as palavras em caixa baixa
+2. **Hífens como separadores** — use `-`, não `_` nem espaços
+3. **Sem números de issue** — mantenha nomes descritivos e limpos
+4. **Descrições curtas** — idealmente com menos de 50 caracteres
+5. **Sem caracteres especiais** — apenas letras, números, hífens e `/`
 
-### Examples
+### Exemplos
 
 ```bash
-# Good
+# Bom
 feature/adicionar-filtro-vagas
 fix/corrigir-timeout-api
 hotfix/erro-ssl-certificado
 
-# Bad
-feature/Feature_Login_OAuth  # Uppercase and underscores
-fix/bugfix                   # Too generic
-feature/123                  # Only numbers
-feature/login oauth           # Spaces
+# Ruim
+feature/Feature_Login_OAuth  # Maiúsculas e underscores
+fix/bugfix                   # Genérico demais
+feature/123                  # Só números
+feature/login oauth          # Espaços
 ```
 
-## Pull Request Workflow
+## Fluxo de Pull Request
 
-1. **Create branch** from master:
+1. **Crie a branch** a partir do master:
    ```bash
    git checkout master && git pull
    git checkout -b feature/minha-feature
    ```
 
-2. **Develop and commit** using Conventional Commits:
+2. **Desenvolva e commite** usando Conventional Commits:
    ```bash
    git add . && git commit -m "feat: adiciona feature X"
    ```
 
-3. **Push and create PR**:
+3. **Faça push e abra o PR**:
    ```bash
    git push -u origin feature/minha-feature
-   # Open PR on GitHub
+   # Abra o PR no GitHub
    ```
 
-4. **CI runs automatically**:
+4. **O CI roda automaticamente**:
    - `Lint` — ruff check + ruff format
-   - `Test` — pytest with 70% coverage
+   - `Test` — pytest com 70% de cobertura
    - `Security` — pip-audit + trivy
 
-5. **Review**:
-   - Require 1 approval from any project member
-   - GitHub Copilot Code Review (if available)
+5. **Revisão**:
+   - Exige 1 aprovação de qualquer membro do projeto
+   - GitHub Copilot Code Review (se disponível)
 
 6. **Merge**:
-   - PR approved + CI passing → merge to master
-   - Strategy: **Squash merge** (one commit per feature)
+   - PR aprovado + CI verde → merge no master
+   - Estratégia: **Squash merge** (um commit por feature)
 
-## Branch Protection Rules
+## Regras de Proteção de Branch
 
-The `master` branch is protected with the following rules:
+A branch `master` é protegida com as seguintes regras:
 
-- ✅ **Pull request required** — direct pushes forbidden
-- ✅ **1 approval required** — at least one reviewer must approve
-- ✅ **Dismiss stale approvals** — new commits revoke previous approvals
-- ✅ **Status checks required** — Lint, Test, and Security must pass
-- ✅ **Linear history** — no merge commits allowed
+- ✅ **Pull request obrigatório** — pushes diretos são proibidos
+- ✅ **1 aprovação obrigatória** — pelo menos um revisor precisa aprovar
+- ✅ **Aprovações antigas são descartadas** — novos commits revogam aprovações anteriores
+- ✅ **Status checks obrigatórios** — Lint, Test e Security precisam passar
+- ✅ **Histórico linear** — sem commits de merge
 
-## Merge Strategy
+## Estratégia de Merge
 
-We use **squash merging** by default:
+Usamos **squash merge** por padrão:
 
-- All commits from the feature branch are combined into a single commit on master
-- Keeps master history clean and linear
-- Each feature/fix = one commit
+- Todos os commits da branch de feature são combinados em um único commit no master
+- Mantém o histórico do master limpo e linear
+- Cada feature/fix = um commit
 
-### Configuring Squash Merge
+### Configurando o Squash Merge
 
-To enable in GitHub:
-1. Go to **Settings** → **General** → **Pull Requests**
-2. Enable **Allow squash merging**
-3. Optionally set **Default to squash merging**
+Para habilitar no GitHub:
+1. Vá em **Settings** → **General** → **Pull Requests**
+2. Habilite **Allow squash merging**
+3. Opcionalmente marque **Default to squash merging**
 
-## Code Style
+## Estilo de Código
 
-- Follow existing code patterns in the project
-- Run `ruff check` and `ruff format` before committing
-- Use Conventional Commits for commit messages: `feat:`, `fix:`, `docs:`, etc.
+- Siga os padrões de código existentes no projeto
+- Rode `ruff check` e `ruff format` antes de commitar
+- Use Conventional Commits nas mensagens: `feat:`, `fix:`, `docs:` etc.
 
-## Questions?
+## Dúvidas?
 
-Open an issue or start a discussion on GitHub.
+Abra uma issue ou inicie uma discussão no GitHub.
