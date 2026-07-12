@@ -51,8 +51,16 @@ Thumbs.db
 htmlcov/
 coverage.xml
 coverage.lcov
-.claude/worktrees/
 
-# Playground dos agentes (faxina) — diário interno, não versionar
-.planning/faxina/
-.claude/settings.json
+# Ferramentas locais de assistentes e planejamento interno (não versionar)
+.planning/
+.claude/
+.windsurf/
+CLAUDE.md
+
+# Documentação interna / rascunhos acadêmicos (não versionar)
+CONTEXTO-MIGRACAO.md
+docs/AWS_STATUS.md
+docs/development/CREDENCIAIS.md
+docs/Relátorio Parcial - Bot.md
+docs/artigo-abnt-iterbot.md
