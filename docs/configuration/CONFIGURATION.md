@@ -185,7 +185,7 @@ O projeto fornece dois templates:
 
 - **`.env.example`** — Template completo com descrições e exemplos. Use como referência.
 - **`.env.local`** — Template mínimo para desenvolvimento local com Docker Compose.
-- **`.env.production.example`** — Template para produção em EC2.
+- **`.env.production.example`** — Template para produção.
 
 ### Uso
 
@@ -322,7 +322,7 @@ Os valores padrão são definidos em `config/env.py` com resolução em cascata:
 | `EMAIL_USE_TLS` | `True` | `bool` |
 | `EMAIL_HOST_USER` | `""` (string vazia) | `str` |
 | `EMAIL_HOST_PASSWORD` | `""` (string vazia) | `str` |
-| `DEFAULT_FROM_EMAIL` | `"***REMOVED***"` | `str` |
+| `DEFAULT_FROM_EMAIL` | `"noreply@iterbot.example.com"` | `str` |
 | `EMAIL_PROVIDER` | `"console"` | `str` |
 | `EMAIL_FALLBACK_PROVIDER` | `""` (string vazia) | `str` |
 | `RESEND_API_KEY` | `""` (string vazia) | `str` |
@@ -386,7 +386,7 @@ Configurações-chave para desenvolvimento:
 
 **Banco de dados em desenvolvimento:** Se não houver Docker Secret `postgres_password` e `DATABASE_URL` não estiver definida, o Django usará SQLite automaticamente.
 
-### Produção (EC2)
+### Produção
 
 Use `.env.production.example` como base:
 
@@ -426,7 +426,7 @@ Configurações obrigatórias para produção:
 
 **BasicAuth do Traefik:** Protege rotas sensíveis (WAHA dashboard, Django admin) com camada adicional de autenticação além do Django auth. Configurado via `deployment/scripts/setup-htpasswd.sh`.
 
-<!-- VERIFY: O Security Group da EC2 deve permitir apenas portas 22, 80, 443 em produção -->
+
 
 ---
 

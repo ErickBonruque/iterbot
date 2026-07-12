@@ -19,4 +19,5 @@ Documentacao arquitetural do projeto.
 | ADR-001 | WAHA sem Proxy Traefik | Superseded (producao agora usa Traefik + BasicAuth + TLS) |
 | ADR-002 | Campos Criptografados | Accepted |
 | ADR-003 | Celery para Tasks | Accepted |
-| ADR-004 | EC2 + Docker Compose | Accepted |
+| ADR-004 | EC2 + Docker Compose | Superseded em parte pelo ADR-005 (host mudou; Docker Compose mantido) |
+| ADR-005 | Migração da EC2 para VM UTFPR (`gosh`) | Accepted |

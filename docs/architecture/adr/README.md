@@ -10,6 +10,7 @@ ADRs documentam decisoes arquiteturais significativas.
 | [adr-002-campos-criptografados.md](adr-002-campos-criptografados.md) | Campos Criptografados | 2026-04-16 |
 | [adr-003-celery-tasks.md](adr-003-celery-tasks.md) | Celery para Tasks Assincronas | 2026-04-16 |
 | [adr-004-ec2-docker-compose.md](adr-004-ec2-docker-compose.md) | EC2 + Docker Compose | 2026-04-16 |
+| [adr-005-migracao-host-gosh-utfpr.md](adr-005-migracao-host-gosh-utfpr.md) | Migração da EC2 para VM UTFPR (`gosh`) | 2026-07-01 |
 
 ## O que e um ADR?
 

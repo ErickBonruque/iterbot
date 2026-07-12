@@ -4,9 +4,9 @@ on:
   pull_request:
   push:
     branches:
+      - master
       - 'feature/*'
       - 'fix/*'
-      - 'gsd/*'
   workflow_dispatch:
 
 jobs:

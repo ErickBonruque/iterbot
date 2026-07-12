@@ -6,34 +6,39 @@ Guias de deploy e configuracao de infraestrutura.
 
 | Arquivo | Descricao |
 |---------|-----------|
-| [DEPLOY_GUIDE.md](DEPLOY_GUIDE.md) | Guia completo de deploy |
-| [EMAIL_RUNBOOK.md](EMAIL_RUNBOOK.md) | Runbook operacional do email Resend (rotacao, revogacao, troubleshooting) |
-| [BACKUP_S3.md](BACKUP_S3.md) | Backup para S3 |
-| [SECURITY_GROUPS.md](SECURITY_GROUPS.md) | Grupos de seguranca AWS |
-| [SES_SANDBOX_EXIT.md](SES_SANDBOX_EXIT.md) | Sair do sandbox SES |
-| [COST-COMPARISON.md](COST-COMPARISON.md) | Comparativo de custos de hospedagem |
+| [MIGRACAO-GOSH-UTFPR.md](MIGRACAO-GOSH-UTFPR.md) | **Plano vigente** — migração para a VM própria da UTFPR (`gosh`) |
+| [MIGRACAO-DOMINIO-FIXO.md](MIGRACAO-DOMINIO-FIXO.md) | (histórico/supersedido) plano de host compartilhado |
+| [EMAIL_RUNBOOK.md](EMAIL_RUNBOOK.md) | Runbook operacional do e-mail (rotação, revogação, troubleshooting) |
+
+> ℹ️ O deploy original em AWS EC2 foi **descomissionado** (ver
+> [ADR-004](../architecture/adr/adr-004-ec2-docker-compose.md) e
+> [ADR-005](../architecture/adr/adr-005-migracao-host-gosh-utfpr.md)). Os guias
+> específicos de AWS (S3, Security Groups, SES sandbox) foram removidos do
+> repositório; scripts legados de AWS ainda existem em `deployment/scripts/`
+> mas não fazem parte do fluxo atual.
 
 ## Infraestrutura
 
-- **Plataforma:** AWS EC2 (t3.small)
+- **Plataforma:** VM UTFPR `gosh.sh.utfpr.edu.br` (Ubuntu 22.04, 1 vCPU / 1.8 GB RAM / 19 GB disco), gerida pela COGETI via Ansible
 - **Container:** Docker Compose
-- **Proxy:** Traefik v3.6
-- **Dominio:** sslip.io (producao — Let's Encrypt TLS)
-- **Custo mensal estimado:** ~$16.30 (ver [COST-COMPARISON.md](COST-COMPARISON.md))
+- **Proxy:** Traefik v3.6 (TLS Let's Encrypt + BasicAuth)
+- **Dominio:** `gosh.sh.utfpr.edu.br` (producao)
+- **Rede:** SSH (22) filtrado de fora da UTFPR — deploy exige campus ou VPN institucional; 80/443 públicas
+- **Custo:** hospedagem institucional (sem custo AWS)
 
-## Production Deployment Guide
+## Guia de Deploy em Producao
 
 ### Requisitos
 
-- EC2 instance (t3.small, us-east-1)
-- AWS CLI configurado com IAM Role ou credenciais
-- Docker e Docker Compose instalados
+- VM com Docker Engine + Docker Compose instalados
+- Acesso SSH ao host (na rede da UTFPR ou via VPN institucional)
+- Domínio com registro A apontando para o host (para o TLS via Let's Encrypt)
 
 ### Passo a passo
 
-1. **Provisionar EC2:**
+1. **Clonar o repositório no host:**
    ```bash
-   sudo bash deployment/scripts/setup-ec2.sh
+   git clone https://github.com/ErickBonruque/iterbot.git && cd iterbot
    ```
 
 2. **Configurar secrets:**
@@ -45,23 +50,28 @@ Guias de deploy e configuracao de infraestrutura.
 3. **Configurar .env:**
    ```bash
    cp .env.production.example .env
-   # Editar .env com valores reais
+   # Editar .env com valores reais (DOMAIN, ALLOWED_HOSTS, PORTAL_BASE_URL, e-mail)
    ```
 
 4. **Validar ambiente:**
    ```bash
-   bash deployment/scripts/validate_environment.sh --ec2
+   bash deployment/scripts/validate_environment.sh
    ```
 
-5. **Subir servicos:**
+5. **Subir servicos e semear dados:**
    ```bash
    docker compose -f docker-compose.yml -f docker-compose.prod.yml up --build -d
+   docker compose -f docker-compose.yml -f docker-compose.prod.yml run --rm backend python manage.py migrate
+   docker compose -f docker-compose.yml -f docker-compose.prod.yml run --rm backend python manage.py seed_courses
    ```
 
 6. **Verificar deploy:**
    ```bash
-   bash deployment/scripts/smoke-check.sh SEU-IP.sslip.io
+   bash deployment/scripts/smoke-check.sh gosh.sh.utfpr.edu.br
    ```
+
+Para o passo a passo completo da migração (limites de memória, pareamento do
+WhatsApp, TLS), ver [MIGRACAO-GOSH-UTFPR.md](MIGRACAO-GOSH-UTFPR.md).
 
 ## Security Hardening
 
@@ -78,68 +88,47 @@ Para configurar usuarios BasicAuth:
 bash deployment/scripts/setup-htpasswd.sh
 ```
 
-### Security Group
+### Rede do host
 
-O Security Group da EC2 deve permitir apenas as portas 22, 80 e 443:
-
-```bash
-bash deployment/scripts/harden-security-group.sh
-```
-
-Este script remove as portas 3000, 8000 e 8080 do acesso publico de forma idempotente.
+A rede é gerida pela COGETI/UTFPR: apenas as portas 80/443 são públicas; a
+porta 22 (SSH) é filtrada de fora da rede institucional. Não há Security Group
+para configurar (diferente do deploy AWS antigo).
 
 ## Backup & Restore
 
-- **Backup diario:** crontab as 02:00 — `backup-postgres.sh`
-- **Backup check:** crontab as 03:00 — `check-backup.sh` (alerta via SES se falhar)
-- **Disk check:** crontab a cada 6h — `check-disk-space.sh` (alerta via SES se >80%)
-- **Restore test mensal:** crontab dia 1 as 04:00 — `restore-test.sh`
-- **Retencao:** S3 lifecycle policy — 30 dias para `daily/`, 90 dias para `weekly/`
-
-Aplicar lifecycle policy:
-```bash
-aws s3api put-bucket-lifecycle-configuration \
-  --bucket iterbot-utfpr-backups \
-  --lifecycle-configuration file://deployment/config/s3-lifecycle.json
-```
+- **Backup diario:** `backup-postgres.sh` (dump local do PostgreSQL via crontab)
+- **Disk check:** `check-disk-space.sh` (alerta por e-mail se uso >80%)
+- Os scripts de backup/restore para S3 (`check-backup.sh`, `restore-test.sh`,
+  `restore-postgres.sh`) pertencem ao deploy AWS antigo e exigem adaptação
+  antes de uso no host atual.
 
 ## Monitoring & Alerts
 
-Os alertas sao enviados pelo provider de e-mail configurado em `EMAIL_PROVIDER` (Resend, Brevo, AWS SES, SMTP) — ver `infra/email/factory.py` e [EMAIL_RUNBOOK.md](EMAIL_RUNBOOK.md). Scripts shell de alerta no host usam SMTP via SES por padrao quando `EMAIL_PROVIDER=ses`.
+Os alertas sao enviados pelo provider de e-mail configurado em `EMAIL_PROVIDER`
+(Resend, Brevo, AWS SES, SMTP) — ver `infra/email/factory.py` e
+[EMAIL_RUNBOOK.md](EMAIL_RUNBOOK.md). O destinatário dos alertas é definido em
+`ALERT_EMAIL` (fallback: `DEFAULT_FROM_EMAIL`).
 
-| Alerta | Script | Frequencia | Condicao |
-|--------|--------|------------|----------|
-| Backup falhou | `check-backup.sh` | Diario (03:00) | Backup nao encontrado em S3 ou tamanho suspeito |
-| Disco cheio | `check-disk-space.sh` | A cada 6h | Uso de disco acima de 80% (configuravel via `DISK_THRESHOLD`) |
+## CI/CD
 
-## CI/CD Pipeline
+O repositório mantém CI no GitHub Actions (`.github/workflows/ci.yml`): lint
+(ruff), testes (pytest + coverage) e varredura de segurança (pip-audit +
+Trivy) em cada PR e push.
 
-### Deploy Workflow (`.github/workflows/deploy.yml`)
-
-O deploy workflow tem dois gates obrigatorios:
-
-1. **CI Gate** — lint (ruff check), format check (ruff format --check), e testes (pytest)
-2. **Deploy** — so executa apos CI passar (`needs: ci`)
+**Deploy é manual**: como o SSH do host é filtrado de fora da UTFPR, o GitHub
+Actions não alcança a porta 22. Opções registradas em
+[MIGRACAO-GOSH-UTFPR.md](MIGRACAO-GOSH-UTFPR.md): self-hosted runner na rede
+institucional, deploy manual no campus ou VPN. O workflow antigo de deploy
+para AWS (via SSM) foi removido junto com a EC2.
 
 ### Rollback
 
-Para fazer rollback via GitHub Actions:
-1. Ir em Actions > Deploy > Run workflow
-2. Marcar `rollback = true`
-3. Opcionalmente informar o commit hash
-
-Ou manualmente na EC2:
+No host:
 ```bash
 bash deployment/scripts/rollback.sh [--commit HASH]
 ```
 
 O rollback faz checkout do commit, rebuild dos containers, e executa smoke-check.
-
-## Cost
-
-Ver [COST-COMPARISON.md](COST-COMPARISON.md) para comparativo detalhado.
-
-**Resumo:** EC2 t3.small on-demand ~$16.30/mo. Reserved Instance 1yr ~$10.79/mo.
 
 ## Troubleshooting
 
@@ -149,5 +138,4 @@ Ver [COST-COMPARISON.md](COST-COMPARISON.md) para comparativo detalhado.
 | SSL cert expirado | Verificar logs Traefik: `make logs-traefik` |
 | Backup falhou | Verificar log: `tail /var/log/iterbot-backup.log` |
 | Disco cheio | Verificar uso: `df -h` e `docker system df` |
-| Deploy falhou | Verificar CI logs no GitHub Actions |
 | Rollback necessario | `bash deployment/scripts/rollback.sh` |

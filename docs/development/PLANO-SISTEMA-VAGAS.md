@@ -21,7 +21,7 @@
    foi feito, arquivos tocados, migrações criadas, decisões/desvios).
 4. **Toda fase precisa de testes** (o projeto usa pytest — ver `apps/*/tests/`). Não marque uma
    fase como concluída sem testes verdes para ela.
-5. **Padrões obrigatórios do projeto** (ver `CLAUDE.md`): Ruff (lint+format), structlog (logging
+5. **Padrões obrigatórios do projeto** (ver `CONTRIBUTING.md` e `docs/development/`): Ruff (lint+format), structlog (logging
    JSON, nunca logar dados sensíveis), Conventional Commits (`cz commit`), `EncryptedCharField`
    para dados sensíveis, handlers do bot via `BaseHandler`, mensagens centralizadas em
    `apps/bot/messages.py`. **Sempre responder/documentar em português.**
@@ -682,4 +682,4 @@ ajuda no hover.
 - **Convenção "areas vazio = todas"**: centralize num único helper para evitar divergência entre
   resumo semanal, menu do aluno e admin.
 - **Deploy**: o projeto usa CI/CD com gates (lint + testes). Migrações precisam aplicar limpo em
-  produção (EC2/Docker Compose). Ver `CLAUDE.md` e `deployment/`.
+  produção (Docker Compose). Ver `docs/deploy/` e `deployment/`.

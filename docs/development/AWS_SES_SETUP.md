@@ -26,7 +26,7 @@ Este guia descreve como configurar o Amazon Simple Email Service (SES) para envi
 
 1. Acesse o **Amazon SES Console**
 2. Vá em **Email Addresses** → **Verify a New Email Address**
-3. Digite: `***REMOVED***` (ou outro e-mail remetente desejado)
+3. Digite: `seu-email@exemplo.com` (ou outro e-mail remetente desejado)
 4. Acesse a caixa de entrada do e-mail e clique no link de verificação
 
 ### Opção B: Verificar Domínio Completo (Recomendado)
@@ -99,7 +99,7 @@ EMAIL_PORT=587
 EMAIL_USE_TLS=True
 EMAIL_HOST_USER=<SMTP_USERNAME>
 EMAIL_HOST_PASSWORD=<SMTP_PASSWORD>
-DEFAULT_FROM_EMAIL=***REMOVED***
+DEFAULT_FROM_EMAIL=seu-email@exemplo.com
 ```
 
 **Importante:** Use Docker Secrets para `EMAIL_HOST_PASSWORD`:
@@ -125,7 +125,7 @@ from django.core.mail import send_mail
 send_mail(
     'Teste IterBot',
     'E-mail de teste do sistema.',
-    '***REMOVED***',
+    'seu-email@exemplo.com',
     ['seu.email@alunos.utfpr.edu.br'],
     fail_silently=False,
 )

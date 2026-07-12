@@ -178,5 +178,5 @@ graph TB
 | `config/` | Configuração centralizada via `env.py` — dataclasses que leem de Docker Secrets → env vars → defaults. |
 | `waha_bot/` | Projeto Django: `settings.py`, `urls.py` (roteamento raiz), `celery.py` (autodiscover), `asgi.py`/`wsgi.py`. |
 | `docker/` | Dockerfiles multi-stage (`docker/django/Dockerfile`) e scripts de entrypoint/start. |
-| `deployment/` | Scripts operacionais (setup EC2, backup/restore PostgreSQL, smoke check, harden security group, rollback) e configurações S3 lifecycle. |
+| `deployment/` | Scripts operacionais (provisionamento, backup/restore PostgreSQL, smoke check, rollback). |
 | `secrets/` | Docker Secrets em arquivo (senhas, API keys, chaves) — **nunca** commitado no git. |

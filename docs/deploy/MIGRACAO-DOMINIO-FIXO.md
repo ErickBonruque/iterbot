@@ -1,5 +1,13 @@
 # Migração para Domínio Fixo — `chat-universitario.sh.utfpr.edu.br`
 
+> ⚠️ **SUPERSEDIDO (2026-07-01).** Este plano — migrar para o host **compartilhado**
+> `200.134.22.218` / `chat-universitario.sh.utfpr.edu.br` — **nunca foi executado**.
+> O projeto conseguiu uma **VM dedicada** (`gosh.sh.utfpr.edu.br` / `200.134.22.219`),
+> tornando desnecessária a convivência com o outro bot. O plano vigente está em
+> [`MIGRACAO-GOSH-UTFPR.md`](MIGRACAO-GOSH-UTFPR.md) e na decisão
+> [ADR-005](../architecture/adr/adr-005-migracao-host-gosh-utfpr.md).
+> Mantido apenas como referência histórica.
+
 ## Decisão
 
 **Migrar o deploy para o servidor da UTFPR (`200.134.22.218`).**
@@ -132,8 +140,8 @@ atual). Depois da virada:
 
 Somente após o bot validado no servidor novo (mensagens entrando e saindo,
 smoke-check verde): parar os containers na EC2 e desligar/terminar a
-instância (manter os backups no S3). Atualizar as referências a EC2 nos
-docs (`CLAUDE.md`, `docs/deploy/`) quando a virada estiver concluída.
+instância (manter os backups no S3). Atualizar as referências a EC2 na
+documentação (`docs/deploy/`) quando a virada estiver concluída.
 
 ---
 
