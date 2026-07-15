@@ -223,7 +223,7 @@ UNFOLD = {
     "SITE_TITLE": "IterBot Admin",
     "SITE_HEADER": "IterBot UTFPR",
     "SITE_URL": "/",
-    "SITE_LOGO": lambda request: static("img/logo-icon.png"),
+    "SITE_LOGO": lambda request: static("img/logo-utfpr.png"),
     "SITE_ICON": lambda request: static("img/logo-icon.png"),
     "SHOW_HISTORY": True,
     "SHOW_VIEW_ON_SITE": True,

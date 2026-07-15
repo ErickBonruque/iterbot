@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load i18n %}
+{% load static %}
 
 {% block title %}Cadastro - IterBot UTFPR{% endblock %}
 
@@ -11,6 +12,11 @@
                 <h4 class="mb-0">Cadastro de Aluno</h4>
             </div>
             <div class="card-body">
+                <div class="text-center mb-3">
+                    <img src="{% static 'img/logo-utfpr.png' %}"
+                         alt="UTFPR - Universidade Tecnológica Federal do Paraná"
+                         class="img-fluid" style="max-height: 64px;">
+                </div>
                 <p class="text-muted text-center mb-4">
                     Crie sua conta com seu e-mail institucional UTFPR
                 </p>

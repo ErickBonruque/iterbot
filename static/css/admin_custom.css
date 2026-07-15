@@ -155,8 +155,13 @@ table tbody tr:hover {
 
 .cv-site-logo {
     display: block;
-    height: 34px;
+    height: 40px;
     width: auto;
+    /* Chip branco: o logotipo oficial da UTFPR tem letras pretas e sumiria
+       sobre o tema escuro do admin. */
+    background: #fff;
+    border-radius: 6px;
+    padding: 5px 9px;
 }
 
 .cv-admin-dashboard {
