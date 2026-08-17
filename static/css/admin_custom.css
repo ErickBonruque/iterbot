@@ -242,11 +242,14 @@ table tbody tr:hover {
     gap: 10px;
 }
 
+/* Botão de ação em painel comum: usa os tokens do tema, senão fica branco no
+   branco quando o painel é claro (era estilizado só para o hero escuro). */
 .cv-admin-action {
-    background: rgba(248, 250, 252, 0.12);
-    border: 1px solid rgba(248, 250, 252, 0.22);
+    background: var(--cv-surface-2);
+    border: 1px solid var(--cv-border);
     border-radius: 999px;
-    color: #f8fafc;
+    color: var(--cv-text);
+    cursor: pointer;
     display: inline-flex;
     font-size: 13px;
     font-weight: 600;
@@ -255,6 +258,27 @@ table tbody tr:hover {
     padding: 9px 16px;
     text-decoration: none;
     transition: all 0.2s ease;
+}
+
+/* Dentro do hero o fundo é escuro nos dois temas — o botão volta a ser
+   translúcido claro para não virar uma chapa sólida sobre o gradiente. */
+.cv-admin-hero .cv-admin-action {
+    background: rgba(248, 250, 252, 0.12);
+    border-color: rgba(248, 250, 252, 0.22);
+    color: #f8fafc;
+}
+
+.cv-admin-action[disabled] {
+    cursor: progress;
+    opacity: 0.6;
+}
+
+/* Filtro de período selecionado (tela de Observabilidade) — a classe já era
+   usada no template, mas não tinha estilo, então nada indicava o ativo. */
+.cv-admin-action--active {
+    background: var(--cv-yellow-500);
+    border-color: var(--cv-yellow-500);
+    color: #111827;
 }
 
 .cv-admin-action:hover {
