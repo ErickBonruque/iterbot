@@ -85,6 +85,11 @@ class TestCompanyLoginView(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Login - Portal Empresas")
 
+    def test_portal_root_redirects_to_login(self):
+        """/empresas/ devolvia 404 — hoje leva para a tela de login."""
+        response = self.client.get("/empresas/")
+        self.assertRedirects(response, "/empresas/login/")
+
     def test_login_valid_credentials(self):
         # Marcar email como verificado para allauth
         from allauth.account.models import EmailAddress
