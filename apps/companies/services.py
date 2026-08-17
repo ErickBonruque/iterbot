@@ -87,6 +87,17 @@ class CompaniesService:
         return job
 
     @staticmethod
+    def list_company_jobs(company):
+        """Vagas visíveis da empresa (as removidas não voltam a aparecer)."""
+        if company is None:
+            return Job.objects.none()
+        return (
+            Job.objects.filter(company=company)
+            .exclude(status=JobStatus.REMOVED)
+            .order_by("-created_at")
+        )
+
+    @staticmethod
     def list_company_applications(user):
         """Candidaturas das vagas da empresa do `user`, mais recentes primeiro."""
         company = CompaniesService.get_user_company_or_none(user)

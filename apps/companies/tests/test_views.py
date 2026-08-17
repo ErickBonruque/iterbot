@@ -90,6 +90,13 @@ class TestCompanyLoginView(TestCase):
         response = self.client.get("/empresas/")
         self.assertRedirects(response, "/empresas/login/")
 
+    def test_forms_do_not_leak_python_list_on_screen(self):
+        """`{{ form.hidden_fields }}` imprimia "[]" acima do botao de enviar."""
+        for url in ("/empresas/login/", "/empresas/signup/"):
+            with self.subTest(url=url):
+                content = self.client.get(url).content.decode()
+                self.assertNotIn("\n                    []", content)
+
     def test_login_valid_credentials(self):
         # Marcar email como verificado para allauth
         from allauth.account.models import EmailAddress
@@ -140,6 +147,44 @@ class TestCompanyProfileView(TestCase):
         response = self.client.get("/empresas/perfil/")
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "22.333.444/0001-90")
+
+    def test_profile_hides_removed_jobs(self):
+        """Vaga removida sumia da lista mas ainda contava para o card existir,
+        deixando a empresa com um "Minhas Vagas" vazio e sem o botao de criar."""
+        from apps.jobs.models import Job, JobStatus
+
+        Job.objects.create(
+            company=self.company,
+            titulo="Vaga removida",
+            descricao="...",
+            tipo="estagio",
+            status=JobStatus.REMOVED,
+        )
+
+        self.client.force_login(self.user)
+        response = self.client.get("/empresas/perfil/")
+
+        self.assertNotContains(response, "Vaga removida")
+        self.assertContains(response, "Nenhuma vaga cadastrada ainda")
+
+    def test_profile_lists_active_job_once(self):
+        from apps.jobs.models import Job, JobStatus
+
+        Job.objects.create(
+            company=self.company,
+            titulo="Vaga ativa",
+            descricao="...",
+            tipo="estagio",
+            status=JobStatus.APPROVED,
+        )
+
+        self.client.force_login(self.user)
+        response = self.client.get("/empresas/perfil/")
+        content = response.content.decode()
+
+        self.assertContains(response, "Vaga ativa")
+        # Regressao: o botao Editar aparecia duplicado em cada linha da lista.
+        self.assertEqual(content.count("Editar</a>"), 1)
 
     def test_profile_update(self):
         self.client.force_login(self.user)

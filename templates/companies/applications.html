@@ -10,12 +10,16 @@
         {% if applications %}
         {% for application in applications %}
         <div class="card mb-3">
-            <div class="card-header d-flex justify-content-between align-items-center">
+            <div class="card-header d-flex justify-content-between align-items-center gap-2">
                 <div>
                     <strong>{{ application.job.titulo }}</strong>
                     <small class="text-muted ms-2">{{ application.created_at|date:"d/m/Y H:i" }}</small>
                 </div>
-                <span class="badge bg-secondary">{{ application.get_status_display }}</span>
+                <span class="badge
+                    {% if application.status == 'contatado' %}bg-success
+                    {% elif application.status == 'rejeitada' %}bg-danger
+                    {% elif application.status == 'pending' %}bg-warning text-dark
+                    {% else %}bg-secondary{% endif %}">{{ application.get_status_display }}</span>
             </div>
             <div class="card-body">
                 <p class="mb-1"><strong>Candidato</strong></p>
@@ -41,7 +45,7 @@
                 <p class="mb-3"><strong>Recado:</strong> {{ application.message }}</p>
                 {% endif %}
 
-                <form method="post" action="/empresas/candidaturas/{{ application.pk }}/status/" class="d-flex gap-2 align-items-center">
+                <form method="post" action="{% url 'companies:application_status' application.pk %}" class="d-flex gap-2 align-items-center">
                     {% csrf_token %}
                     <label for="status_{{ application.pk }}" class="form-label mb-0">Status:</label>
                     <select name="status" id="status_{{ application.pk }}" class="form-select form-select-sm" style="width:auto;">
@@ -54,10 +58,31 @@
             </div>
         </div>
         {% endfor %}
+
+        {% if is_paginated %}
+        <nav aria-label="Paginação das candidaturas">
+            <ul class="pagination justify-content-center">
+                {% if page_obj.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}">Anterior</a>
+                </li>
+                {% endif %}
+                <li class="page-item disabled">
+                    <span class="page-link">Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span>
+                </li>
+                {% if page_obj.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.next_page_number }}">Próxima</a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
         {% else %}
         <div class="card">
             <div class="card-body text-center text-muted">
-                <p class="mb-0">Nenhuma candidatura recebida ainda.</p>
+                <p class="mb-2">Nenhuma candidatura recebida ainda.</p>
+                <small>As candidaturas dos alunos chegam por aqui assim que suas vagas forem aprovadas e divulgadas no WhatsApp.</small>
             </div>
         </div>
         {% endif %}

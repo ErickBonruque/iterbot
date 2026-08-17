@@ -88,6 +88,10 @@ class CompanyProfileView(LoginRequiredMixin, UpdateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["company"] = self.object
+        # Vagas removidas nao aparecem para a empresa; filtrar aqui (e nao no
+        # template) mantem o "nenhuma vaga cadastrada" correto quando todas
+        # foram removidas.
+        context["jobs"] = CompaniesService.list_company_jobs(self.object)
         return context
 
     def form_valid(self, form):
@@ -188,6 +192,7 @@ class JobApplicationsListView(ApprovedCompanyRequiredMixin, ListView):
     template_name = "companies/applications.html"
     context_object_name = "applications"
     login_url = "/empresas/login/"
+    paginate_by = 20
 
     def get_queryset(self):
         return CompaniesService.list_company_applications(self.request.user)

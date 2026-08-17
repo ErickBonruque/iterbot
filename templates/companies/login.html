@@ -66,7 +66,8 @@
                         </label>
                     </div>
 
-                    {{ form.hidden_fields }}
+                    {# `{{ form.hidden_fields }}` imprimia a lista do Python ("[]") na tela #}
+                    {% for hidden_field in form.hidden_fields %}{{ hidden_field }}{% endfor %}
 
                     <div class="d-grid gap-2">
                         <button type="submit" class="btn btn-primary btn-lg">Entrar</button>
@@ -80,7 +81,7 @@
                         <a href="/accounts/password/reset/">Esqueci minha senha</a>
                     </p>
                     <p class="mb-0">
-                        Nao tem uma conta? <a href="/empresas/signup/">Cadastre-se</a>
+                        Não tem uma conta? <a href="{% url 'companies:signup' %}">Cadastre-se</a>
                     </p>
                 </div>
             </div>

@@ -17,7 +17,7 @@
                          class="brand-logo">
                 </div>
                 <p class="text-muted text-center mb-4">
-                    Cadastre sua empresa para publicar vagas de estagio
+                    Cadastre sua empresa para publicar vagas de estágio
                 </p>
 
                 <form method="post" action="">
@@ -51,7 +51,7 @@
                                name="nome"
                                class="form-control {% if form.nome.errors %}is-invalid{% endif %}"
                                id="id_nome"
-                               placeholder="Razao social ou nome fantasia"
+                               placeholder="Razão social ou nome fantasia"
                                value="{{ form.nome.value|default:'' }}"
                                required>
                         {% if form.nome.errors %}
@@ -94,12 +94,12 @@
                     </div>
 
                     <div class="mb-3">
-                        <label for="id_contato_nome" class="form-label">Nome do Responsavel *</label>
+                        <label for="id_contato_nome" class="form-label">Nome do Responsável *</label>
                         <input type="text"
                                name="contato_nome"
                                class="form-control {% if form.contato_nome.errors %}is-invalid{% endif %}"
                                id="id_contato_nome"
-                               placeholder="Nome completo do responsavel"
+                               placeholder="Nome completo do responsável"
                                value="{{ form.contato_nome.value|default:'' }}"
                                required>
                         {% if form.contato_nome.errors %}
@@ -110,7 +110,7 @@
                     </div>
 
                     <div class="mb-3">
-                        <label for="id_contato_cargo" class="form-label">Cargo do Responsavel *</label>
+                        <label for="id_contato_cargo" class="form-label">Cargo do Responsável *</label>
                         <input type="text"
                                name="contato_cargo"
                                class="form-control {% if form.contato_cargo.errors %}is-invalid{% endif %}"
@@ -159,7 +159,8 @@
                         {% endif %}
                     </div>
 
-                    {{ form.hidden_fields }}
+                    {# `{{ form.hidden_fields }}` imprimia a lista do Python ("[]") na tela #}
+                    {% for hidden_field in form.hidden_fields %}{{ hidden_field }}{% endfor %}
 
                     <div class="d-grid gap-2 mt-4">
                         <button type="submit" class="btn btn-primary btn-lg">Cadastrar Empresa</button>
@@ -169,7 +170,7 @@
                 <hr class="my-4">
 
                 <p class="text-center mb-0">
-                    Ja tem uma conta? <a href="/empresas/login/">Entrar</a>
+                    Já tem uma conta? <a href="{% url 'companies:login' %}">Entrar</a>
                 </p>
             </div>
         </div>

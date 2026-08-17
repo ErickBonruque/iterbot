@@ -1,6 +1,6 @@
 {% extends "companies/base_company.html" %}
 
-{% block title %}{% if form.instance.pk %}Editar Vaga{% else %}Nova Vaga de Estagio{% endif %} - IterBot UTFPR{% endblock %}
+{% block title %}{% if form.instance.pk %}Editar Vaga{% else %}Nova Vaga de Estágio{% endif %} - IterBot UTFPR{% endblock %}
 
 {% block company_content %}
 <div class="row justify-content-center">
@@ -20,7 +20,7 @@
                             ms-2">{{ job.get_status_display }}</span>
                         {% endif %}
                     {% else %}
-                        Nova Vaga de Estagio
+                        Nova Vaga de Estágio
                     {% endif %}
                 </h4>
             </div>
@@ -35,12 +35,12 @@
                     {% endif %}
 
                     <div class="mb-3">
-                        <label for="id_titulo" class="form-label">Titulo da Vaga *</label>
+                        <label for="id_titulo" class="form-label">Título da Vaga *</label>
                         <input type="text"
                                name="titulo"
                                class="form-control {% if form.titulo.errors %}is-invalid{% endif %}"
                                id="id_titulo"
-                               placeholder="Ex: Estagiario de Desenvolvimento Web"
+                               placeholder="Ex: Estagiário de Desenvolvimento Web"
                                value="{{ form.titulo.value|default:'' }}"
                                required>
                         {% if form.titulo.errors %}
@@ -51,7 +51,7 @@
                     </div>
 
                     <div class="mb-3">
-                        <label for="id_descricao" class="form-label">Descricao *</label>
+                        <label for="id_descricao" class="form-label">Descrição *</label>
                         <textarea name="descricao"
                                   class="form-control {% if form.descricao.errors %}is-invalid{% endif %}"
                                   id="id_descricao"
@@ -71,7 +71,7 @@
                                   class="form-control {% if form.requisitos.errors %}is-invalid{% endif %}"
                                   id="id_requisitos"
                                   rows="3"
-                                  placeholder="Conhecimentos e habilidades necessarias">{{ form.requisitos.value|default:'' }}</textarea>
+                                  placeholder="Conhecimentos e habilidades necessárias">{{ form.requisitos.value|default:'' }}</textarea>
                         {% if form.requisitos.errors %}
                         <div class="invalid-feedback">
                             {{ form.requisitos.errors.0 }}
@@ -80,7 +80,7 @@
                     </div>
 
                     <div class="mb-3">
-                        <label for="id_salario" class="form-label">Salario</label>
+                        <label for="id_salario" class="form-label">Salário</label>
                         <input type="text"
                                name="salario"
                                class="form-control {% if form.salario.errors %}is-invalid{% endif %}"
@@ -101,10 +101,10 @@
                                 id="id_tipo"
                                 required>
                             <option value="">Selecione o tipo</option>
-                            <option value="estagio" {% if form.tipo.value == 'estagio' %}selected{% endif %}>Estagio</option>
+                            <option value="estagio" {% if form.tipo.value == 'estagio' %}selected{% endif %}>Estágio</option>
                             <option value="clt" {% if form.tipo.value == 'clt' %}selected{% endif %}>CLT</option>
                             <option value="pj" {% if form.tipo.value == 'pj' %}selected{% endif %}>PJ</option>
-                            <option value="temporario" {% if form.tipo.value == 'temporario' %}selected{% endif %}>Temporario</option>
+                            <option value="temporario" {% if form.tipo.value == 'temporario' %}selected{% endif %}>Temporário</option>
                         </select>
                         {% if form.tipo.errors %}
                         <div class="invalid-feedback">
@@ -134,13 +134,13 @@
                     </div>
 
                     <div class="alert alert-info">
-                        <small>Sua vaga sera analisada antes de ser publicada.</small>
+                        <small>Sua vaga será analisada antes de ser publicada.</small>
                     </div>
 
                     <div class="d-flex gap-2">
                         <a href="{% url 'companies:profile' %}" class="btn btn-secondary btn-lg flex-fill">Cancelar</a>
                         {% if form.instance.pk %}
-                        <button type="submit" class="btn btn-primary btn-lg flex-fill">Salvar Alteracoes</button>
+                        <button type="submit" class="btn btn-primary btn-lg flex-fill">Salvar Alterações</button>
                         {% else %}
                         <button type="submit" class="btn btn-primary btn-lg flex-fill">Publicar Vaga</button>
                         {% endif %}

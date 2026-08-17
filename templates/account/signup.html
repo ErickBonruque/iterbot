@@ -77,7 +77,8 @@
                         {% endif %}
                     </div>
 
-                    {{ form.hidden_fields }}
+                    {# `{{ form.hidden_fields }}` imprimia a lista do Python ("[]") na tela #}
+                    {% for hidden_field in form.hidden_fields %}{{ hidden_field }}{% endfor %}
 
                     <div class="d-grid gap-2 mt-4">
                         <button type="submit" class="btn btn-primary btn-lg">Criar Conta</button>

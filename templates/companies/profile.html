@@ -72,7 +72,7 @@
                     </div>
 
                     <div class="mb-3">
-                        <label for="id_endereco" class="form-label">Endereco</label>
+                        <label for="id_endereco" class="form-label">Endereço</label>
                         <textarea name="endereco"
                                   class="form-control {% if form.endereco.errors %}is-invalid{% endif %}"
                                   id="id_endereco"
@@ -85,7 +85,7 @@
                     </div>
 
                     <div class="mb-3">
-                        <label for="id_descricao" class="form-label">Descricao</label>
+                        <label for="id_descricao" class="form-label">Descrição</label>
                         <textarea name="descricao"
                                   class="form-control {% if form.descricao.errors %}is-invalid{% endif %}"
                                   id="id_descricao"
@@ -98,7 +98,7 @@
                     </div>
 
                     <div class="mb-3">
-                        <label for="id_contato_nome" class="form-label">Nome do Responsavel *</label>
+                        <label for="id_contato_nome" class="form-label">Nome do Responsável *</label>
                         <input type="text"
                                name="contato_nome"
                                class="form-control {% if form.contato_nome.errors %}is-invalid{% endif %}"
@@ -113,7 +113,7 @@
                     </div>
 
                     <div class="mb-3">
-                        <label for="id_contato_cargo" class="form-label">Cargo do Responsavel *</label>
+                        <label for="id_contato_cargo" class="form-label">Cargo do Responsável *</label>
                         <input type="text"
                                name="contato_cargo"
                                class="form-control {% if form.contato_cargo.errors %}is-invalid{% endif %}"
@@ -128,21 +128,23 @@
                     </div>
 
                     <div class="d-grid gap-2 mt-4">
-                        <button type="submit" class="btn btn-primary">Salvar Alteracoes</button>
+                        <button type="submit" class="btn btn-primary">Salvar Alterações</button>
                     </div>
                 </form>
             </div>
         </div>
 
-        {% if company.jobs.exists %}
+        {% if jobs %}
         <div class="card mt-4">
-            <div class="card-header text-center">
+            <div class="card-header d-flex justify-content-between align-items-center">
                 <h4 class="mb-0">Minhas Vagas</h4>
+                {% if company.status == 'approved' %}
+                <a href="{% url 'companies:job_create' %}" class="btn btn-sm btn-primary">Nova vaga</a>
+                {% endif %}
             </div>
             <div class="card-body">
-                {% for job in company.jobs.all %}
-                    {% if job.status != 'removed' %}
-                <div class="d-flex justify-content-between align-items-center mb-3 pb-3 {% if not forloop.last %}border-bottom{% endif %}">
+                {% for job in jobs %}
+                <div class="d-flex justify-content-between align-items-center gap-3 mb-3 pb-3 {% if not forloop.last %}border-bottom{% endif %}">
                     <div>
                         <strong>{{ job.titulo }}</strong>
                         <br>
@@ -157,12 +159,12 @@
                         <span class="badge bg-info ms-2">Rascunho</span>
                         {% endif %}
                     </div>
-                    <a href="/empresas/vagas/{{ job.pk }}/editar/" class="btn btn-sm btn-outline-dark">Editar</a>
-                    <a href="/empresas/vagas/{{ job.pk }}/editar/" class="btn btn-sm btn-outline-dark">Editar</a>
-                    <a href="/empresas/vagas/{{ job.pk }}/deletar/" class="btn btn-sm btn-outline-danger ms-2">Remover</a>
+                    <div class="text-nowrap">
+                        <a href="{% url 'companies:job_update' job.pk %}" class="btn btn-sm btn-outline-dark">Editar</a>
+                        <a href="{% url 'companies:job_delete' job.pk %}" class="btn btn-sm btn-outline-danger ms-2">Remover</a>
+                    </div>
                 </div>
-                {% endif %}
-            {% endfor %}
+                {% endfor %}
             </div>
         </div>
         {% else %}
@@ -170,7 +172,7 @@
             <div class="card-body text-center text-muted">
                 <p class="mb-2">Nenhuma vaga cadastrada ainda.</p>
                 {% if company.status == 'approved' %}
-                <a href="/empresas/vagas/nova/" class="btn btn-primary">Cadastrar Primeira Vaga</a>
+                <a href="{% url 'companies:job_create' %}" class="btn btn-primary">Cadastrar Primeira Vaga</a>
                 {% else %}
                 <button class="btn btn-secondary" disabled title="Disponível após aprovação do cadastro">
                     Cadastrar Primeira Vaga
