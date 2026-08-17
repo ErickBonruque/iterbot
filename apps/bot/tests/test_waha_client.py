@@ -141,3 +141,84 @@ class TestWahaClientStartSession:
             client.start_session()
         call_url = mock_post.call_args[0][0]
         assert call_url == "http://waha:3000/api/sessions/iterbot/start"
+
+
+class TestWahaClientLogoutSession:
+    """Logout devolve a sessão para SCAN_QR_CODE (pareamento pelo admin)."""
+
+    def test_posts_to_logout_endpoint(self):
+        client = WahaClient(
+            settings=_make_settings(base_url="http://waha:3000", session_name="iterbot")
+        )
+        with patch("infra.waha.client.requests.post") as mock_post:
+            mock_post.return_value = MagicMock(status_code=200)
+            assert client.logout_session() is True
+        assert mock_post.call_args[0][0] == "http://waha:3000/api/sessions/iterbot/logout"
+
+    def test_returns_false_on_http_error(self):
+        client = WahaClient(settings=_make_settings())
+        with patch("infra.waha.client.requests.post") as mock_post:
+            mock_post.return_value = MagicMock(status_code=500)
+            assert client.logout_session() is False
+
+    def test_returns_false_on_connection_error(self):
+        client = WahaClient(settings=_make_settings())
+        with patch("infra.waha.client.requests.post") as mock_post:
+            mock_post.side_effect = requests.exceptions.ConnectionError()
+            assert client.logout_session() is False
+
+
+class TestWahaClientGetQr:
+    """QR de pareamento consumido pela tela Status do Bot."""
+
+    def test_returns_data_uri_when_session_is_scanning(self):
+        client = WahaClient(
+            settings=_make_settings(base_url="http://waha:3000", session_name="iterbot")
+        )
+        with patch("infra.waha.client.requests.get") as mock_get:
+            mock_get.return_value = MagicMock(
+                status_code=200,
+                headers={"Content-Type": "image/png"},
+                content=b"ABC",
+            )
+            result = client.get_qr()
+
+        assert result.available is True
+        # "ABC" em base64 — a imagem vai inline no <img src> da tela do admin.
+        assert result.image == "data:image/png;base64,QUJD"
+        assert mock_get.call_args[0][0] == "http://waha:3000/api/iterbot/auth/qr"
+
+    def test_reports_session_status_on_422(self):
+        # O WAHA responde 422 quando a sessão não está em SCAN_QR_CODE; a tela
+        # precisa do status para orientar o operador em vez de mostrar erro cru.
+        client = WahaClient(settings=_make_settings())
+        response = MagicMock(status_code=422, headers={"Content-Type": "application/json"})
+        response.json.return_value = {
+            "error": "Session status is not as expected",
+            "status": "FAILED",
+        }
+        with patch("infra.waha.client.requests.get", return_value=response):
+            result = client.get_qr()
+
+        assert result.available is False
+        assert result.session_status == "FAILED"
+        assert result.error == "Session status is not as expected"
+
+    def test_survives_non_json_error_body(self):
+        client = WahaClient(settings=_make_settings())
+        response = MagicMock(status_code=502, headers={"Content-Type": "text/html"})
+        response.json.side_effect = ValueError("no json")
+        with patch("infra.waha.client.requests.get", return_value=response):
+            result = client.get_qr()
+
+        assert result.available is False
+        assert "502" in result.error
+
+    def test_returns_error_when_waha_is_unreachable(self):
+        client = WahaClient(settings=_make_settings())
+        with patch("infra.waha.client.requests.get") as mock_get:
+            mock_get.side_effect = requests.exceptions.ConnectionError()
+            result = client.get_qr()
+
+        assert result.available is False
+        assert result.error

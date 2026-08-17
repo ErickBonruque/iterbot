@@ -79,6 +79,16 @@ class IterBotAdminSite(UnfoldAdminSite):
                 self.admin_view(self.waha_restart_api_view),
                 name="waha_restart_api",
             ),
+            path(
+                "api/waha-qr/",
+                self.admin_view(self.waha_qr_api_view),
+                name="waha_qr_api",
+            ),
+            path(
+                "api/waha-logout/",
+                self.admin_view(self.waha_logout_api_view),
+                name="waha_logout_api",
+            ),
         ]
         return custom_urls + super().get_urls()
 
@@ -177,6 +187,53 @@ class IterBotAdminSite(UnfoldAdminSite):
         try:
             client = WahaClient()
             success = client.start_session()
+        except Exception:
+            success = False
+
+        return JsonResponse({"success": success})
+
+    def waha_qr_api_view(self, request):
+        """QR de pareamento do WhatsApp para a tela Status do Bot.
+
+        Evita o túnel SSH até o dashboard do WAHA: a imagem chega como data URI
+        e o status da sessão acompanha, para a tela dizer o que falta quando não
+        há QR (sessão parada, já conectada, WAHA fora do ar).
+        """
+        from django.http import JsonResponse
+
+        from infra.waha.client import WahaClient
+
+        try:
+            result = WahaClient().get_qr()
+        except Exception as error:
+            return JsonResponse(
+                {"available": False, "image": None, "session_status": None, "error": str(error)},
+                status=502,
+            )
+
+        return JsonResponse(
+            {
+                "available": result.available,
+                "image": result.image,
+                "session_status": result.session_status,
+                "error": result.error,
+            }
+        )
+
+    def waha_logout_api_view(self, request):
+        """Desconecta o número pareado para permitir um novo pareamento."""
+        from django.http import JsonResponse
+
+        from infra.waha.client import WahaClient
+
+        if request.method != "POST":
+            return JsonResponse({"error": "Method not allowed"}, status=405)
+
+        try:
+            client = WahaClient()
+            # Sem o start seguinte a sessão fica parada e nunca chega a
+            # SCAN_QR_CODE — é o start que faz o WAHA emitir um QR novo.
+            success = client.logout_session() and client.start_session()
         except Exception:
             success = False
 

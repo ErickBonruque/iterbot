@@ -44,6 +44,31 @@
         </div>
     </div>
 
+    <!-- Pareamento do WhatsApp: evita abrir o dashboard do WAHA por tunel SSH -->
+    <article class="cv-admin-panel" id="waha-pairing" style="margin-bottom: 24px;">
+        <h2 class="cv-admin-panel-title">Conexão do WhatsApp</h2>
+        <p style="margin-bottom: 12px;">
+            Sessão: <strong data-field="session-status">{{ current_status.session_status|default:"—" }}</strong>
+            <span data-field="hint" style="display:block; margin-top:4px; opacity:0.8;"></span>
+        </p>
+
+        <div data-field="qr-area" style="margin-bottom: 12px;">
+            <img data-field="qr-image" alt="QR Code para parear o WhatsApp"
+                 style="display:none; width:280px; max-width:100%; background:#fff; padding:8px; border-radius:8px;">
+        </div>
+
+        {% csrf_token %}
+        <div style="display:flex; flex-wrap:wrap; gap:8px;">
+            <button type="button" class="cv-admin-action" data-action="show-qr">Mostrar QR Code</button>
+            <button type="button" class="cv-admin-action" data-action="restart">Reiniciar sessão</button>
+            <button type="button" class="cv-admin-action" data-action="logout">Desconectar número</button>
+        </div>
+        <p style="margin-top:10px; font-size:0.85rem; opacity:0.75;">
+            No celular do bot: WhatsApp &rsaquo; Dispositivos conectados &rsaquo; Conectar dispositivo.
+            O código é renovado sozinho enquanto esta tela estiver aberta.
+        </p>
+    </article>
+
     <!-- Métricas por período -->
     <div class="cv-admin-panels-grid" style="margin-bottom: 24px;">
         <article class="cv-admin-panel">
@@ -117,4 +142,107 @@
         </table>
     </article>
 </div>
+
+<script>
+(function() {
+    var panel = document.getElementById('waha-pairing');
+    if (!panel) return;
+
+    // O WAHA troca o QR a cada poucos segundos; enquanto o operador estiver
+    // olhando a tela, buscamos de novo para nunca exibir um código vencido.
+    var POLL_MS = 8000;
+    var pollTimer = null;
+
+    var statusField = panel.querySelector('[data-field="session-status"]');
+    var hintField = panel.querySelector('[data-field="hint"]');
+    var qrImage = panel.querySelector('[data-field="qr-image"]');
+    var csrfToken = panel.querySelector('[name=csrfmiddlewaretoken]').value;
+
+    function stopPolling() {
+        if (pollTimer) {
+            clearInterval(pollTimer);
+            pollTimer = null;
+        }
+    }
+
+    function showQr(dataUri) {
+        qrImage.src = dataUri;
+        qrImage.style.display = 'block';
+    }
+
+    function hideQr() {
+        qrImage.removeAttribute('src');
+        qrImage.style.display = 'none';
+    }
+
+    function fetchQr() {
+        fetch("{% url 'admin:waha_qr_api' %}", {
+            headers: {"X-Requested-With": "XMLHttpRequest"}
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            statusField.textContent = data.session_status || '—';
+            if (data.available) {
+                showQr(data.image);
+                hintField.textContent = 'Escaneie o código com o celular do bot.';
+                return;
+            }
+
+            hideQr();
+            if (data.session_status === 'WORKING') {
+                hintField.textContent = 'WhatsApp conectado — nenhum pareamento necessário.';
+                stopPolling();
+                return;
+            }
+            hintField.textContent = data.error || 'QR indisponível no momento.';
+        })
+        .catch(function() {
+            hintField.textContent = 'Erro ao consultar o WAHA.';
+        });
+    }
+
+    function startPolling() {
+        fetchQr();
+        stopPolling();
+        pollTimer = setInterval(fetchQr, POLL_MS);
+    }
+
+    function postAction(url, button, busyLabel) {
+        var originalLabel = button.textContent;
+        button.disabled = true;
+        button.textContent = busyLabel;
+        return fetch(url, {
+            method: "POST",
+            headers: {"X-CSRFToken": csrfToken, "X-Requested-With": "XMLHttpRequest"}
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            hintField.textContent = data.success
+                ? 'Sessão reiniciada — aguardando o QR.'
+                : 'O WAHA recusou a operação. Veja os logs do serviço.';
+            if (data.success) startPolling();
+        })
+        .catch(function() {
+            hintField.textContent = 'Erro de conexão com o WAHA.';
+        })
+        .finally(function() {
+            button.disabled = false;
+            button.textContent = originalLabel;
+        });
+    }
+
+    panel.querySelector('[data-action="show-qr"]').addEventListener('click', startPolling);
+
+    panel.querySelector('[data-action="restart"]').addEventListener('click', function() {
+        postAction("{% url 'admin:waha_restart_api' %}", this, 'Reiniciando...');
+    });
+
+    panel.querySelector('[data-action="logout"]').addEventListener('click', function() {
+        if (!confirm('Isso desconecta o número que o bot usa hoje. Continuar?')) return;
+        postAction("{% url 'admin:waha_logout_api' %}", this, 'Desconectando...');
+    });
+
+    window.addEventListener('beforeunload', stopPolling);
+})();
+</script>
 {% endblock %}
