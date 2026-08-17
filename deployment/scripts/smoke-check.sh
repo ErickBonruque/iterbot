@@ -48,6 +48,17 @@ check_service() {
     return 1
 }
 
+# Codigo HTTP de uma URL, ou "000" quando nem houve resposta.
+# O `|| echo 000` ingenuo concatena com o "000" que o proprio -w imprime e
+# produz "000000", que nao casa com nenhuma comparacao.
+http_status() {
+    local url="$1"
+    shift
+    local status_code
+    status_code="$(curl -k -sS -o /dev/null -w '%{http_code}' "$@" "$url" 2>/dev/null || true)"
+    echo "${status_code:-000}"
+}
+
 check_http_status() {
     local name="$1"
     local url="$2"
@@ -55,7 +66,7 @@ check_http_status() {
     local status_code
 
     printf "  %-50s " "$name"
-    status_code="$(curl -k -sS -o /dev/null -w '%{http_code}' "$url" 2>/dev/null || true)"
+    status_code="$(http_status "$url")"
     if [[ "$status_code" =~ $expected_pattern ]]; then
         echo "[OK]"
         pass
@@ -97,10 +108,20 @@ check_command() {
 
 check_log_config() {
     local name="$1"
+    local max_size=""
 
     printf "  %-50s " "$name"
-    if ${DOCKER_BIN} inspect iterbot_backend 2>/dev/null | grep -q max-size; then
-        echo "[OK]"
+    # Rodando logo apos 'up -d', o container pode estar sendo recriado e o
+    # inspect falha por instantes — sem as tentativas isso vira falso negativo.
+    for _ in 1 2 3 4 5; do
+        max_size="$(${DOCKER_BIN} inspect iterbot_backend \
+            --format '{{index .HostConfig.LogConfig.Config "max-size"}}' 2>/dev/null || true)"
+        [ -n "$max_size" ] && break
+        sleep 2
+    done
+
+    if [ -n "$max_size" ]; then
+        echo "[OK] (max-size=${max_size})"
         pass
     else
         echo "[FAIL]"
@@ -157,19 +178,16 @@ else
 fi
 echo ""
 
-echo "[DEPL-04] Backup S3"
-check_command "aws cli disponivel" command -v aws
-if command -v aws > /dev/null 2>&1; then
-    # Testa credenciais — SKIP se nao houver (backup usa .env)
-    if aws sts get-caller-identity > /dev/null 2>&1; then
-        printf "  %-50s " "IAM Role funcional"
-        echo "[OK]"
-        pass
-    else
-        check_skip "IAM Role funcional" "sem instance profile - backup usa credenciais do .env"
-    fi
+echo "[DEPL-04] Backup"
+# O backup para S3 e heranca da EC2; no host da UTFPR a conta AWS foi encerrada,
+# entao a ausencia do aws cli e o esperado e nao uma falha do deploy. O destino
+# definitivo dos backups no gosh ainda esta em aberto.
+if command -v aws > /dev/null 2>&1 && aws sts get-caller-identity > /dev/null 2>&1; then
+    printf "  %-50s " "Credenciais AWS funcionais (backup S3)"
+    echo "[OK]"
+    pass
 else
-    check_skip "IAM Role funcional" "aws cli nao instalado"
+    check_skip "Backup S3" "sem AWS no host da UTFPR - definir destino de backup"
 fi
 echo ""
 
@@ -214,7 +232,7 @@ if [ "$DOMAIN" != "localhost" ]; then
     # publicamente. 000 = DNS/conexao falhou (esperado, sem registro waha.*),
     # 404 = Traefik sem router para o host. Qualquer resposta 2xx/3xx/401 indica
     # que o WAHA ainda esta exposto (config antiga).
-    WAHA_STATUS=$(curl -k -sS -o /dev/null -w '%{http_code}' "https://waha.${DOMAIN}/dashboard" 2>/dev/null || echo "000")
+    WAHA_STATUS=$(http_status "https://waha.${DOMAIN}/dashboard")
     printf "  %-50s " "WAHA Dashboard NOT publicly routed (expect 000/404)"
     if [ "$WAHA_STATUS" = "000" ] || [ "$WAHA_STATUS" = "404" ]; then
         echo "[OK] (${WAHA_STATUS})"
@@ -224,7 +242,7 @@ if [ "$DOMAIN" != "localhost" ]; then
         fail
     fi
 
-    ADMIN_STATUS=$(curl -k -sS -o /dev/null -w '%{http_code}' "https://${DOMAIN}/admin/" 2>/dev/null || echo "000")
+    ADMIN_STATUS=$(http_status "https://${DOMAIN}/admin/")
     printf "  %-50s " "Django Admin requires auth (expect 401)"
     if [ "$ADMIN_STATUS" = "401" ] || [ "$ADMIN_STATUS" = "403" ]; then
         echo "[OK] (${ADMIN_STATUS})"
@@ -243,7 +261,7 @@ echo ""
 echo "[SEC-03] HTTPS"
 if [ "$DOMAIN" != "localhost" ]; then
     REDIRECT_URL="http://${DOMAIN}"
-    REDIRECT_STATUS=$(curl -k -sS -o /dev/null -w '%{http_code}' --max-redirs 0 "$REDIRECT_URL" 2>/dev/null || echo "000")
+    REDIRECT_STATUS=$(http_status "$REDIRECT_URL" --max-redirs 0)
     printf "  %-50s " "HTTP redirects to HTTPS"
     if [ "$REDIRECT_STATUS" = "301" ] || [ "$REDIRECT_STATUS" = "308" ] || [ "$REDIRECT_STATUS" = "302" ]; then
         echo "[OK] (${REDIRECT_STATUS})"
@@ -253,7 +271,7 @@ if [ "$DOMAIN" != "localhost" ]; then
         fail
     fi
 
-    HTTPS_STATUS=$(curl -k -sS -o /dev/null -w '%{http_code}' "https://${DOMAIN}/health/" 2>/dev/null || echo "000")
+    HTTPS_STATUS=$(http_status "https://${DOMAIN}/health/")
     printf "  %-50s " "HTTPS /health/ responds (200)"
     if [ "$HTTPS_STATUS" = "200" ]; then
         echo "[OK]"
