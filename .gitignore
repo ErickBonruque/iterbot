@@ -40,6 +40,8 @@ waha-sessions/
 
 # Docker
 docker-compose.override.yml
+# Limites de memoria especificos do host de producao (gerado na migracao gosh)
+docker-compose.resources.yml
 
 # OS
 .DS_Store
