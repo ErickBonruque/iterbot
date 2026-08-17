@@ -29,6 +29,11 @@
 .cv-site-logo-link {
     align-items: center;
     display: inline-flex;
+    max-width: 100%;
+    /* O cabecalho e um flex container estreito: sem isso ele espremia a
+       largura do logotipo (proporcao ~2.7:1) e a imagem saia achatada. */
+    min-width: 0;
+    overflow: hidden;
 }
 
 html,
@@ -154,7 +159,12 @@ table tbody tr:hover {
 }
 
 .cv-site-logo {
-    height: 52px;
+    height: auto;
+    /* `object-fit` + limites (em vez de altura fixa) preservam a proporcao
+       mesmo quando o cabecalho tem menos largura do que o logotipo pede. */
+    max-height: 44px;
+    max-width: 100%;
+    object-fit: contain;
     width: auto;
 }
 

@@ -1,8 +1,10 @@
 {% load i18n %}
 
-{# Override do Unfold: o template original fixa `h-8` e sempre renderiza uma
-   unica versao do logotipo. Aqui as duas versoes vao para o HTML e o CSS do
-   projeto (.cv-site-logo--light/--dark) escolhe a do tema ativo. #}
+{% comment %}
+Override do Unfold: o template original fixa `h-8` e renderiza uma unica versao
+do logotipo. Aqui as duas versoes vao para o HTML e o CSS do projeto
+(.cv-site-logo--light/--dark) escolhe a do tema ativo.
+{% endcomment %}
 <a href="{% url 'admin:index' %}" class="cv-site-logo-link">
     {% if site_logo.light and site_logo.dark %}
         <img src="{{ site_logo.light }}" alt="{% trans 'Home' %}" class="cv-site-logo cv-site-logo--light" />

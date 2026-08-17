@@ -158,6 +158,9 @@ class TestStatusBotPage:
         content = response.content.decode()
         assert 'id="waha-pairing"' in content
         assert "/admin/api/waha-qr/" in content
+        # `{# ... #}` so vale para uma linha: escrito em varias, o Django
+        # imprimia o comentario do override do logotipo no cabecalho do admin.
+        assert "Override do Unfold" not in content
 
 
 @pytest.mark.django_db

@@ -67,24 +67,29 @@
             background-color: #fff3cd;
             border-color: #ffc107;
         }
-        /* Logotipo institucional no topo dos cards (fundo claro) e no rodape
-           (fundo preto) — cada um usa a versao do arquivo com a cor de texto
-           correspondente, sem chapa de fundo. */
+        /* Logotipo institucional no topo dos cards (fundo claro), na navbar e no
+           rodape (fundo preto) — cada um usa a versao do arquivo com a cor de
+           texto correspondente, sem chapa de fundo.
+           Altura por `max-height` com `object-fit`: o logotipo e largo (~2.7:1)
+           e, com altura fixa dentro de um flex estreito, sairia achatado. */
+        .brand-logo,
+        .footer-logo,
+        .navbar-logo {
+            height: auto;
+            max-width: 100%;
+            object-fit: contain;
+            width: auto;
+        }
         .brand-logo {
             display: block;
-            height: 88px;
             margin: 0 auto;
-            max-width: 100%;
-            width: auto;
+            max-height: 80px;
         }
         .footer-logo {
-            height: 52px;
-            max-width: 100%;
-            width: auto;
+            max-height: 48px;
         }
         .navbar-logo {
-            height: 30px;
-            width: auto;
+            max-height: 26px;
         }
         {% block extra_css %}{% endblock %}
     </style>

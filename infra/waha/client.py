@@ -35,6 +35,12 @@ class WahaClient:
         settings: WAHA configuration settings.
     """
 
+    # O endpoint de QR segura a requisição enquanto o WAHA tenta produzir o
+    # código: medido em produção, ele leva ~10s só para responder 422 quando a
+    # sessão não está em SCAN_QR_CODE. O timeout padrão do cliente (5s) cortava
+    # a chamada antes de qualquer resposta.
+    QR_TIMEOUT_SECONDS = 25
+
     def __init__(self, settings: WahaSettings | None = None) -> None:
         """Initialize the WAHA client.
 
@@ -203,7 +209,7 @@ class WahaClient:
                 url,
                 headers=headers,
                 params={"format": "image"},
-                timeout=self.settings.timeout_seconds,
+                timeout=self.QR_TIMEOUT_SECONDS,
             )
         except requests.exceptions.RequestException as error:
             logger.error(

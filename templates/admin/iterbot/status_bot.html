@@ -150,8 +150,12 @@
 
     // O WAHA troca o QR a cada poucos segundos; enquanto o operador estiver
     // olhando a tela, buscamos de novo para nunca exibir um código vencido.
-    var POLL_MS = 8000;
+    // O intervalo conta a partir da resposta (e não do disparo) porque a
+    // requisição do QR pode levar mais de 10s do lado do WAHA — com setInterval
+    // as chamadas se sobreporiam.
+    var POLL_MS = 6000;
     var pollTimer = null;
+    var polling = false;
 
     var statusField = panel.querySelector('[data-field="session-status"]');
     var hintField = panel.querySelector('[data-field="hint"]');
@@ -159,10 +163,16 @@
     var csrfToken = panel.querySelector('[name=csrfmiddlewaretoken]').value;
 
     function stopPolling() {
+        polling = false;
         if (pollTimer) {
-            clearInterval(pollTimer);
+            clearTimeout(pollTimer);
             pollTimer = null;
         }
+    }
+
+    function scheduleNextFetch() {
+        if (!polling) return;
+        pollTimer = setTimeout(fetchQr, POLL_MS);
     }
 
     function showQr(dataUri) {
