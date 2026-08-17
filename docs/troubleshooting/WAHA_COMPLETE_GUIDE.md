@@ -106,6 +106,27 @@ Você deve ver:
 cat secrets/waha_dashboard_password.txt
 ```
 
+Em produção o WAHA não tem rota pública, então o dashboard só responde por
+túnel SSH:
+
+```bash
+ssh -L 3000:localhost:3000 a2587246@gosh.sh.utfpr.edu.br
+```
+
+### 5. Parear o WhatsApp (QR Code)
+
+O caminho normal é pelo próprio admin do IterBot, sem túnel:
+
+1. Acesse **Status do Bot** (`/admin/status-bot/`)
+2. No painel **Conexão do WhatsApp**, clique em **Mostrar QR Code**
+   - Sessão em `FAILED`/`STOPPED`: clique antes em **Reiniciar sessão**
+   - Trocar o número do bot: **Desconectar número** e então mostrar o QR
+3. No celular do bot: WhatsApp › Dispositivos conectados › Conectar dispositivo
+4. A tela troca o código sozinho a cada 8s e avisa quando a sessão vira `WORKING`
+
+O QR só existe enquanto a sessão está em `SCAN_QR_CODE`; nos demais estados a
+API responde 422 e a tela mostra o estado atual.
+
 ## 🔐 Credenciais
 
 | Serviço | URL | Username | Password | Arquivo |

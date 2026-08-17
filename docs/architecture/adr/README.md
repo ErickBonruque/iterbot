@@ -11,6 +11,7 @@ ADRs documentam decisoes arquiteturais significativas.
 | [adr-003-celery-tasks.md](adr-003-celery-tasks.md) | Celery para Tasks Assincronas | 2026-04-16 |
 | [adr-004-ec2-docker-compose.md](adr-004-ec2-docker-compose.md) | EC2 + Docker Compose | 2026-04-16 |
 | [adr-005-migracao-host-gosh-utfpr.md](adr-005-migracao-host-gosh-utfpr.md) | Migração da EC2 para VM UTFPR (`gosh`) | 2026-07-01 |
+| [adr-006-jobspy-subprocesso.md](adr-006-jobspy-subprocesso.md) | Scrape do python-jobspy isolado em subprocesso | 2026-08-17 |
 
 ## O que e um ADR?
 
