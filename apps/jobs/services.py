@@ -164,6 +164,20 @@ def build_review_for_user(course, job_searcher: JobSearcher) -> list[dict[str, A
     return combined[:5]
 
 
+def _job_field(value: Any, max_length: int | None = None) -> str:
+    """Normaliza um campo textual vindo do scraper para persistência.
+
+    O jobspy entrega `None` nas colunas que não preencheu (NaN convertido) —
+    `record.get("campo", "")` não protege disso, porque a chave existe com valor
+    nulo. Como os campos de DailyJob são NOT NULL, um único registro assim
+    derrubava o bulk_create do termo inteiro (`description` vem sempre nula
+    quando `linkedin_fetch_description` está desligado). Truncar no limite da
+    coluna evita perder o lote pelo mesmo motivo.
+    """
+    text = str(value).strip() if value is not None else ""
+    return text[:max_length] if max_length else text
+
+
 def fetch_and_save_daily_jobs(job_searcher) -> dict[str, int]:
     """Scrapa todos os SearchTerms ativos e persiste em DailyJob (BOT-02).
 
@@ -179,6 +193,7 @@ def fetch_and_save_daily_jobs(job_searcher) -> dict[str, int]:
     search_terms = list(SearchTerm.objects.filter(is_default=True).select_related("course"))
     stats: dict[str, int] = {
         "terms_processed": 0,
+        "terms_empty": 0,
         "jobs_saved": 0,
         "jobs_skipped": 0,
         "errors": 0,
@@ -188,23 +203,35 @@ def fetch_and_save_daily_jobs(job_searcher) -> dict[str, int]:
         kwargs = term.to_search_kwargs()
         try:
             results = job_searcher.search(terms=[term.term], **kwargs)
+            if not results:
+                # `search()` engole falhas de scrape e devolve lista vazia, então
+                # esta contagem é o que separa "dia sem vagas" de "scraper quebrado".
+                stats["terms_empty"] += 1
             to_create = [
                 DailyJob(
                     search_term=term,
                     fetched_date=today,
-                    title=r.get("title", ""),
-                    company=r.get("company", ""),
-                    location=r.get("location", ""),
-                    job_url=r.get("job_url") or r.get("job_url_direct", ""),
-                    description=r.get("description", ""),
-                    job_type=r.get("job_type", ""),
+                    title=_job_field(r.get("title"), 255),
+                    company=_job_field(r.get("company"), 255),
+                    location=_job_field(r.get("location"), 255),
+                    job_url=_job_field(r.get("job_url") or r.get("job_url_direct"), 1000),
+                    description=_job_field(r.get("description")),
+                    job_type=_job_field(r.get("job_type"), 50),
                 )
                 for r in results
                 if r.get("job_url") or r.get("job_url_direct")
             ]
-            created = DailyJob.objects.bulk_create(to_create, ignore_conflicts=True)
-            stats["jobs_saved"] += len(created)
-            stats["jobs_skipped"] += len(to_create) - len(created)
+            # `bulk_create(ignore_conflicts=True)` devolve a lista que recebeu —
+            # o Postgres não retorna as linhas inseridas nesse modo, então contar
+            # o retorno marcaria toda vaga repetida como nova. Medimos pela
+            # diferença de linhas do termo no dia.
+            saved_before = DailyJob.objects.filter(search_term=term, fetched_date=today).count()
+            DailyJob.objects.bulk_create(to_create, ignore_conflicts=True)
+            saved = (
+                DailyJob.objects.filter(search_term=term, fetched_date=today).count() - saved_before
+            )
+            stats["jobs_saved"] += saved
+            stats["jobs_skipped"] += len(to_create) - saved
             JobSearchLog.objects.create(
                 user=None,
                 search_term=term.term,
@@ -230,6 +257,10 @@ def fetch_and_save_daily_jobs(job_searcher) -> dict[str, int]:
         deleted_old=deleted,
         **stats,
     )
+    if search_terms and not stats["jobs_saved"] and not stats["jobs_skipped"]:
+        # Nenhum termo entregou vaga alguma: é falha sistêmica (scraper bloqueado,
+        # rede, runner quebrado), não um dia fraco. Evento próprio para alarme.
+        logger.error("fetch_daily_jobs_no_results", **stats)
     return stats
 
 

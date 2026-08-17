@@ -215,7 +215,13 @@ class TestFetchAndSaveDailyJobs:
             ]
         )
         stats = fetch_and_save_daily_jobs(job_searcher=searcher)
-        assert set(stats.keys()) == {"terms_processed", "jobs_saved", "jobs_skipped", "errors"}
+        assert set(stats.keys()) == {
+            "terms_processed",
+            "terms_empty",
+            "jobs_saved",
+            "jobs_skipped",
+            "errors",
+        }
 
     def test_erro_em_termo_incrementa_errors_e_continua(self):
         from apps.courses.models import SearchTerm
@@ -236,6 +242,75 @@ class TestFetchAndSaveDailyJobs:
         assert stats["errors"] == 1
         assert stats["terms_processed"] == 2
         assert DailyJob.objects.count() == 1
+
+    def test_persiste_vaga_com_campos_nulos_do_scraper(self):
+        from apps.jobs.models import DailyJob
+        from apps.jobs.services import fetch_and_save_daily_jobs
+
+        # Regressão de produção: o jobspy devolve None nas colunas que não
+        # preencheu (description vem sempre nula sem linkedin_fetch_description)
+        # e os campos do modelo são NOT NULL — um registro assim derrubava o
+        # bulk_create do termo inteiro com IntegrityError.
+        searcher = self._make_searcher(
+            [
+                {
+                    "title": "Dev Python",
+                    "company": "Corp",
+                    "location": None,
+                    "description": None,
+                    "job_type": None,
+                    "job_url": "https://example.com/nulo",
+                },
+            ]
+        )
+
+        stats = fetch_and_save_daily_jobs(job_searcher=searcher)
+
+        job = DailyJob.objects.get(job_url="https://example.com/nulo")
+        assert (job.description, job.location, job.job_type) == ("", "", "")
+        assert stats["errors"] == 0
+        assert stats["jobs_saved"] == 1
+
+    def test_trunca_campos_maiores_que_a_coluna(self):
+        from apps.jobs.models import DailyJob
+        from apps.jobs.services import fetch_and_save_daily_jobs
+
+        searcher = self._make_searcher(
+            [
+                {
+                    "title": "T" * 300,
+                    "company": "Corp",
+                    "job_url": "https://example.com/longo",
+                },
+            ]
+        )
+
+        fetch_and_save_daily_jobs(job_searcher=searcher)
+
+        assert len(DailyJob.objects.get(job_url="https://example.com/longo").title) == 255
+
+    def test_conta_termo_sem_resultado_em_terms_empty(self):
+        from apps.jobs.services import fetch_and_save_daily_jobs
+
+        stats = fetch_and_save_daily_jobs(job_searcher=self._make_searcher([]))
+
+        assert stats["terms_empty"] == 1
+        assert stats["jobs_saved"] == 0
+
+    def test_vaga_repetida_conta_como_skipped_e_nao_como_salva(self):
+        from apps.jobs.services import fetch_and_save_daily_jobs
+
+        searcher = self._make_searcher(
+            [
+                {"title": "Dev", "company": "Corp", "job_url": "https://example.com/dup"},
+            ]
+        )
+        fetch_and_save_daily_jobs(job_searcher=searcher)
+
+        stats = fetch_and_save_daily_jobs(job_searcher=searcher)
+
+        assert stats["jobs_saved"] == 0
+        assert stats["jobs_skipped"] == 1
 
     def test_cria_job_search_log_com_user_none(self):
         from apps.jobs.models import JobSearchLog
