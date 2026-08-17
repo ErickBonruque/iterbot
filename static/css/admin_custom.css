@@ -154,14 +154,28 @@ table tbody tr:hover {
 }
 
 .cv-site-logo {
-    display: block;
-    height: 40px;
+    height: 52px;
     width: auto;
-    /* Chip branco: o logotipo oficial da UTFPR tem letras pretas e sumiria
-       sobre o tema escuro do admin. */
-    background: #fff;
-    border-radius: 6px;
-    padding: 5px 9px;
+}
+
+/* Cada tema mostra a versão legível sobre o seu fundo — texto preto no claro,
+   texto branco no escuro (o Unfold marca o tema com a classe `dark` no <html>).
+   Seletor descendente em vez das utilitárias `dark:hidden` do Tailwind para não
+   depender da ordem em que as folhas de estilo são carregadas. */
+.cv-site-logo--light {
+    display: block;
+}
+
+.cv-site-logo--dark {
+    display: none;
+}
+
+.dark .cv-site-logo--light {
+    display: none;
+}
+
+.dark .cv-site-logo--dark {
+    display: block;
 }
 
 .cv-admin-dashboard {

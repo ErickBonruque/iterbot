@@ -67,6 +67,21 @@
             background-color: #fff3cd;
             border-color: #ffc107;
         }
+        /* Logotipo institucional no topo dos cards (fundo claro) e no rodape
+           (fundo preto) — cada um usa a versao do arquivo com a cor de texto
+           correspondente, sem chapa de fundo. */
+        .brand-logo {
+            display: block;
+            height: 88px;
+            margin: 0 auto;
+            max-width: 100%;
+            width: auto;
+        }
+        .footer-logo {
+            height: 52px;
+            max-width: 100%;
+            width: auto;
+        }
         {% block extra_css %}{% endblock %}
     </style>
 </head>
@@ -99,10 +114,9 @@
 
     <footer class="footer text-center">
         <div class="container">
-            <img src="{% static 'img/logo-utfpr.png' %}"
+            <img src="{% static 'img/logo-utfpr-branco.png' %}"
                  alt="UTFPR - Universidade Tecnológica Federal do Paraná"
-                 class="mb-2"
-                 style="height: 40px; background: #fff; padding: 5px 9px; border-radius: 6px;">
+                 class="footer-logo mb-2">
             <br>
             <small>IterBot UTFPR - Sistema de Divulgação de Vagas de Estágio</small>
         </div>

@@ -223,7 +223,13 @@ UNFOLD = {
     "SITE_TITLE": "IterBot Admin",
     "SITE_HEADER": "IterBot UTFPR",
     "SITE_URL": "/",
-    "SITE_LOGO": lambda request: static("img/logo-utfpr.png"),
+    # Duas versões do logotipo oficial: o arquivo padrão tem texto preto e o
+    # "-branco" tem texto branco, então cada tema do admin usa o legível sobre
+    # o seu fundo (ver templates/unfold/helpers/site_logo.html).
+    "SITE_LOGO": {
+        "light": lambda request: static("img/logo-utfpr.png"),
+        "dark": lambda request: static("img/logo-utfpr-branco.png"),
+    },
     "SITE_ICON": lambda request: static("img/logo-icon.png"),
     "SHOW_HISTORY": True,
     "SHOW_VIEW_ON_SITE": True,
