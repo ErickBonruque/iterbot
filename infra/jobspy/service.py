@@ -1,80 +1,35 @@
 import json
-import multiprocessing
-import os
+import subprocess
+import sys
+from pathlib import Path
 from typing import Any
 
 import structlog
-from jobspy import scrape_jobs
 
 logger = structlog.get_logger(__name__)
 
-# "fork" mantém a criação do subprocesso barata (copy-on-write) e preserva os
-# patches que os testes aplicam em `scrape_jobs` no processo pai. O projeto roda
-# exclusivamente em Linux (Docker), onde fork está sempre disponível.
-#
-# Forkar a partir de um processo com threads pode, em tese, travar o filho num
-# lock herdado (o CPython emite DeprecationWarning nesse caso). Aceitamos o
-# risco: a task roda no ForkPoolWorker do Celery, que é single-threaded, e um
-# filho travado por qualquer motivo — deadlock ou laço infinito do jobspy — cai
-# no mesmo timeout e é morto. Trocar para "forkserver"/"spawn" custaria reimportar
-# o Django a cada termo e quebraria os mocks dos testes.
-_MP_CONTEXT = multiprocessing.get_context("fork")
+# Raiz do repositório (infra/jobspy/service.py -> infra/jobspy -> infra -> raiz).
+# É o cwd do subprocesso, para que `python -m infra.jobspy._scrape_runner`
+# encontre o pacote sem depender do PYTHONPATH herdado.
+_PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
-# Margem para o subprocesso encerrar após terminate() antes do kill() forçado.
-_TERMINATE_GRACE_SECONDS = 2.0
+# Módulo executado no subprocesso. Constante (e não literal inline) para que os
+# testes possam apontar para um runner falso.
+_RUNNER_MODULE = "infra.jobspy._scrape_runner"
+
+# Quanto do stderr do subprocesso entra na mensagem de erro logada.
+_STDERR_EXCERPT_CHARS = 500
 
 
-def _records_from_dataframe(jobs_df) -> list[dict[str, Any]]:
-    """Converte DataFrame em lista de dicts JSON-serializáveis.
+def _failure_message(completed: subprocess.CompletedProcess) -> str:
+    """Descreve um subprocesso que terminou sem devolver JSON no stdout.
 
-    `jobs_df.to_dict("records")` preserva tipos pandas/numpy (Timestamp, NaN,
-    int64, etc.) que não são compatíveis com `json.dumps` — quebra ao gravar
-    em `request.session` (Django usa JSONSerializer por padrão desde 4.1) e
-    em qualquer outra serialização downstream.
-
-    Roteamos via `to_json(orient="records", date_format="iso")` que cuida da
-    conversão (Timestamp → ISO string, NaN → null, numpy → tipos nativos).
+    Cobre morte por sinal (OOM killer devolve returncode -9) e erro de
+    importação antes do runner conseguir escrever qualquer coisa.
     """
-    if jobs_df is None or jobs_df.empty:
-        return []
-    return json.loads(jobs_df.to_json(orient="records", date_format="iso"))
-
-
-def _scrape_worker(sender, scrape_kwargs: dict[str, Any]) -> None:
-    """Executa `scrape_jobs` no processo filho e devolve o resultado pelo pipe.
-
-    Encerra com `os._exit()` para pular atexit handlers e destrutores herdados
-    do pai via fork — executá-los fecharia conexões de banco e do broker que o
-    processo pai ainda está usando.
-    """
-    try:
-        payload = ("ok", _records_from_dataframe(scrape_jobs(**scrape_kwargs)))
-    except Exception as exc:
-        payload = ("error", f"{type(exc).__name__}: {exc}")
-
-    try:
-        sender.send(payload)
-        sender.close()
-    except (BrokenPipeError, OSError):
-        # O pai desistiu (timeout) e fechou a ponta dele — não há o que reportar.
-        pass
-    finally:
-        os._exit(0)
-
-
-def _terminate(proc) -> None:
-    """Garante que o subprocesso morra, levando junto as threads do jobspy."""
-    if proc.is_alive():
-        proc.terminate()
-        proc.join(_TERMINATE_GRACE_SECONDS)
-    if proc.is_alive():
-        proc.kill()
-        proc.join(_TERMINATE_GRACE_SECONDS)
-    try:
-        proc.close()
-    except ValueError:
-        # Ainda não encerrou apesar do kill; os FDs saem com o processo.
-        logger.warning("jobspy_subprocess_close_failed", pid=proc.pid)
+    stderr = (completed.stderr or "").strip()
+    excerpt = stderr[-_STDERR_EXCERPT_CHARS:] if stderr else "sem stderr"
+    return f"runner encerrou com codigo {completed.returncode}: {excerpt}"
 
 
 def _run_scrape(scrape_kwargs: dict[str, Any], timeout_seconds: float) -> tuple[str, Any]:
@@ -85,34 +40,50 @@ def _run_scrape(scrape_kwargs: dict[str, Any], timeout_seconds: float) -> tuple[
     novas (`start += len(job_list)`), então uma busca sem resultados repete a
     mesma página para sempre. Uma thread nessa situação é inabortável e segue
     consumindo CPU até o processo morrer — foi o que saturou o worker em
-    produção, acumulando ~32 threads por dia. Um subprocesso, ao contrário,
-    morre com terminate()/kill(), levando junto os ThreadPoolExecutor que o
-    jobspy abre por site.
+    produção, acumulando ~32 threads por dia. Um processo separado, ao
+    contrário, morre no SIGKILL do timeout levando junto os ThreadPoolExecutor
+    que o jobspy abre por site.
+
+    Usamos `subprocess` e não `multiprocessing`: a busca roda dentro de um
+    ForkPoolWorker do Celery, que é um processo daemônico, e o multiprocessing
+    proíbe filhos de daemon ("daemonic processes are not allowed to have
+    children") — a tentativa anterior falhou em 100% dos termos em produção.
+
+    O custo é subir um interpretador novo a cada termo (~1s local, alguns
+    segundos no host de 1 vCPU por causa do import do pandas); `timeout_seconds`
+    cobre startup + scrape.
 
     Returns:
         ("ok", records) em caso de sucesso, ("timeout", None) se estourou o
         tempo, ou ("error", mensagem) se o scrape falhou.
     """
-    receiver, sender = _MP_CONTEXT.Pipe(duplex=False)
-    proc = _MP_CONTEXT.Process(
-        target=_scrape_worker,
-        args=(sender, scrape_kwargs),
-        daemon=True,
-    )
-    proc.start()
-    # O pai só lê: fechar a ponta de escrita aqui faz o recv() acusar EOF caso o
-    # filho morra sem responder, em vez de bloquear até o timeout.
-    sender.close()
+    try:
+        completed = subprocess.run(
+            [sys.executable, "-m", _RUNNER_MODULE],
+            input=json.dumps(scrape_kwargs),
+            capture_output=True,
+            text=True,
+            timeout=timeout_seconds,
+            cwd=_PROJECT_ROOT,
+            check=False,
+        )
+    except subprocess.TimeoutExpired:
+        # subprocess.run mata o filho (SIGKILL) e espera antes de propagar.
+        return "timeout", None
+
+    stdout = (completed.stdout or "").strip()
+    if not stdout:
+        return "error", _failure_message(completed)
 
     try:
-        if not receiver.poll(timeout_seconds):
-            return "timeout", None
-        return receiver.recv()
-    except EOFError:
-        return "error", "subprocesso encerrou sem devolver resultado"
-    finally:
-        receiver.close()
-        _terminate(proc)
+        payload = json.loads(stdout)
+    except ValueError:
+        return "error", f"saida invalida do runner: {stdout[:_STDERR_EXCERPT_CHARS]}"
+
+    if "error" in payload:
+        return "error", payload["error"]
+
+    return "ok", payload.get("records", [])
 
 
 class JobSearchService:
@@ -122,7 +93,8 @@ class JobSearchService:
         None: This class is stateless; all config is passed to search().
     """
 
-    SEARCH_TIMEOUT_SECONDS = 30
+    # Orçamento por termo incluindo o startup do subprocesso (ver `_run_scrape`).
+    SEARCH_TIMEOUT_SECONDS = 40
 
     def search(
         self,

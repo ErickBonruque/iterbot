@@ -1,24 +1,24 @@
+import io
 import json
-import multiprocessing
+import os
+import sys
 import threading
 import time
+from contextlib import contextmanager
 from unittest.mock import patch
 
 import numpy as np
 import pandas as pd
 import pytest
 
+from infra.jobspy import _scrape_runner, service as service_module
+from infra.jobspy.records import records_from_dataframe
 from infra.jobspy.service import JobSearchService
 
 
 @pytest.fixture
 def service():
     return JobSearchService()
-
-
-@pytest.fixture
-def empty_df():
-    return pd.DataFrame()
 
 
 @pytest.fixture
@@ -33,11 +33,155 @@ def sample_df():
     )
 
 
+@contextmanager
+def fake_runner(tmp_path, body: str):
+    """Substitui o runner real por um script controlado em `tmp_path`.
+
+    `_run_scrape` executa `python -m <_RUNNER_MODULE>` com cwd `_PROJECT_ROOT`;
+    apontando os dois para o script falso exercitamos o protocolo de verdade
+    (JSON no stdin, JSON no stdout, kill no timeout) sem tocar a rede.
+    """
+    (tmp_path / "fake_runner.py").write_text(body)
+    with (
+        patch.dict(os.environ),
+        patch.multiple(
+            service_module,
+            _PROJECT_ROOT=tmp_path,
+            _RUNNER_MODULE="fake_runner",
+        ),
+    ):
+        # O pytest-cov instrumenta subprocessos via COV_CORE_*/COVERAGE_PROCESS_*;
+        # herdadas aqui, elas fazem o runner falso largar arquivos .coverage.*
+        # órfãos no repo (ele roda com outro cwd, sem achar a config, e o combine
+        # quebra ao juntar dados com e sem branch coverage).
+        for key in [k for k in os.environ if k.startswith(("COV_CORE", "COVERAGE_"))]:
+            del os.environ[key]
+        yield
+
+
+# Runner falso que devolve uma vaga fixa, ignorando os kwargs recebidos.
+RUNNER_OK = """
+import json, sys
+json.load(sys.stdin)
+json.dump({"records": [{"title": "Python Developer"}]}, sys.stdout)
+"""
+
+# Runner falso que trava — reproduz o laço infinito de paginação do LinkedIn.
+RUNNER_HANGS = """
+import time
+time.sleep(60)
+"""
+
+
+class TestRunScrape:
+    """Contrato entre `_run_scrape` e o processo runner."""
+
+    def test_returns_records_from_runner(self, tmp_path):
+        with fake_runner(tmp_path, RUNNER_OK):
+            status, payload = service_module._run_scrape({"search_term": "python"}, 30)
+
+        assert status == "ok"
+        assert payload == [{"title": "Python Developer"}]
+
+    def test_forwards_kwargs_through_stdin(self, tmp_path):
+        # O runner devolve os kwargs que recebeu, provando que a serialização
+        # de ida chegou íntegra do outro lado.
+        with fake_runner(
+            tmp_path,
+            """
+import json, sys
+json.dump({"records": [json.load(sys.stdin)]}, sys.stdout)
+""",
+        ):
+            status, payload = service_module._run_scrape(
+                {"search_term": "python", "site_name": ["linkedin"]}, 30
+            )
+
+        assert status == "ok"
+        assert payload == [{"search_term": "python", "site_name": ["linkedin"]}]
+
+    def test_runner_error_payload_is_propagated(self, tmp_path):
+        with fake_runner(
+            tmp_path,
+            """
+import json, sys
+json.dump({"error": "RuntimeError: scraper explodiu"}, sys.stdout)
+""",
+        ):
+            status, payload = service_module._run_scrape({}, 30)
+
+        assert status == "error"
+        assert payload == "RuntimeError: scraper explodiu"
+
+    def test_death_without_output_is_reported_as_error(self, tmp_path):
+        # Cenário do OOM killer: o processo some sem escrever nada no stdout.
+        with fake_runner(
+            tmp_path,
+            """
+import os, sys
+print("boom", file=sys.stderr)
+os._exit(9)
+""",
+        ):
+            status, payload = service_module._run_scrape({}, 30)
+
+        assert status == "error"
+        assert "codigo 9" in payload
+        assert "boom" in payload
+
+    def test_garbage_on_stdout_is_reported_as_error(self, tmp_path):
+        with fake_runner(tmp_path, "print('nao sou json')"):
+            status, payload = service_module._run_scrape({}, 30)
+
+        assert status == "error"
+        assert "saida invalida" in payload
+
+    def test_timeout_reports_timeout(self, tmp_path):
+        with fake_runner(tmp_path, RUNNER_HANGS):
+            started = time.monotonic()
+            status, payload = service_module._run_scrape({}, 1)
+            elapsed = time.monotonic() - started
+
+        assert (status, payload) == ("timeout", None)
+        # Voltou no orçamento, não nos 60s do runner travado.
+        assert elapsed < 15
+
+    def test_timeout_actually_kills_the_runner(self, tmp_path):
+        """Regressão do incidente de produção: um scrape travado seguia queimando
+        CPU depois do timeout (thread inabortável dentro do worker Celery). O
+        runner falso escreve num arquivo enquanto vive — se o arquivo continuar
+        crescendo depois do timeout, o processo sobreviveu."""
+        heartbeat = tmp_path / "heartbeat"
+        with fake_runner(
+            tmp_path,
+            f"""
+import time
+with open({str(heartbeat)!r}, "a", buffering=1) as fh:
+    while True:
+        fh.write("tick\\n")
+        time.sleep(0.05)
+""",
+        ):
+            assert service_module._run_scrape({}, 1)[0] == "timeout"
+
+        size_after_timeout = heartbeat.stat().st_size
+        time.sleep(0.5)
+        assert heartbeat.stat().st_size == size_after_timeout
+
+    def test_hung_runner_leaves_no_thread_behind(self, tmp_path):
+        threads_before = threading.active_count()
+
+        with fake_runner(tmp_path, RUNNER_HANGS):
+            assert service_module._run_scrape({}, 1)[0] == "timeout"
+
+        assert threading.active_count() == threads_before
+
+
 @pytest.mark.django_db
-class TestJobSearchServiceNewParams:
+class TestJobSearchServiceParams:
     """Os kwargs são verificados na fronteira `_run_scrape` porque `scrape_jobs`
-    passou a ser chamado no subprocesso — um mock patcheado aqui registra a
-    chamada na memória do filho, invisível para o processo de teste."""
+    roda no processo runner — um mock patcheado aqui registra a chamada na
+    memória do filho, invisível para o processo de teste."""
 
     @patch("infra.jobspy.service._run_scrape")
     def test_search_accepts_new_params(self, mock_run, service):
@@ -90,8 +234,25 @@ class TestJobSearchServiceNewParams:
         assert service.search(terms=["python"]) == []
 
     @patch("infra.jobspy.service._run_scrape")
+    def test_search_skips_term_on_timeout(self, mock_run, service):
+        mock_run.return_value = ("timeout", None)
+        assert service.search(terms=["python"]) == []
+
+    @patch("infra.jobspy.service._run_scrape")
+    def test_search_continues_to_next_term_after_timeout(self, mock_run, service):
+        mock_run.side_effect = [
+            ("timeout", None),
+            ("ok", [{"title": "Python Developer"}]),
+        ]
+
+        result = service.search(terms=["trava", "python"])
+
+        assert len(result) == 1
+        assert result[0]["title"] == "Python Developer"
+
+    @patch("infra.jobspy.service._run_scrape")
     def test_search_survives_subprocess_start_failure(self, mock_run, service):
-        # Falhar ao criar o subprocesso (fork sem memória, por exemplo) não pode
+        # Falhar ao criar o subprocesso (sem memória, por exemplo) não pode
         # abortar os demais termos da busca.
         mock_run.side_effect = [
             OSError("Cannot allocate memory"),
@@ -104,111 +265,92 @@ class TestJobSearchServiceNewParams:
         assert result[0]["title"] == "Python Developer"
 
 
-@pytest.mark.django_db
-class TestJobSearchServiceTimeout:
-    @patch("infra.jobspy.service.scrape_jobs")
-    def test_search_returns_empty_when_scrape_hangs(self, mock_scrape, service):
-        # Simula scrape_jobs preso (o scraper do LinkedIn entra em laço infinito
-        # de paginação quando o termo não retorna vagas novas). search() deve
-        # abortar no timeout e seguir adiante com lista vazia.
-        def slow_scrape(*args, **kwargs):
-            time.sleep(30.0)
-            return pd.DataFrame()
+class TestScrapeRunner:
+    """`_scrape_runner.main()` chamado no processo de teste, com o jobspy
+    mockado — o que roda em produção é o mesmo código, só que via `python -m`."""
 
-        mock_scrape.side_effect = slow_scrape
+    def _run_main(self, monkeypatch, scrape_kwargs: dict) -> tuple[int, dict]:
+        response = io.StringIO()
+        monkeypatch.setattr(sys, "stdin", io.StringIO(json.dumps(scrape_kwargs)))
+        monkeypatch.setattr(sys, "stdout", response)
 
-        result = service.search(terms=["python"], timeout=1)
+        code = _scrape_runner.main()
 
-        assert result == []
+        return code, json.loads(response.getvalue())
 
-    @patch("infra.jobspy.service.scrape_jobs")
-    def test_search_continues_to_next_term_after_timeout(self, mock_scrape, service, sample_df):
-        # Primeiro termo trava, segundo retorna normalmente. Resultado deve
-        # conter apenas o segundo.
-        def side_effect(*args, **kwargs):
-            if kwargs.get("search_term") == "trava":
-                time.sleep(30.0)
-                return pd.DataFrame()
-            return sample_df
-
-        mock_scrape.side_effect = side_effect
-
-        result = service.search(terms=["trava", "python"], timeout=1)
-
-        assert len(result) == 1
-        assert result[0]["title"] == "Python Developer"
-
-
-@pytest.mark.django_db
-class TestJobSearchServiceIsolation:
-    """Regressão do incidente de produção: um scrape travado acumulava threads
-    inabortáveis no worker Celery (~32/dia), saturando a CPU do host."""
-
-    @patch("infra.jobspy.service.scrape_jobs")
-    def test_hung_scrape_leaves_no_thread_behind(self, mock_scrape, service):
-        def hang(*args, **kwargs):
-            time.sleep(30.0)
-            return pd.DataFrame()
-
-        mock_scrape.side_effect = hang
-
-        threads_before = threading.active_count()
-        assert service.search(terms=["trava"], timeout=1) == []
-        assert threading.active_count() == threads_before
-
-    @patch("infra.jobspy.service.scrape_jobs")
-    def test_hung_scrape_leaves_no_orphan_process(self, mock_scrape, service):
-        def hang(*args, **kwargs):
-            time.sleep(30.0)
-            return pd.DataFrame()
-
-        mock_scrape.side_effect = hang
-
-        children_before = len(multiprocessing.active_children())
-        assert service.search(terms=["trava"], timeout=1) == []
-        assert len(multiprocessing.active_children()) == children_before
-
-    @patch("infra.jobspy.service.scrape_jobs")
-    def test_crash_in_subprocess_is_reported_as_error(self, mock_scrape, service):
-        mock_scrape.side_effect = RuntimeError("scraper explodiu")
-
-        assert service.search(terms=["python"]) == []
-
-    @patch("infra.jobspy.service.scrape_jobs")
-    def test_successful_search_leaves_no_orphan_process(self, mock_scrape, service, sample_df):
+    @patch("jobspy.scrape_jobs")
+    def test_main_emits_records(self, mock_scrape, monkeypatch, sample_df):
         mock_scrape.return_value = sample_df
 
-        children_before = len(multiprocessing.active_children())
-        result = service.search(terms=["python"])
+        code, payload = self._run_main(monkeypatch, {"search_term": "python"})
 
-        assert len(result) == 1
-        assert len(multiprocessing.active_children()) == children_before
+        assert code == 0
+        assert payload["records"][0]["title"] == "Python Developer"
+        assert mock_scrape.call_args.kwargs == {"search_term": "python"}
+
+    @patch("jobspy.scrape_jobs")
+    def test_main_reports_scrape_failure(self, mock_scrape, monkeypatch):
+        mock_scrape.side_effect = RuntimeError("scraper explodiu")
+
+        code, payload = self._run_main(monkeypatch, {"search_term": "python"})
+
+        assert code == 1
+        assert payload["error"] == "RuntimeError: scraper explodiu"
+
+    @patch("jobspy.scrape_jobs")
+    def test_main_keeps_stdout_clean(self, mock_scrape, monkeypatch, sample_df, capsys):
+        # Uma lib que imprima no stdout não pode corromper a resposta JSON.
+        def noisy_scrape(**kwargs):
+            print("log solto do scraper")
+            return sample_df
+
+        mock_scrape.side_effect = noisy_scrape
+
+        code, payload = self._run_main(monkeypatch, {"search_term": "python"})
+
+        assert code == 0
+        assert payload["records"][0]["title"] == "Python Developer"
+        assert "log solto do scraper" in capsys.readouterr().err
+
+    def test_main_reports_invalid_stdin(self, monkeypatch):
+        response = io.StringIO()
+        monkeypatch.setattr(sys, "stdin", io.StringIO("nao sou json"))
+        monkeypatch.setattr(sys, "stdout", response)
+
+        code = _scrape_runner.main()
+
+        assert code == 1
+        assert "kwargs invalidos" in json.loads(response.getvalue())["error"]
 
 
-@pytest.mark.django_db
-class TestJobSearchServiceJsonSafe:
-    @patch("infra.jobspy.service.scrape_jobs")
-    def test_search_results_are_json_serializable(self, mock_scrape, service):
+class TestRecordsFromDataframe:
+    def test_records_are_json_serializable(self):
         # Regressão: results são gravados em request.session no admin
         # (SearchTermAdmin.test_search). Django usa JSONSerializer por padrão,
         # então Timestamp, NaN e numpy scalars vindos de scrape_jobs precisam
-        # estar normalizados antes de retornarem do service.
-        mock_scrape.return_value = pd.DataFrame(
-            {
-                "title": ["Python Dev"],
-                "company": ["Acme"],
-                "date_posted": [pd.Timestamp("2026-04-26")],
-                "salary": [np.nan],
-                "applicants": [np.int64(42)],
-            }
+        # estar normalizados antes de chegarem ao service.
+        records = records_from_dataframe(
+            pd.DataFrame(
+                {
+                    "title": ["Python Dev"],
+                    "company": ["Acme"],
+                    "date_posted": [pd.Timestamp("2026-04-26")],
+                    "salary": [np.nan],
+                    "applicants": [np.int64(42)],
+                }
+            )
         )
 
-        result = service.search(terms=["python"])
-
         # Deve ser serializável sem default=str
-        json.dumps(result)
+        json.dumps(records)
 
-        record = result[0]
+        record = records[0]
         assert isinstance(record["date_posted"], str)
         assert record["salary"] is None
         assert isinstance(record["applicants"], int)
+
+    def test_empty_dataframe_returns_empty_list(self):
+        assert records_from_dataframe(pd.DataFrame()) == []
+
+    def test_none_returns_empty_list(self):
+        assert records_from_dataframe(None) == []
