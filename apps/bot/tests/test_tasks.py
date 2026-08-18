@@ -2,6 +2,8 @@
 
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 
 class TestBeatScheduleRegistration:
     def test_check_waha_health_in_beat_schedule(self):
@@ -308,3 +310,41 @@ class TestProactiveNotifierCompanyApproved:
 
         assert result["status"] == "skipped"
         assert result["reason"] == "company_not_found"
+
+
+class ProcessWebhookMessageRetryTests:
+    """O retry da task nao pode reenviar respostas que ja sairam."""
+
+    @patch("infra.waha.client.WahaClient")
+    @patch("apps.bot.models.BotConfiguration")
+    @patch("apps.bot.services.BotService")
+    def test_no_retry_when_reply_already_sent(self, mock_service, _mock_config, _mock_client):
+        from apps.bot.tasks import process_webhook_message
+
+        def reply_then_fail(chat_id, body, from_me):
+            client = mock_service.call_args.kwargs["waha_client"]
+            client.send_message(chat_id, "resposta parcial")
+            raise RuntimeError("falha depois de responder")
+
+        mock_service.return_value.process_message.side_effect = reply_then_fail
+
+        with patch.object(process_webhook_message, "retry") as mock_retry:
+            result = process_webhook_message.run("5511999999999@c.us", "menu")
+
+        mock_retry.assert_not_called()
+        assert result["status"] == "failed"
+
+    @patch("infra.waha.client.WahaClient")
+    @patch("apps.bot.models.BotConfiguration")
+    @patch("apps.bot.services.BotService")
+    def test_retries_when_nothing_was_sent(self, mock_service, _mock_config, _mock_client):
+        from apps.bot.tasks import process_webhook_message
+
+        mock_service.return_value.process_message.side_effect = RuntimeError("db indisponivel")
+
+        with patch.object(process_webhook_message, "retry") as mock_retry:
+            mock_retry.side_effect = RuntimeError("retry chamado")
+            with pytest.raises(RuntimeError):
+                process_webhook_message.run("5511999999999@c.us", "menu")
+
+        mock_retry.assert_called_once()

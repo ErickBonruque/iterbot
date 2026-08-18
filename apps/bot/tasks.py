@@ -1,7 +1,12 @@
 """Tasks Celery para monitoramento e estabilidade do bot WhatsApp."""
 
+from typing import TYPE_CHECKING
+
 import structlog
 from celery import shared_task
+
+if TYPE_CHECKING:
+    from infra.waha.protocols import MessageSender
 
 logger = structlog.get_logger(__name__)
 
@@ -16,13 +21,36 @@ class CeleryEmailConfirmationDispatcher:
         send_company_confirmation_email.delay(user_id)
 
 
+class _SendTrackingClient:
+    """Envolve o cliente WAHA para saber se alguma resposta já saiu.
+
+    O retry da task reexecuta o fluxo inteiro. Se o handler já respondeu ao
+    usuário antes de falhar, repetir reenviaria as mesmas mensagens e avançaria
+    o estado da conversa de novo — exatamente o sintoma de resposta duplicada
+    seguida de mensagem fora de contexto. Só vale retentar enquanto nada saiu.
+    """
+
+    def __init__(self, inner: "MessageSender") -> None:
+        self._inner = inner
+        self.sent_any = False
+
+    def send_message(self, chat_id: str, text: str) -> bool:
+        # Marca antes de chamar: se o envio estourar no meio, assumimos que a
+        # mensagem pode ter chegado e não repetimos o fluxo.
+        self.sent_any = True
+        return self._inner.send_message(chat_id, text)
+
+
 @shared_task(bind=True, max_retries=3, default_retry_delay=30)
 def process_webhook_message(self, chat_id: str, body: str) -> dict:
     """Processa mensagem recebida pelo webhook de forma assíncrona."""
-    try:
-        from apps.bot.services import BotService
+    from apps.bot.models import BotConfiguration
+    from apps.bot.services import BotService
+    from infra.waha.client import WahaClient
 
-        bot = BotService()
+    client = _SendTrackingClient(WahaClient(settings=BotConfiguration.get_active()))
+    try:
+        bot = BotService(waha_client=client)
         bot.process_message(chat_id, body, False)
         logger.info("webhook_message_processed", chat_id=chat_id)
         return {"status": "processed", "chat_id": chat_id}
@@ -31,8 +59,11 @@ def process_webhook_message(self, chat_id: str, body: str) -> dict:
             "webhook_message_processing_failed",
             chat_id=chat_id,
             error=str(exc),
+            already_replied=client.sent_any,
             exc_info=True,
         )
+        if client.sent_any:
+            return {"status": "failed", "chat_id": chat_id, "retried": False}
         raise self.retry(exc=exc) from exc
 
 
