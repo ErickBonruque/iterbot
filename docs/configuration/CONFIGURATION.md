@@ -488,6 +488,23 @@ Processadores structlog (em ordem):
 | `backend` | Build local (Python 3.11) | 8000 | Django + Gunicorn |
 | `waha` | `devlikeapro/waha` | 3000 | WhatsApp HTTP API |
 
+### Gunicorn (backend)
+
+Definido em `docker/django/start.sh`. Worker class `gthread` — o gargalo do
+backend é espera de I/O (banco, WAHA, e-mail), não CPU, e o host de produção
+tem 1 vCPU. Com o worker `sync` único que havia antes, uma requisição lenta
+segurava o POST do webhook do WAHA até o timeout e o WAHA reenviava o evento,
+fazendo o bot responder duplicado.
+
+| Variável | Default | Descrição |
+|---|---|---|
+| `GUNICORN_WORKERS` | `2` | Processos worker. Use `1` se a RAM apertar — as threads seguem valendo |
+| `GUNICORN_THREADS` | `4` | Threads por worker |
+| `GUNICORN_TIMEOUT` | `60` | Segundos até o worker ser considerado travado |
+
+Workers são reciclados a cada ~500 requests (`--max-requests` com jitter),
+protegendo contra vazamento de memória no host de 1.8 GB.
+
 ### Redis
 
 O Redis é configurado com:
