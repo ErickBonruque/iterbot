@@ -39,6 +39,9 @@ env = environ.Env(
     WAHA_DASHBOARD_PASSWORD=(str, "password"),
     WHATSAPP_SWAGGER_USERNAME=(str, "swagger"),
     WHATSAPP_SWAGGER_PASSWORD=(str, "password"),
+    ADZUNA_APP_ID=(str, ""),
+    ADZUNA_APP_KEY=(str, ""),
+    ADZUNA_COUNTRY=(str, "br"),
 )
 
 # Read .env file if it exists

@@ -172,6 +172,7 @@ def fetch_and_save_daily_jobs(job_searcher: JobSearcher) -> dict[str, int]:
     `terms_empty` (sites devolveram zero), `errors`.
     """
     import json
+    from collections import Counter
     from datetime import date, timedelta
 
     from apps.courses.models import SearchTerm
@@ -214,6 +215,7 @@ def fetch_and_save_daily_jobs(job_searcher: JobSearcher) -> dict[str, int]:
                     job_url=_job_field(r.get("job_url") or r.get("job_url_direct"), 1000),
                     description=_job_field(r.get("description")),
                     job_type=_job_field(r.get("job_type"), 50),
+                    source=_job_field(r.get("site"), 20),
                 )
                 for r in relevant
                 if r.get("job_url") or r.get("job_url_direct")
@@ -237,6 +239,9 @@ def fetch_and_save_daily_jobs(job_searcher: JobSearcher) -> dict[str, int]:
                 found=len(results),
                 kept=len(relevant),
                 reasons=dict(reasons),
+                # Quanto cada fonte contribui — base para decidir quais manter.
+                found_by_site=dict(Counter(r.get("site") or "?" for r in results)),
+                kept_by_site=dict(Counter(r.get("site") or "?" for r in relevant)),
             )
             JobSearchLog.objects.create(
                 user=None,

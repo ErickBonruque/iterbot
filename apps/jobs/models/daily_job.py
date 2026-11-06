@@ -5,7 +5,7 @@ from apps.courses.models import SearchTerm
 
 
 class DailyJob(TimeStampedModel):
-    """Vaga pré-fetched diariamente por SearchTerm via jobspy (BOT-01)."""
+    """Vaga pré-fetched diariamente por SearchTerm via jobspy/Adzuna (BOT-01)."""
 
     search_term = models.ForeignKey(
         SearchTerm,
@@ -23,6 +23,13 @@ class DailyJob(TimeStampedModel):
     job_url = models.URLField(max_length=1000, help_text="Link direto para a vaga")
     description = models.TextField(blank=True, default="")
     job_type = models.CharField(max_length=50, blank=True, default="")
+    source = models.CharField(
+        max_length=20,
+        blank=True,
+        default="",
+        verbose_name="Fonte",
+        help_text="Site de onde a vaga veio: linkedin, indeed, glassdoor ou adzuna",
+    )
     is_manual = models.BooleanField(
         default=False,
         help_text="Vaga adicionada manualmente pelo admin (BOT-04)",

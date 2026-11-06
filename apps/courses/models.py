@@ -181,8 +181,9 @@ class SearchTerm(TimeStampedModel):
         max_length=100,
         default="linkedin,indeed,glassdoor",
         help_text=(
-            "Sites de busca separados por vírgula: linkedin, indeed, glassdoor. "
-            "LinkedIn ignora cidade e 'apenas remotas'; Indeed respeita os dois."
+            "Sites de busca separados por vírgula: linkedin, indeed, glassdoor, adzuna. "
+            "LinkedIn ignora cidade e 'apenas remotas'; Indeed e Adzuna respeitam a "
+            "cidade (a Adzuna não tem filtro de remoto: usa a palavra 'remoto')."
         ),
     )
     location = models.CharField(

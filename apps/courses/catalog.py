@@ -16,6 +16,10 @@ Os termos foram escolhidos medindo, em buscas reais (nov/2026), quantas vagas
   Glassdoor ficou de fora: devolve as mesmas vagas do Indeed, sem descrição.
 - **remoto**: o Indeed respeita "apenas remotas"; o LinkedIn não (a palavra
   "remoto" no termo e o texto da vaga fazem esse papel).
+- **Adzuna** (API oficial, `infra/adzuna`) entra em todos os termos: respeita
+  cidade + raio e traz vagas que o Indeed não tem (cooperativas do Oeste, por
+  exemplo). Na medição de nov/2026 somou 3 estágios regionais (CC 2, BIO 1) e
+  3 remotos de CC. Custa ~9 chamadas/dia de uma cota de 2.500/mês.
 
 Termos iguais em cursos diferentes (a busca regional e a remota amplas) rodam
 uma vez só por dia — `fetch_and_save_daily_jobs` reaproveita o resultado.
@@ -31,7 +35,7 @@ _REGIONAL_BROAD = {
     "term": "estágio",
     "label": "Estágios na região",
     "scope": "regional",
-    "site_name": "indeed",
+    "site_name": "indeed,adzuna",
     "location": REGION_SHORT,
     "distance": REGION_RADIUS_MILES,
     "is_remote": False,
@@ -44,7 +48,7 @@ _REMOTE_BROAD = {
     "term": "estágio OR estagiário",
     "label": "Estágios remotos",
     "scope": "remoto",
-    "site_name": "indeed",
+    "site_name": "indeed,adzuna",
     "location": "Brazil",
     "distance": None,
     "is_remote": True,
@@ -59,7 +63,7 @@ def _remote(term: str, label: str, priority: int) -> dict[str, Any]:
         "term": term,
         "label": label,
         "scope": "remoto",
-        "site_name": "linkedin,indeed",
+        "site_name": "linkedin,indeed,adzuna",
         "location": "Brazil",
         "distance": None,
         "is_remote": True,
@@ -74,7 +78,7 @@ def _regional(term: str, label: str, priority: int) -> dict[str, Any]:
         "term": term,
         "label": label,
         "scope": "regional",
-        "site_name": "linkedin,indeed",
+        "site_name": "linkedin,indeed,adzuna",
         "location": REGION_LONG,
         "distance": REGION_RADIUS_MILES,
         "is_remote": False,

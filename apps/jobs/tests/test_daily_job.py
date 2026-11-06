@@ -164,6 +164,21 @@ class TestFetchAndSaveDailyJobs:
         assert DailyJob.objects.filter(job_url="https://example.com/1").exists()
         assert DailyJob.objects.first().fetched_date == date.today()
 
+    def test_grava_a_fonte_da_vaga(self):
+        from apps.jobs.models import DailyJob
+        from apps.jobs.services import fetch_and_save_daily_jobs
+
+        searcher = self._make_searcher(
+            [
+                {"title": "A", "company": "X", "job_url": "https://e.com/1", "site": "adzuna"},
+                {"title": "B", "company": "Y", "job_url": "https://e.com/2", "site": "indeed"},
+                {"title": "C", "company": "Z", "job_url": "https://e.com/3"},
+            ]
+        )
+        fetch_and_save_daily_jobs(job_searcher=searcher)
+        sources = dict(DailyJob.objects.values_list("title", "source"))
+        assert sources == {"A": "adzuna", "B": "indeed", "C": ""}
+
     def test_filtra_vagas_sem_job_url(self):
         from apps.jobs.models import DailyJob
         from apps.jobs.services import fetch_and_save_daily_jobs

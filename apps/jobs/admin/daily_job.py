@@ -13,6 +13,7 @@ class DailyJobAdmin(ModelAdmin):
         "title",
         "company",
         "search_term",
+        "source",
         "fetched_date",
         "job_type",
         "is_manual",
@@ -22,6 +23,7 @@ class DailyJobAdmin(ModelAdmin):
         "fetched_date",
         "search_term__course",
         "search_term",
+        "source",
         "is_manual",
     )
     search_fields = ("title", "company", "search_term__term")

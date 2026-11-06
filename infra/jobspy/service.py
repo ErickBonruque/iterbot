@@ -6,6 +6,8 @@ from typing import Any
 
 import structlog
 
+from infra.adzuna.client import AdzunaClient, AdzunaError
+
 logger = structlog.get_logger(__name__)
 
 # Raiz do repositório (infra/jobspy/service.py -> infra/jobspy -> infra -> raiz).
@@ -96,15 +98,36 @@ def _run_scrape(scrape_kwargs: dict[str, Any], timeout_seconds: float) -> tuple[
     return "ok", payload.get("records", [])
 
 
-class JobSearchService:
-    """Busca vagas em LinkedIn, Indeed e Glassdoor via python-jobspy.
+ADZUNA_SITE = "adzuna"
+DEFAULT_SITES = ["linkedin", "indeed", "glassdoor"]
 
-    Attributes:
-        None: This class is stateless; all config is passed to search().
+
+def _default_adzuna_client() -> AdzunaClient:
+    from config.adzuna_settings import AdzunaSettings
+
+    adzuna = AdzunaSettings()
+    return AdzunaClient(app_id=adzuna.app_id, app_key=adzuna.app_key, country=adzuna.country)
+
+
+class JobSearchService:
+    """Busca vagas em LinkedIn, Indeed e Glassdoor (python-jobspy) e na Adzuna.
+
+    `site_name` escolhe as fontes de cada busca. "adzuna" é atendido pela API
+    oficial (`infra.adzuna`), via HTTP direto — sem o subprocesso do jobspy,
+    que só existe para conter o laço infinito do scraper do LinkedIn.
     """
 
     # Orçamento por termo incluindo o startup do subprocesso (ver `_run_scrape`).
     SEARCH_TIMEOUT_SECONDS = 40
+
+    def __init__(self, adzuna_client: AdzunaClient | None = None) -> None:
+        self._adzuna_client = adzuna_client
+
+    @property
+    def adzuna_client(self) -> AdzunaClient:
+        if self._adzuna_client is None:
+            self._adzuna_client = _default_adzuna_client()
+        return self._adzuna_client
 
     def search(
         self,
@@ -125,14 +148,17 @@ class JobSearchService:
         """Busca vagas para os termos fornecidos em multiplas plataformas.
 
         Cada termo roda em um subprocesso próprio (ver `_run_scrape`): um termo
-        que trave não contamina os demais nem o worker Celery.
+        que trave não contamina os demais nem o worker Celery. Falha de uma
+        fonte (timeout, bloqueio, Adzuna fora do ar) é logada e não impede as
+        outras.
 
         Args:
             terms: Lista de termos de busca (ex: ["estagio python", "desenvolvedor junior"]).
             location: Localizacao geografica da busca.
             limit: Numero maximo de resultados por term.
             hours_old: Vagas publicadas nas ultimas N horas.
-            site_name: Lista de sites para busca (default: linkedin, indeed, glassdoor).
+            site_name: Lista de sites para busca: linkedin, indeed, glassdoor,
+                adzuna (default: linkedin, indeed, glassdoor).
             distance: Distancia em milhas do local de busca.
             job_type: Tipo de vaga (fulltime, parttime, internship, contract, temporary, other).
             is_remote: Filtrar apenas vagas remotas.
@@ -143,64 +169,119 @@ class JobSearchService:
             timeout: Tempo maximo em segundos para busca de cada termo (default: SEARCH_TIMEOUT_SECONDS).
 
         Returns:
-            Lista de dicts com campos: title, company, location, job_type, job_url, date_posted.
-
-        Raises:
-            Exception: Logged and swallowed; search continues to next term.
+            Lista de dicts com campos: title, company, location, job_type, job_url,
+            date_posted, site.
         """
         timeout_seconds = timeout or self.SEARCH_TIMEOUT_SECONDS
+        sites = site_name or DEFAULT_SITES
+        jobspy_sites = [site for site in sites if site != ADZUNA_SITE]
+        use_adzuna = ADZUNA_SITE in sites
         results = []
 
         for term in terms:
-            scrape_kwargs = self._build_scrape_kwargs(
-                term=term,
-                location=location,
-                limit=limit,
-                hours_old=hours_old,
-                site_name=site_name,
-                distance=distance,
-                job_type=job_type,
-                is_remote=is_remote,
-                country_indeed=country_indeed,
-                linkedin_fetch_description=linkedin_fetch_description,
-                linkedin_company_ids=linkedin_company_ids,
-                offset=offset,
-            )
-            try:
-                status, payload = _run_scrape(scrape_kwargs, timeout_seconds)
-            except Exception as exc:
-                # Falha ao criar/conduzir o subprocesso (ex.: fork sem memória).
-                # Um termo problemático não pode derrubar a busca inteira.
-                logger.warning(
-                    "jobspy_search_failed",
+            if jobspy_sites:
+                scrape_kwargs = self._build_scrape_kwargs(
                     term=term,
                     location=location,
-                    error=f"{type(exc).__name__}: {exc}",
+                    limit=limit,
+                    hours_old=hours_old,
+                    site_name=jobspy_sites,
+                    distance=distance,
+                    job_type=job_type,
+                    is_remote=is_remote,
+                    country_indeed=country_indeed,
+                    linkedin_fetch_description=linkedin_fetch_description,
+                    linkedin_company_ids=linkedin_company_ids,
+                    offset=offset,
                 )
-                continue
-
-            if status == "timeout":
-                logger.warning(
-                    "jobspy_search_timeout",
-                    term=term,
-                    location=location,
-                    timeout_seconds=timeout_seconds,
+                results.extend(self._search_jobspy(term, location, scrape_kwargs, timeout_seconds))
+            if use_adzuna:
+                results.extend(
+                    self._search_adzuna(
+                        term,
+                        location=location,
+                        distance=distance,
+                        is_remote=is_remote,
+                        hours_old=hours_old,
+                        limit=limit,
+                    )
                 )
-                continue
-
-            if status == "error":
-                logger.warning(
-                    "jobspy_search_failed",
-                    term=term,
-                    location=location,
-                    error=payload,
-                )
-                continue
-
-            results.extend(payload)
-            logger.info("jobspy_search_success", term=term, count=len(payload))
 
         return results
+
+    def _search_jobspy(
+        self, term: str, location: str, scrape_kwargs: dict[str, Any], timeout_seconds: float
+    ) -> list[dict[str, Any]]:
+        """Um termo no jobspy, isolado em subprocesso. Falhas viram lista vazia."""
+        try:
+            status, payload = _run_scrape(scrape_kwargs, timeout_seconds)
+        except Exception as exc:
+            # Falha ao criar/conduzir o subprocesso (ex.: fork sem memória).
+            # Um termo problemático não pode derrubar a busca inteira.
+            logger.warning(
+                "jobspy_search_failed",
+                term=term,
+                location=location,
+                error=f"{type(exc).__name__}: {exc}",
+            )
+            return []
+
+        if status == "timeout":
+            logger.warning(
+                "jobspy_search_timeout",
+                term=term,
+                location=location,
+                timeout_seconds=timeout_seconds,
+            )
+            return []
+
+        if status == "error":
+            logger.warning(
+                "jobspy_search_failed",
+                term=term,
+                location=location,
+                error=payload,
+            )
+            return []
+
+        records: list[dict[str, Any]] = payload
+        logger.info("jobspy_search_success", term=term, count=len(records))
+        return records
+
+    def _search_adzuna(
+        self,
+        term: str,
+        *,
+        location: str,
+        distance: int | None,
+        is_remote: bool,
+        hours_old: int,
+        limit: int,
+    ) -> list[dict[str, Any]]:
+        """Um termo na Adzuna. Falhas (inclusive sem credencial) viram lista vazia."""
+        try:
+            records = self.adzuna_client.search(
+                term,
+                location=location,
+                distance_miles=distance,
+                is_remote=is_remote,
+                hours_old=hours_old,
+                limit=limit,
+            )
+        except AdzunaError as exc:
+            logger.warning("adzuna_search_failed", term=term, location=location, error=str(exc))
+            return []
+        except Exception as exc:
+            logger.warning(
+                "adzuna_search_failed",
+                term=term,
+                location=location,
+                error=f"{type(exc).__name__}: {exc}",
+            )
+            return []
+
+        logger.info("adzuna_search_success", term=term, count=len(records))
+        return records
 
     def _build_scrape_kwargs(
         self,
@@ -219,7 +300,7 @@ class JobSearchService:
     ) -> dict[str, Any]:
         """Monta os kwargs de uma chamada a `scrape_jobs` para um termo."""
         return {
-            "site_name": site_name or ["linkedin", "indeed", "glassdoor"],
+            "site_name": site_name or DEFAULT_SITES,
             "search_term": term,
             "location": location,
             "results_wanted": limit,

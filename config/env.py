@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 
 from config._helpers import BASE_DIR, _get_secret_or_env, _read_secret_file, env
+from config.adzuna_settings import AdzunaSettings
 from config.aws_settings import AwsSettings
 from config.credentials import BotDashboardCredentials, DjangoAdminCredentials
 from config.django_settings import DatabaseSettings, DjangoSettings, RedisSettings
@@ -20,6 +21,7 @@ class AppConfig:
     waha_swagger_credentials: WahaSwaggerCredentials
     email: EmailSettings
     aws: AwsSettings
+    adzuna: AdzunaSettings
 
     def __init__(self) -> None:
         self.django = DjangoSettings()
@@ -32,12 +34,14 @@ class AppConfig:
         self.waha_swagger_credentials = WahaSwaggerCredentials()
         self.email = EmailSettings()
         self.aws = AwsSettings()
+        self.adzuna = AdzunaSettings()
 
 
 settings = AppConfig()
 
 __all__ = [
     "BASE_DIR",
+    "AdzunaSettings",
     "AppConfig",
     "AwsSettings",
     "BotDashboardCredentials",
