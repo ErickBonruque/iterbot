@@ -105,6 +105,16 @@ A configuração é centralizada no módulo `config/env.py`, que define dataclas
 | `RESEND_API_KEY` | Não | Chave de API do Resend. | `resend_api_key` |
 | `BREVO_API_KEY` | Condicional | Chave de API do Brevo (Sendinblue). Obrigatória quando `EMAIL_PROVIDER=brevo`. | `brevo_api_key` |
 
+### Adzuna (vagas online)
+
+| Variável | Obrigatória | Descrição | Docker Secret |
+|---|---|---|---|
+| `ADZUNA_APP_ID` | Não | Application ID da conta em developer.adzuna.com. | — |
+| `ADZUNA_APP_KEY` | Não | Application key. Sem ID + key, o site `adzuna` dos termos de busca é pulado (log `adzuna_search_failed`). | `adzuna_app_key` |
+| `ADZUNA_COUNTRY` | Não | País da API. Padrão: `br`. | — |
+
+Plano gratuito: 2.500 chamadas/mês; cada página de até 50 vagas é uma chamada (máx. 2 por termo). O catálogo atual gasta ~9/dia.
+
 > **Nota:** A partir da migração Brevo (abr/2026), `EMAIL_BACKEND` **não muda mais automaticamente** com base em credenciais AWS. Toda entrega transacional passa por `EMAIL_PROVIDER` (Brevo por padrão) via `infra/email/factory.py`, incluindo e-mails do allauth (interceptados por `UTFPRAccountAdapter`). Para usar SES como Django backend, configure `EMAIL_BACKEND=django_ses.SESBackend` explicitamente.
 
 > **Nota:** Quando `EMAIL_FALLBACK_PROVIDER` está configurado, o sistema tenta automaticamente o provider de fallback se o primary falhar. O health check em `/health/` verifica ambos os providers.

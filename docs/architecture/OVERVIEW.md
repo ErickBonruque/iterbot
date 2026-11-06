@@ -4,7 +4,7 @@
 
 ## Visão Geral do Sistema
 
-O IterBot é um assistente WhatsApp que conecta estudantes da UTFPR a oportunidades de estágio e emprego. O sistema opera em duas frentes: (1) busca automática de vagas online via scraping pré-agendado (LinkedIn, Indeed, Glassdoor através do python-jobspy, executado diariamente às 07:00 e armazenado em `DailyJob`) e (2) vagas locais cadastradas por empresas da região por meio de um portal web. Estudantes interagem exclusivamente pelo WhatsApp — autenticam-se com credenciais do portal do aluno, selecionam seu curso e recebem sugestões de vagas em milissegundos (consultando banco local, sem scraping em tempo real) — enquanto empresas utilizam um portal web (`/empresas/*`) para cadastro e gestão de vagas. A arquitetura segue o padrão monolítico Django com filas assíncronas (Celery + Redis) para tarefas em background, integração com WhatsApp via WAHA (WhatsApp HTTP API), proxy reverso (Traefik) com TLS e BasicAuth em produção, e rastreamento completo de ações do bot via `BotActionLog`.
+O IterBot é um assistente WhatsApp que conecta estudantes da UTFPR a oportunidades de estágio e emprego. O sistema opera em duas frentes: (1) busca automática de vagas online pré-agendada (LinkedIn, Indeed, Glassdoor através do python-jobspy e a API oficial da Adzuna, executado diariamente às 07:00 e armazenado em `DailyJob`) e (2) vagas locais cadastradas por empresas da região por meio de um portal web. Estudantes interagem exclusivamente pelo WhatsApp — autenticam-se com credenciais do portal do aluno, selecionam seu curso e recebem sugestões de vagas em milissegundos (consultando banco local, sem scraping em tempo real) — enquanto empresas utilizam um portal web (`/empresas/*`) para cadastro e gestão de vagas. A arquitetura segue o padrão monolítico Django com filas assíncronas (Celery + Redis) para tarefas em background, integração com WhatsApp via WAHA (WhatsApp HTTP API), proxy reverso (Traefik) com TLS e BasicAuth em produção, e rastreamento completo de ações do bot via `BotActionLog`.
 
 ## Diagrama de Componentes
 
@@ -47,7 +47,7 @@ graph TB
     end
 
     subgraph "Serviços Externos"
-        JOBSAPI[python-jobspy<br/>LinkedIn, Indeed, Glassdoor]
+        JOBSAPI[python-jobspy + API Adzuna<br/>LinkedIn, Indeed, Glassdoor, Adzuna]
         EMAIL[Provider de E-mail<br/>Resend / Brevo / AWS SES]
     end
 
@@ -146,7 +146,7 @@ graph TB
 | 1 | `BaseHandler` | `apps/bot/handlers/base.py` | Classe abstrata base para handlers de conversação. Define `send_msg()`, `get_text()` e `handle()` — cada handler especializado (auth, busca, menu, review) herda desta classe. |
 | 2 | `BotService` | `apps/bot/services.py` | Orquestrador central do bot. Recebe mensagens do webhook, identifica intenções e delega para o handler adequado conforme estado do usuário (`current_action`). |
 | 3 | `WahaClient` | `infra/waha/client.py` | Cliente HTTP para a API do WAHA. Encapsula envio de mensagens (`send_message`), ciclo de vida da sessão (`start_session`, `restart_session`, `logout_session`, `get_session_status`), obtenção do QR de pareamento (`get_qr`) e normalização de chat IDs. |
-| 4 | `JobSearchService` | `infra/jobspy/service.py` | Serviço de busca de vagas online. Cada termo roda `scrape_jobs` do python-jobspy (LinkedIn, Indeed, Glassdoor) em um processo separado (`infra/jobspy/_scrape_runner.py`), com timeout que mata o processo — ver [ADR-006](adr/adr-006-jobspy-subprocesso.md). Usado pela task `fetch_daily_jobs` para pré-busca diária — não chamado diretamente no webhook. |
+| 4 | `JobSearchService` | `infra/jobspy/service.py` | Serviço de busca de vagas online. Cada termo roda `scrape_jobs` do python-jobspy (LinkedIn, Indeed, Glassdoor) em um processo separado (`infra/jobspy/_scrape_runner.py`), com timeout que mata o processo — ver [ADR-006](adr/adr-006-jobspy-subprocesso.md). O site `adzuna` é atendido pela API oficial (`infra/adzuna/client.py`), via HTTP direto. Usado pela task `fetch_daily_jobs` para pré-busca diária — não chamado diretamente no webhook. |
 | 5 | `DailyJob` | `apps/jobs/models/daily_job.py` | Model de vagas pré-fetched. Armazena vagas coletadas diariamente por `SearchTerm` com deduplicação via `unique_together(search_term, job_url, fetched_date)`. Campo `is_manual=True` permite inserção via admin. Dois índices compostos garantem queries sub-segundo no handler de busca. |
 | 6 | `BotActionLog` | `apps/bot/models/bot_action_log.py` | Log de ações do bot. Registra cada interação significativa (SEARCH, MENU, AUTH, REVIEW, WAHA_SEND) com status SUCCESS/ERROR/TIMEOUT e campos para debugging (`error_message`, `error_type`, `duration_ms`, `metadata`). Consumido pelo `DashboardService` para métricas de observabilidade. |
 | 7 | `UTFPRAuthService` | `apps/users/services.py` | Serviço de autenticação de estudantes. Métodos: `authenticate()`, `link_user()`, `confirm_email()`, `resend_confirmation()`, `logout()`. |
@@ -168,8 +168,9 @@ graph TB
 | `apps/users/` | Model `UserProfile`, serviço de autenticação UTFPR, adapter django-allauth, validação de e-mail institucional, views de confirmação de e-mail e signals. |
 | `apps/courses/` | Modelos `Course` e `SearchTerm` que conectam cursos da UTFPR a termos de busca para scraping. |
 | `apps/core/` | Modelo abstrato `TimeStampedModel`, views de health check, `build_portal_url()`, admin customizado (`IterBotAdminSite`) com páginas de monitoramento, `DashboardService` (agregador de métricas que consome `BotHealthCheck`, `BotActionLog`, `InteractionLog`, `UserProfile`, `JobSearchLog`). |
-| `infra/` | Infraestrutura transversal: cliente WAHA, serviço jobspy, campos criptografados, middlewares de correlation ID e logging estruturado, factory de providers de e-mail, configuração do Traefik. |
+| `infra/` | Infraestrutura transversal: cliente WAHA, serviço jobspy, cliente Adzuna, campos criptografados, middlewares de correlation ID e logging estruturado, factory de providers de e-mail, configuração do Traefik. |
 | `infra/waha/` | `WahaClient` — cliente HTTP que encapsula toda comunicação com a API do WAHA. |
+| `infra/adzuna/` | `AdzunaClient` — cliente da API de vagas da Adzuna; devolve vagas no mesmo formato do jobspy. |
 | `infra/jobspy/` | `JobSearchService` — fachada para o python-jobspy com busca multi-plataforma de vagas; `_scrape_runner.py` (processo isolado de scrape) e `records.py` (normalização do DataFrame para JSON). |
 | `infra/security/` | `FieldEncryption` (Fernet) e `EncryptedCharField`/`EncryptedTextField` para criptografia transparente de dados sensíveis no banco. |
 | `infra/middleware/` | `CorrelationIdMiddleware` e `StructuredLoggingMiddleware` — middlewares Django para tracing distribuído e logs estruturados em JSON. |

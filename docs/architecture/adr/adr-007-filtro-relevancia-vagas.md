@@ -73,8 +73,39 @@ de nível inicial** que dê para conciliar com a graduação.
   termos experimentais criados no admin. Curso sem palavras-chave não filtra área.
 - O "Testar busca" do admin mostra o resultado já filtrado e o motivo das
   recusas, para calibrar palavras-chave sem deploy.
-- Adzuna (API oficial, chave gratuita) fica como próxima fonte se o volume
-  ficar baixo demais; Gupy e Google estão fora por não terem acesso estável.
+- Adzuna (API oficial, chave gratuita) entrou como fonte complementar no mesmo
+  dia — ver o adendo abaixo. Gupy e Google estão fora por não terem acesso estável.
+
+## Adendo (2026-11-06): Adzuna como fonte complementar
+
+A Adzuna virou mais um valor de `SearchTerm.site_name` (`"adzuna"`), atendido
+pela API oficial em `infra/adzuna/client.py` — HTTP direto, sem o subprocesso
+do jobspy. Assim o filtro de relevância, a deduplicação, o cache de buscas
+idênticas e o "Testar busca" do admin tratam as duas fontes igual. Todos os
+termos do catálogo usam a Adzuna (migração `courses.0007`).
+
+Medição com a API (país `br`):
+
+- `where="Santa Helena, PR"` + raio de 121 km traz Cascavel, Foz, Toledo,
+  MCR, Palotina, Medianeira, Maripá… Sem a UF, "Santa Helena" vira a cidade de
+  SC (Chapecó). Algumas vagas de Jacareí/SP vêm geocodificadas no MS, dentro do
+  raio — o filtro regional descarta.
+- Sem filtro de "apenas remotas": a palavra "remoto" entra na busca; "a OR b"
+  vira `what_or`.
+- Somou 3 estágios regionais (CC 2 — cooperativa em Palotina e Cascavel; BIO 1
+  — Medianeira) e 3 remotos de CC que o Indeed não tinha. Agronomia segue sem
+  vaga na região.
+- Cota grátis de 2.500 chamadas/mês; o catálogo gasta ~9/dia (máx. 2 páginas
+  por termo, teto no cliente).
+
+A Adzuna devolve um trecho da descrição, o que expôs um falso positivo no
+escopo remoto: vagas presenciais de suporte de TI citam "acesso remoto",
+"atendimento ao usuário remoto e presencial", "usuários presenciais e remotos".
+Esse jargão agora é removido da descrição antes de procurar o sinal de remoto
+(no título, "remoto" continua valendo). Afeta também as vagas do LinkedIn.
+
+`DailyJob.source` registra o site de cada vaga, e o log `fetch_daily_jobs_term`
+traz `found_by_site`/`kept_by_site`, para medir quanto cada fonte contribui.
 
 ## Alternatives Considered
 

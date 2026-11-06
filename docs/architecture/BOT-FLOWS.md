@@ -398,7 +398,7 @@ sequenceDiagram
 1. Celery Beat dispara `fetch_daily_jobs` todo dia às 07:00 BRT — `waha_bot/settings/celery.py:L29` (`crontab(hour=7, minute=0)`)
 2. Task thin instancia `JobSearchService` e delega para `fetch_and_save_daily_jobs()` — `apps/jobs/tasks.py:L26`
 3. `fetch_and_save_daily_jobs()` busca todos os `SearchTerm.objects.filter(is_default=True)` com `select_related("course")` — `apps/jobs/services.py:L145`
-4. Para cada termo: chama `job_searcher.search()` usando `term.to_search_kwargs()` como configuração (LinkedIn, Indeed, Glassdoor) — `apps/jobs/services.py:L154`
+4. Para cada termo: chama `job_searcher.search()` usando `term.to_search_kwargs()` como configuração (LinkedIn, Indeed, Glassdoor via jobspy; Adzuna via API) — `apps/jobs/services.py:L154`
 5. Resultados salvos via `DailyJob.objects.bulk_create(to_create, ignore_conflicts=True)` — idempotente por `unique_together` — `apps/jobs/services.py:L171`
 6. Apenas resultados com URL válida são persistidos: `if r.get("job_url") or r.get("job_url_direct")` — `apps/jobs/services.py:L168`
 7. Vagas com mais de 7 dias são deletadas automaticamente — `apps/jobs/services.py:L193`

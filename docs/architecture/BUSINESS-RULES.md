@@ -40,7 +40,7 @@ flowchart TD
     B -->|delega para| C[fetch_and_save_daily_jobs]
     C -->|consulta| D[SearchTerm.objects.filter\nis_default=True]
     D --> E{Para cada SearchTerm}
-    E -->|term.to_search_kwargs| F[JobSearchService.search\nLinkedIn, Indeed, Glassdoor]
+    E -->|term.to_search_kwargs| F[JobSearchService.search\nLinkedIn, Indeed, Glassdoor, Adzuna]
     F -->|resultados| G[DailyJob.objects.bulk_create\nignore_conflicts=True]
     G --> H[JobSearchLog.create\nuser=None]
     E -->|próximo termo| E
@@ -56,7 +56,7 @@ flowchart TD
 1. Celery Beat dispara `fetch_daily_jobs` todo dia às 07:00 horário de Brasília — `waha_bot/settings/celery.py:L29` (`crontab(hour=7, minute=0)`)
 2. Task thin instancia `JobSearchService` e delega para `fetch_and_save_daily_jobs(job_searcher)` — função pura e testável — `apps/jobs/tasks.py:L27`
 3. Itera sobre todos os `SearchTerm.objects.filter(is_default=True)` com `select_related("course")` — `apps/jobs/services.py:L145`
-4. Para cada `SearchTerm`: usa `term.to_search_kwargs()` como fonte única de configuração e chama `job_searcher.search()` (LinkedIn, Indeed, Glassdoor via python-jobspy) — `apps/jobs/services.py:L154`
+4. Para cada `SearchTerm`: usa `term.to_search_kwargs()` como fonte única de configuração e chama `job_searcher.search()` (LinkedIn, Indeed, Glassdoor via python-jobspy; Adzuna via API oficial, `infra/adzuna/`) — `apps/jobs/services.py:L154`
 5. Somente resultados com URL válida são persistidos: `if r.get("job_url") or r.get("job_url_direct")` — `apps/jobs/services.py:L168`
 6. Resultados salvos via `DailyJob.objects.bulk_create(to_create, ignore_conflicts=True)` — idempotente por `unique_together` — `apps/jobs/services.py:L171`
 7. Vagas com mais de 7 dias são deletadas automaticamente no mesmo ciclo — `apps/jobs/services.py:L193`

@@ -20,7 +20,7 @@ Bot de WhatsApp para conectar estudantes da UTFPR com oportunidades de estágio 
 | Banco de dados | PostgreSQL 15 |
 | Cache / fila | Redis 7 + Celery |
 | WhatsApp | [WAHA](https://waha.devlike.pro/) (WhatsApp HTTP API) |
-| Busca de vagas | python-jobspy (LinkedIn, Indeed, Glassdoor) |
+| Busca de vagas | python-jobspy (LinkedIn, Indeed, Glassdoor) + API Adzuna |
 | Proxy / TLS | Traefik v3.6 + Let's Encrypt |
 | E-mail | Multi-provider (Brevo, Resend, AWS SES, SMTP) com fallback |
 | Execução | Docker Compose |
@@ -108,6 +108,7 @@ apps/
   core/         # Base models, health checks, admin customizado, dashboards
 infra/
   waha/         # Cliente HTTP para a API do WAHA
+  adzuna/       # Cliente da API Adzuna (vagas online)
   jobspy/       # Serviço de busca de vagas online
   email/        # Factory multi-provider de e-mail (Brevo, Resend, SES, SMTP)
   security/     # Criptografia de campos sensíveis (EncryptedCharField)

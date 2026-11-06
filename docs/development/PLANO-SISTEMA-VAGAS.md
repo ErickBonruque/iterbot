@@ -41,7 +41,7 @@
 | 2 | Resumo semanal só local + caso vazio | ✅ Concluída | 2026-06-13 |
 | 3 | Menu do aluno: "Vagas do meu curso" | ✅ Concluída | 2026-06-14 |
 | 4 | Candidatura com mini-perfil | ✅ Concluída | 2026-06-14 |
-| 5 | Busca online: jobspy + ranking + Adzuna | 🟡 5a concluída (filtro de relevância); 5b Adzuna pendente | 2026-11-06 (5a) |
+| 5 | Busca online: jobspy + ranking + Adzuna | ✅ Concluída (5a filtro de relevância; 5b Adzuna) | 2026-11-06 |
 | 6 | Admin de SearchTerm intuitivo/traduzido | ⬜ Não iniciada | — |
 
 **Legenda:** ⬜ Não iniciada · 🟡 Em andamento · ✅ Concluída · ⏸️ Bloqueada
@@ -509,7 +509,7 @@ a uma vaga local, empresa é notificada e acompanha pelo portal.
 
 ## Fase 5 — Busca online: jobspy + ranking + Adzuna
 
-**Status:** 🟡 5a concluída em 2026-11-06 (filtro de relevância + catálogo de termos); 5b (Adzuna) pendente
+**Status:** ✅ Concluída em 2026-11-06 — 5a (filtro de relevância + catálogo de termos) e 5b (Adzuna)
 **Decisão e evidências:** [ADR-007](../architecture/adr/adr-007-filtro-relevancia-vagas.md)
 **Objetivo:** o aluno só recebe vaga útil — estágio da área do curso, presencial na região de
 Santa Helena ou remoto, e vaga remota de nível inicial que dê para conciliar com o curso.
@@ -533,11 +533,16 @@ Santa Helena ou remoto, e vaga remota de nível inicial que dê para conciliar c
 persistido — com poucas vagas boas, filtrar rende mais do que ordenar ruído. Sem campo `source` por
 ora (entra junto com a Adzuna).
 
-### 5b — Adzuna (pendente)
-- [ ] Conta em developer.adzuna.com (app_id/app_key) — depende do requisitante
-- [ ] Spike: cobertura do Brasil/Oeste do PR antes de integrar
-- [ ] `infra/adzuna/service.py` no formato canônico do jobspy; credenciais via Docker Secrets
-- [ ] Campo `source` em `DailyJob`; mesclar na pipeline e passar pelo mesmo filtro de relevância
+### 5b — Adzuna (concluída)
+- [x] Conta em developer.adzuna.com (app_id/app_key) — plano Trial, 2.500 chamadas/mês
+- [x] Spike: cobertura do Oeste do PR medida (ver adendo do ADR-007)
+- [x] `infra/adzuna/client.py` devolvendo o formato do jobspy; `site_name="adzuna"` no
+      `JobSearchService`; credenciais por `ADZUNA_APP_ID`/`ADZUNA_APP_KEY` (env ou Docker
+      Secret `adzuna_app_key`)
+- [x] Campo `source` em `DailyJob` (`jobs.0010`); mesma pipeline e mesmo filtro de relevância;
+      catálogo com Adzuna em todos os termos (`courses.0007`)
+- [x] Filtro remoto: jargão de suporte ("acesso remoto", "usuários presenciais e remotos") não
+      conta mais como trabalho remoto
 
 ### Registro de Progresso
 - **2026-11-06 — 5a.** Medição em produção antes: 17% das vagas da semana eram do Brasil.
@@ -618,6 +623,15 @@ ajuda no hover.
 > - Pendências/próximos passos: ...
 > ```
 
+### 2026-11-06 — Fase 5b — Adzuna
+- O que foi feito: Adzuna como site `adzuna` do `JobSearchService` (API oficial, sem subprocesso);
+  catálogo com Adzuna em todos os termos; `DailyJob.source`; log por site (`found_by_site`,
+  `kept_by_site`); correção do falso "remoto" em vagas de suporte de TI. Ver adendo do ADR-007.
+- Migrações: `courses.0007` (help_text + liga Adzuna nos termos), `jobs.0010` (`DailyJob.source`).
+- Testes: `apps/courses/tests/test_adzuna.py` (novo), `test_relevance.py`, `test_daily_job.py`.
+- Medição: +3 estágios regionais (CC 2, BIO 1) e +3 remotos de CC por dia; Agronomia segue 0.
+- Pendências: medir por 1–2 semanas `fetch_daily_jobs_term` (found/kept por site) e a cota.
+
 ### 2026-11-06 — Fase 5a — Filtro de relevância das vagas online
 - O que foi feito: jobspy 1.4.1; filtro regional/remoto por área do curso; catálogo único de
   termos (12 opções); menu só com opções que têm vaga; review sem scraping ao vivo. Ver ADR-007.
@@ -626,7 +640,7 @@ ajuda no hover.
 - Decisões/desvios: sem site `google` (indisponível), sem score persistido; Gupy descartada (API
   pública mudou de rota). Regra de produto confirmada com o requisitante: só estágio da área (região
   ou remoto) e vaga remota de nível inicial.
-- Pendências: Adzuna (5b); medir em produção `fetch_daily_jobs_term` (found/kept) por 1–2 semanas.
+- Pendências: Adzuna (5b, feita no mesmo dia); medir em produção `fetch_daily_jobs_term` (found/kept) por 1–2 semanas.
 
 ### 2026-06-14 — Fase 4 — Candidatura com mini-perfil
 - O que foi feito: ciclo completo de candidatura. `StudentProfile` (mini-perfil reutilizável) + `JobApplication.status/message/profile_snapshot`. `ApplicationHandler` no bot (coleta período→skills→link ou reusa perfil → confirma → cria candidatura + snapshot + e-mail à empresa). Portal de candidaturas (lista/muda status) + admin atualizado.
