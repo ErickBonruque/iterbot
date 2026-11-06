@@ -34,7 +34,7 @@ A EC2 antiga (conta AWS do projeto) foi **parada** em 2026-06-30, com o volume E
 
 ### Estratégia de dados (o que migra e o que recomeça)
 
-- **Cursos e termos de busca:** preservados a partir do **próprio repositório** (`apps/courses/fixtures/courses_terms.json` + comando `seed_courses`), que já contêm os 3 cursos e 35 termos do campus Santa Helena. **Não** há migração do banco da EC2 antiga.
+- **Cursos e termos de busca:** preservados a partir do **próprio repositório** (`apps/courses/fixtures/courses_terms.json` + comando `seed_courses`), que já contêm os 3 cursos e 35 termos do campus Santa Helena. **Não** há migração do banco da EC2 antiga. _(Atualização 2026-11: a fixture foi substituída pelo catálogo `apps/courses/catalog.py` — ver ADR-007.)_
 - **Empresas, alunos e vagas:** descartados — eram apenas dados de teste (o software ainda não estava em produção). Começam do zero no host novo.
 - Consequência: a EC2 antiga pode ser **terminada** sem dump de banco (após confirmação de que não houve edições de termos feitas só em produção).
 

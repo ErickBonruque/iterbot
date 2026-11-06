@@ -95,7 +95,7 @@ flowchart TD
     G -->|CompanyStatus.APPROVED| H[JobCreateView\n/empresas/vagas/nova/\nCria vaga]
     H --> I[Job status=DRAFT]
     I --> J{Admin aprova vaga\nno Django Admin}
-    J -->|JobStatus.APPROVED| K[Vaga aparece no review\nget_local_jobs_for_course]
+    J -->|JobStatus.APPROVED| K[Vaga aparece para a área\nget_local_jobs_for_area]
     K --> L[Estudantes recebem\na vaga no WhatsApp]
 ```
 
@@ -131,7 +131,7 @@ Todas as rotas são montadas com o prefixo `/empresas/` em `waha_bot/urls.py` e 
 3. Vaga criada com `status=JobStatus.DRAFT` por padrão — `apps/jobs/models/job.py:L37`
 4. `CompaniesService.prepare_job_for_creation()` associa a vaga à empresa do usuário autenticado — `apps/companies/views.py:L115`
 5. Administrador aprova a vaga no Django Admin, alterando `status` para `JobStatus.APPROVED`
-6. Vagas `APPROVED` são incluídas no review via `get_local_jobs_for_course()` que filtra `Job.objects.filter(status=JobStatus.APPROVED)` — `apps/jobs/services.py:L39`
+6. Vagas `APPROVED` chegam aos alunos da área escolhida pela empresa (vazio = todas as áreas) via `get_local_jobs_for_area()` — no review sob demanda, em "Vagas do meu curso" e no resumo semanal — `apps/jobs/services.py`
 
 ### Statuses de Vaga
 

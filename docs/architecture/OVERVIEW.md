@@ -90,7 +90,7 @@ graph TB
 3. A view `webhook()` em `apps/bot/views.py` parseia o payload e delega para `BotService.process_message()`.
 4. `BotService` recupera ou cria o `UserProfile` do usuário e identifica a intenção (comando global, ação pendente ou novo comando).
 5. Se o fluxo é de busca de vagas, `JobSearchHandler` apresenta a lista de cursos cadastrados (`Course` → `SearchTerm`).
-6. O estudante seleciona o curso e depois o termo de busca; `JobSearchHandler.perform_search()` consulta `DailyJob.objects.filter(search_term__in=...)` — resposta em milissegundos, sem scraping em tempo real [ref: apps/bot/handlers/job_search.py]. Se não houver vagas do dia, faz fallback para o dia anterior.
+6. O estudante seleciona o curso e vê só as opções com vaga na última coleta, com a contagem ("Estágios na região (3 vagas)"); `JobSearchHandler.perform_search()` lê o `DailyJob` dessa coleta — resposta em milissegundos, sem scraping em tempo real [ref: apps/bot/handlers/job_search.py]. As vagas chegam ao `DailyJob` já filtradas por relevância (área do curso, região/remoto, nível) pela task diária [ref: apps/jobs/relevance.py, ADR-007].
 7. Os resultados são formatados e enviados de volta ao estudante via `WahaClient.send_message()`.
 8. A ação é registrada em `BotActionLog` (action_type=SEARCH, status=SUCCESS/ERROR, duration_ms) para rastreamento e observabilidade [ref: apps/bot/models/bot_action_log.py].
 

@@ -41,7 +41,7 @@
 | 2 | Resumo semanal só local + caso vazio | ✅ Concluída | 2026-06-13 |
 | 3 | Menu do aluno: "Vagas do meu curso" | ✅ Concluída | 2026-06-14 |
 | 4 | Candidatura com mini-perfil | ✅ Concluída | 2026-06-14 |
-| 5 | Busca online: jobspy + ranking + Adzuna | ⬜ Não iniciada | — |
+| 5 | Busca online: jobspy + ranking + Adzuna | 🟡 5a concluída (filtro de relevância); 5b Adzuna pendente | 2026-11-06 (5a) |
 | 6 | Admin de SearchTerm intuitivo/traduzido | ⬜ Não iniciada | — |
 
 **Legenda:** ⬜ Não iniciada · 🟡 Em andamento · ✅ Concluída · ⏸️ Bloqueada
@@ -74,6 +74,9 @@ Estas decisões foram tomadas com o requisitante e **não devem ser revertidas s
    é notificada por e-mail e vê no portal.
 3. **Busca online = jobspy afinado + ranking + Adzuna.** Adicionar site `google` do jobspy,
    ranking de relevância (substituindo o dedup puro) e a API Adzuna como fonte complementar.
+   _Revisto em 2026-11-06 (ADR-007): Google Jobs está indisponível no jobspy; o "ranking" virou
+   **filtro de relevância** por área/região/nível (o aluno só vê estágio da área, na região ou
+   remoto). Adzuna segue como próxima fonte._
 
 ---
 
@@ -506,56 +509,42 @@ a uma vaga local, empresa é notificada e acompanha pelo portal.
 
 ## Fase 5 — Busca online: jobspy + ranking + Adzuna
 
-**Status:** ⬜ Não iniciada
-**Pré-requisitos:** nenhum (independente). **Recomendado: spike antes** (validar credenciais Adzuna
-e qualidade real do site `google` do jobspy com termos reais).
-**Objetivo:** vagas online mais relevantes e com fonte redundante/confiável.
+**Status:** 🟡 5a concluída em 2026-11-06 (filtro de relevância + catálogo de termos); 5b (Adzuna) pendente
+**Decisão e evidências:** [ADR-007](../architecture/adr/adr-007-filtro-relevancia-vagas.md)
+**Objetivo:** o aluno só recebe vaga útil — estágio da área do curso, presencial na região de
+Santa Helena ou remoto, e vaga remota de nível inicial que dê para conciliar com o curso.
 
-### Checklist — JobSpy + ranking
-- [ ] Adicionar suporte ao site `google` do jobspy em `infra/jobspy/service.py`
-      (jobspy usa `google_search_term` — montar uma query bem-formada)
-- [ ] Adicionar campo `google_search_term` em `SearchTerm` (opcional) **ou** derivá-lo
-      automaticamente de `term` + `location` + `job_type`
-- [ ] Melhorar a montagem da query de busca (incluir sinônimos/qualificadores quando útil)
-- [ ] Substituir o dedup puro (`apps/jobs/services.py:111` `deduplicate_jobs`) por **dedup + score
-      de relevância**: termo no título (peso alto) > na descrição, recência (`date_posted`/
-      `hours_old`), match de localização. Ordenar por score antes de cortar.
-- [ ] Persistir o score: adicionar `relevance_score` em `DailyJob` (`apps/jobs/models/daily_job.py`)
+### 5a — Filtro de relevância (concluída)
+- [x] python-jobspy 1.1.82 → 1.4.1 (Glassdoor voltou; paginação/locais do LinkedIn corrigidos;
+      `fetch_description` no lugar do deprecated `linkedin_fetch_description`)
+- [x] Runner repassa `attrs["errors"/"warnings"]`; serviço loga `jobspy_board_errors` (429 ≠ "sem vagas")
+- [x] `apps/jobs/relevance.py`: `classify` (escopo regional/remoto, exclusões, Brasil, região,
+      nível, área) e `dedupe` (entre sites/cidades, máx. 2 por empresa)
+- [x] `Course.job_title_keywords` / `job_course_names` e `SearchTerm.scope` / `label` (admin)
+- [x] Catálogo único `apps/courses/catalog.py` (seed + migração 0006); fixture JSON removida;
+      35 termos → 12 opções; cursos ganharam a área que faltava em produção
+- [x] `fetch_and_save_daily_jobs`: filtra antes de salvar, busca idêntica roda 1x/dia, loga
+      `found/kept/motivos` por termo; alarme de "sem resultados" olha o que os sites devolveram
+- [x] Menu do bot só lista opções com vaga, com contagem; resultado mostra a cidade
+- [x] "Ver Review" lê `DailyJob` (antes rodava jobspy ao vivo com o aluno esperando)
+- [x] "Testar busca" do admin mostra o resultado filtrado e o motivo das recusas
 
-### Checklist — Adzuna
-- [ ] Criar `infra/adzuna/service.py`: client da API Adzuna (Brasil), retornando o mesmo formato de
-      dict que o `JobSearchService.search` (title, company, location, job_type, job_url, date_posted,
-      description, salary)
-- [ ] Credenciais `ADZUNA_APP_ID` / `ADZUNA_APP_KEY` via Docker Secrets/env (ver `config/env.py` e
-      `secrets/`) — **nunca hardcode**
-- [ ] Adicionar campo `source` em `DailyJob` (linkedin/indeed/glassdoor/google/adzuna)
-- [ ] `fetch_and_save_daily_jobs` (`apps/jobs/services.py:133`): mesclar resultados jobspy + Adzuna
-      na mesma pipeline de persistência (respeitar o `unique_together` de `DailyJob`)
-- [ ] Testes: ranking ordena corretamente; Adzuna client parseia resposta (mockar HTTP); merge não
-      duplica; `source` preenchido
+**Desvios do plano original:** sem site `google` (indisponível no jobspy) e sem `relevance_score`
+persistido — com poucas vagas boas, filtrar rende mais do que ordenar ruído. Sem campo `source` por
+ora (entra junto com a Adzuna).
 
-### Boas práticas
-- **Spike primeiro** (descartável): confirmar que a Adzuna tem cobertura útil para Curitiba/Brasil e
-  que o site `google` do jobspy retorna resultados melhores. Só então codar a integração definitiva.
-- Manter o **timeout por fonte** (jobspy já usa `ThreadPoolExecutor` com 30s) e tratar falha de uma
-  fonte sem derrubar as outras (degradação graciosa — padrão já presente em
-  `infra/jobspy/service.py`).
-- Centralizar o "formato canônico de vaga" (dict de campos) para jobspy e Adzuna produzirem o mesmo
-  shape — evita `if source == ...` espalhado.
-- Respeitar limites de rate da API Adzuna; cachear/limitar `results_wanted`.
-
-### Critérios de aceite
-- `fetch_daily_jobs` popula `DailyJob` com vagas de jobspy **e** Adzuna, marcando `source`.
-- Resultados exibidos ao aluno estão ordenados por relevância (não ordem arbitrária).
-- Falha de uma fonte não impede as demais.
-
-### Arquivos afetados
-`infra/jobspy/service.py`, `infra/adzuna/` (novo), `apps/courses/models.py` (campo
-`google_search_term`), `apps/jobs/models/daily_job.py` (`source`, `relevance_score`),
-`apps/jobs/services.py`, `config/env.py`, `secrets/`, migrações, testes em `infra/` e `apps/jobs/`.
+### 5b — Adzuna (pendente)
+- [ ] Conta em developer.adzuna.com (app_id/app_key) — depende do requisitante
+- [ ] Spike: cobertura do Brasil/Oeste do PR antes de integrar
+- [ ] `infra/adzuna/service.py` no formato canônico do jobspy; credenciais via Docker Secrets
+- [ ] Campo `source` em `DailyJob`; mesclar na pipeline e passar pelo mesmo filtro de relevância
 
 ### Registro de Progresso
-> _(preencher ao executar)_
+- **2026-11-06 — 5a.** Medição em produção antes: 17% das vagas da semana eram do Brasil.
+  Experimentos com jobspy 1.4.1 definiram o desenho (ADR-007). Migrações `courses.0005` (campos) e
+  `courses.0006` (catálogo). Testes: `apps/jobs/tests/test_relevance.py`,
+  `apps/courses/tests/test_catalog.py` (inclui teste da migração com models históricos), menu e
+  review em `apps/bot/tests/test_job_search_handler.py` / `apps/jobs/tests/test_services.py`.
 
 ---
 
@@ -628,6 +617,16 @@ ajuda no hover.
 > - Decisões/desvios em relação ao plano: ...
 > - Pendências/próximos passos: ...
 > ```
+
+### 2026-11-06 — Fase 5a — Filtro de relevância das vagas online
+- O que foi feito: jobspy 1.4.1; filtro regional/remoto por área do curso; catálogo único de
+  termos (12 opções); menu só com opções que têm vaga; review sem scraping ao vivo. Ver ADR-007.
+- Migrações: `courses.0005` (campos), `courses.0006` (aplica catálogo; corrige área dos cursos).
+- Testes: suíte completa verde.
+- Decisões/desvios: sem site `google` (indisponível), sem score persistido; Gupy descartada (API
+  pública mudou de rota). Regra de produto confirmada com o requisitante: só estágio da área (região
+  ou remoto) e vaga remota de nível inicial.
+- Pendências: Adzuna (5b); medir em produção `fetch_daily_jobs_term` (found/kept) por 1–2 semanas.
 
 ### 2026-06-14 — Fase 4 — Candidatura com mini-perfil
 - O que foi feito: ciclo completo de candidatura. `StudentProfile` (mini-perfil reutilizável) + `JobApplication.status/message/profile_snapshot`. `ApplicationHandler` no bot (coleta período→skills→link ou reusa perfil → confirma → cria candidatura + snapshot + e-mail à empresa). Portal de candidaturas (lista/muda status) + admin atualizado.

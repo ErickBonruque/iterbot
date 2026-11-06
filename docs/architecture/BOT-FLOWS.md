@@ -198,10 +198,10 @@ sequenceDiagram
     BotService->>ReviewHandler: send_review(user, chat_id)
     ReviewHandler->>ReviewHandler: Verifica is_authenticated_utfpr
     ReviewHandler->>ReviewHandler: Verifica selected_course na sessão
-    ReviewHandler->>JobsService: build_review_for_user(selected_course, job_searcher)
-    JobsService->>DB: Job.objects.filter(status=APPROVED) — vagas locais
-    JobsService->>JobsService: get_online_jobs_for_course() — vagas online via jobspy
-    JobsService->>JobsService: deduplicate_jobs(local + online)
+    ReviewHandler->>JobsService: build_review_for_user(selected_course)
+    JobsService->>DB: Job aprovadas da área do curso — empresas parceiras
+    JobsService->>DB: DailyJob da última coleta do curso — vagas online já filtradas
+    JobsService->>JobsService: dedupe(parceiras + online)
     JobsService-->>ReviewHandler: Top 5 vagas combinadas
     ReviewHandler->>JobsService: format_review_message(course_name, jobs)
     ReviewHandler-->>Estudante: Mensagem formatada com até 5 vagas
@@ -209,18 +209,14 @@ sequenceDiagram
 
 ### Passos
 
-1. `send_review()` verifica `user.is_authenticated_utfpr`; bloqueia se não autenticado — `apps/bot/handlers/job_review.py:L27`
-2. Verifica `selected_course` na sessão; se ausente, solicita que o estudante faça uma busca primeiro — `apps/bot/handlers/job_review.py:L43`
-3. Envia mensagem de "buscando review..." e chama `build_review_for_user(selected_course, job_searcher)` — `apps/bot/handlers/job_review.py:L65`
-4. `build_review_for_user()` combina vagas locais aprovadas (`get_local_jobs_for_course()`) com vagas online (`get_online_jobs_for_course()`) — `apps/jobs/services.py:L125`
-5. `get_local_jobs_for_course()` filtra `Job.objects.filter(status=JobStatus.APPROVED)` pelos termos de busca do curso — `apps/jobs/services.py:L19`
-6. `get_online_jobs_for_course()` chama jobspy via `search_with_config()` para busca online em tempo real — `apps/jobs/services.py:L103`
-7. `deduplicate_jobs()` remove duplicatas por (título normalizado, empresa) — `apps/jobs/services.py:L111`
-8. Retorna os 5 primeiros resultados combinados — `apps/jobs/services.py:L130`
-9. `format_review_message()` formata a mensagem com cabeçalho, lista numerada e rodapé — `apps/jobs/services.py:L202`
-10. Mensagem enviada via WAHA ao estudante — `apps/bot/handlers/job_review.py:L101`
+1. `send_review()` verifica `user.is_authenticated_utfpr`; bloqueia se não autenticado — `apps/bot/handlers/job_review.py`
+2. Verifica `selected_course` na sessão; se ausente, solicita que o estudante faça uma busca primeiro
+3. Envia "buscando review..." e chama `build_review_for_user(selected_course)`
+4. `build_review_for_user()` junta as vagas de empresas parceiras da área do curso (`get_local_jobs_for_area`) com as vagas online da última coleta (`get_latest_daily_jobs`), já filtradas por relevância — `apps/jobs/services.py`
+5. `dedupe()` remove a mesma vaga vinda de dois termos/sites — `apps/jobs/relevance.py`
+6. Retorna as 5 primeiras; `format_review_message()` monta a mensagem
 
-**Nota:** Review sob demanda usa jobspy em tempo real (diferente da busca via DailyJob). Pode ser mais lento para cursos com muitos termos.
+**Nota:** sem scraping na conversa — até nov/2026 o review rodava o jobspy ao vivo para todos os termos do curso, com o aluno esperando.
 
 ---
 

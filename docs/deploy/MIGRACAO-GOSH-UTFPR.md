@@ -23,7 +23,7 @@ Migrar o IterBot da EC2 AWS para uma **VM dedicada da UTFPR**:
 1. **Host dedicado** (`.219`/`gosh`), não o compartilhado `.218`/`chat-universitario` do plano antigo.
 2. **Domínio:** `gosh.sh.utfpr.edu.br`.
 3. **Recurso é o teto disponível** (1.8 GB RAM). Objetivo era compartilhar uma VM de 2 GB com outro bot; conseguiu-se esta VM dedicada e este é o máximo. A stack precisa ser ajustada para caber (limites de memória, WAHA sob controle).
-4. **Dados a preservar = somente cursos e termos de busca**, e estes **já estão versionados no repositório** (`apps/courses/fixtures/courses_terms.json` + `seed_courses`). **Não** há migração de banco da EC2 antiga.
+4. **Dados a preservar = somente cursos e termos de busca**, e estes **já estão versionados no repositório** (hoje: catálogo `apps/courses/catalog.py` + `seed_courses`; a fixture JSON da época foi removida em 2026-11). **Não** há migração de banco da EC2 antiga.
 5. **Empresas, alunos e vagas recomeçam do zero** — eram apenas testes; o software não estava em produção.
 6. **SSH filtrado de fora da UTFPR:** deploy exige campus ou VPN institucional. 80/443 são públicas.
 
@@ -33,7 +33,7 @@ Migrar o IterBot da EC2 AWS para uma **VM dedicada da UTFPR**:
 - [x] Recon do host `gosh` feita: VM crua, sem Docker/orquestrador.
 - [x] **Gate 1 — Docker instalado:** Docker Engine 29.6.1 + Compose v5.2.0 (repositório oficial), rotação de log (`json-file` 10m×3), `live-restore`, usuário no grupo `docker`.
 - [ ] Gate 2/3 — Ajustar `docker-compose.prod.yml` ao recurso + `.env` de produção (domínio `gosh`, `ALLOWED_HOSTS`, `PORTAL_BASE_URL`).
-- [ ] Gate 4 — Semear cursos/termos (`loaddata courses_terms.json` ou `seed_courses`).
+- [ ] Gate 4 — Semear cursos/termos (`seed_courses`).
 - [ ] Gate 5 — Subir stack, emitir TLS, parear WhatsApp (QR), smoke-check.
 - [ ] Descomissionar EC2 antiga (terminar instância; confirmar antes que não houve edição de termos só em produção).
 
@@ -69,7 +69,7 @@ Definir `mem_limit`/reservations no `docker-compose.prod.yml`, priorizando:
 ```bash
 docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d db
 docker compose ... run --rm backend python manage.py migrate
-docker compose ... run --rm backend python manage.py loaddata courses_terms.json  # cursos + termos
+docker compose ... run --rm backend python manage.py seed_courses  # cursos + termos (catálogo)
 docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 ```
 

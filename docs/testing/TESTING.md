@@ -89,6 +89,17 @@ poetry run pytest -k "waha"
 
 Os testes locais usam `DJANGO_SETTINGS_MODULE=waha_bot.settings.development` (definido no `pyproject.toml`). Para que os testes funcionem localmente, é necessário ter as variáveis de ambiente configuradas ou usar o container Docker.
 
+**Rodando fora do Docker, suba um Redis e aponte `REDIS_URL` para ele.** Vários
+testes disparam tasks do Celery (`.delay()`); sem broker alcançável, o Celery
+tenta o host `redis` (que só existe na rede do compose) e cada teste fica
+minutos em retry até falhar — a suíte parece travada:
+
+```bash
+docker run --rm -d --name iterbot-test-redis -p 6379:6379 redis:7-alpine
+REDIS_URL=redis://localhost:6379/0 poetry run pytest   # ~40 s a suíte inteira
+docker stop iterbot-test-redis
+```
+
 Na CI, os serviços necessários são provisionados via GitHub Actions:
 
 - **PostgreSQL 15** — banco `iterbot_test`, usuário `iterbot_user`
