@@ -107,7 +107,7 @@ class WahaClient:
         """POST em /api/sessions/{sessao}/{action}, traduzindo falhas em False.
 
         Args:
-            action: Ação do ciclo de vida da sessão (start, stop, logout).
+            action: Ação do ciclo de vida da sessão (start, restart, logout).
 
         Returns:
             True se o WAHA respondeu 2xx, False em erro HTTP, timeout ou falha
@@ -176,6 +176,46 @@ class WahaClient:
             error, timeout, or connection failure.
         """
         return self._post_session_action("start")
+
+    def restart_session(self) -> bool:
+        """Reinicia a sessão (stop + start), reaproveitando o login salvo.
+
+        É o que recupera uma sessão em FAILED: `start` não serve, porque o WAHA
+        considera a sessão "already running" e responde 201 sem fazer nada.
+
+        Returns:
+            True se o WAHA aceitou o restart, False em qualquer falha.
+        """
+        return self._post_session_action("restart")
+
+    def get_session_status(self) -> str | None:
+        """Consulta o estado atual da sessão (WORKING, FAILED, SCAN_QR_CODE...).
+
+        Returns:
+            O status informado pelo WAHA, ou None se não foi possível consultar.
+        """
+        url = f"{self.settings.base_url}/api/sessions/{self.settings.session_name}"
+        try:
+            response = requests.get(
+                url,
+                headers={"X-Api-Key": self.settings.api_key},
+                timeout=self.settings.timeout_seconds,
+            )
+            if response.status_code != 200:
+                logger.warning(
+                    "waha_session_status_failed",
+                    session_name=self.settings.session_name,
+                    status_code=response.status_code,
+                )
+                return None
+            return response.json().get("status")
+        except (requests.exceptions.RequestException, ValueError) as error:
+            logger.warning(
+                "waha_session_status_failed",
+                session_name=self.settings.session_name,
+                error=str(error),
+            )
+            return None
 
     def logout_session(self) -> bool:
         """Desconecta o número pareado e devolve a sessão para SCAN_QR_CODE.

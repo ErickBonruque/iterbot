@@ -222,3 +222,52 @@ class TestWahaClientGetQr:
 
         assert result.available is False
         assert result.error
+
+
+class TestWahaClientRestartSession:
+    """`start` não recupera sessão FAILED (o WAHA responde "already running");
+    a recuperação precisa do endpoint `restart`."""
+
+    def test_restart_session_posts_to_restart_endpoint(self):
+        client = WahaClient(settings=_make_settings())
+        with patch("infra.waha.client.requests.post") as mock_post:
+            mock_post.return_value = MagicMock(status_code=201)
+            result = client.restart_session()
+        assert result is True
+        mock_post.assert_called_once_with(
+            "http://localhost:3000/api/sessions/default/restart",
+            headers={"X-Api-Key": "test-key", "Content-Type": "application/json"},
+            timeout=5,
+        )
+
+    def test_restart_session_returns_false_on_http_error(self):
+        client = WahaClient(settings=_make_settings())
+        with patch("infra.waha.client.requests.post") as mock_post:
+            mock_post.return_value = MagicMock(status_code=500)
+            assert client.restart_session() is False
+
+
+class TestWahaClientGetSessionStatus:
+    def test_returns_status_from_session_endpoint(self):
+        client = WahaClient(settings=_make_settings())
+        with patch("infra.waha.client.requests.get") as mock_get:
+            mock_get.return_value = MagicMock(status_code=200)
+            mock_get.return_value.json.return_value = {"name": "default", "status": "FAILED"}
+            assert client.get_session_status() == "FAILED"
+        mock_get.assert_called_once_with(
+            "http://localhost:3000/api/sessions/default",
+            headers={"X-Api-Key": "test-key"},
+            timeout=5,
+        )
+
+    def test_returns_none_on_http_error(self):
+        client = WahaClient(settings=_make_settings())
+        with patch("infra.waha.client.requests.get") as mock_get:
+            mock_get.return_value = MagicMock(status_code=404)
+            assert client.get_session_status() is None
+
+    def test_returns_none_on_connection_error(self):
+        client = WahaClient(settings=_make_settings())
+        with patch("infra.waha.client.requests.get") as mock_get:
+            mock_get.side_effect = requests.exceptions.ConnectionError()
+            assert client.get_session_status() is None

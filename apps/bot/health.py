@@ -16,7 +16,15 @@ from config.env import settings
 logger = structlog.get_logger(__name__)
 
 ALERT_THROTTLE_KEY = "waha_alert_sent"
-ALERT_THROTTLE_TTL = 1800  # 30 minutos
+# Um alerta por queda, com lembrete diário enquanto ela durar. A chave é
+# apagada quando o bot volta, então a próxima queda alerta de novo na hora.
+# (Com 30 min, uma queda de um mês gerou ~48 e-mails/dia e queimou a cota.)
+ALERT_THROTTLE_TTL = 24 * 60 * 60
+
+# Estados em que reiniciar recupera a sessão. Fora deles não se mexe:
+# SCAN_QR_CODE espera um humano escanear (reiniciar trocaria o QR na mão
+# dele) e STARTING já está a caminho de WORKING.
+RESTARTABLE_SESSION_STATUSES = frozenset({"FAILED", "STOPPED"})
 
 
 class BotHealthMonitor:
@@ -105,8 +113,20 @@ class BotHealthMonitor:
             max_attempts=len(self.reconnect_backoff),
         )
 
+        session_status = client.get_session_status()
+        if session_status == "WORKING":
+            return True
+        if session_status is not None and session_status not in RESTARTABLE_SESSION_STATUSES:
+            logger.info(
+                "waha_reconnect_skipped",
+                session_name=self.session_name,
+                session_status=session_status,
+                note="SCAN_QR_CODE exige parear pelo admin; STARTING ja esta subindo",
+            )
+            return False
+
         try:
-            if client.start_session():
+            if client.restart_session():
                 logger.info(
                     "waha_reconnect_success",
                     session_name=self.session_name,
@@ -168,7 +188,9 @@ class BotHealthMonitor:
             prev_was_ok=prev_is_ok,
         )
 
-        if not prev_is_ok and not curr_is_ok:
+        if curr_is_ok:
+            cache.delete(ALERT_THROTTLE_KEY)
+        elif not prev_is_ok:
             logger.warning(
                 "waha_consecutive_failures_detected",
                 session_name=self.session_name,
@@ -180,7 +202,10 @@ class BotHealthMonitor:
             if not cache.get(ALERT_THROTTLE_KEY):
                 send_offline_alert_email(
                     session_name=self.session_name,
-                    current_status=current_result["status"],
+                    current_status=(
+                        f"{current_result['status']} "
+                        f"(sessao: {current_result.get('session_status', 'unknown')})"
+                    ),
                     error_message=current_result.get("error_message"),
                     reconnect_attempted=True,
                     reconnect_success=reconnect_success,

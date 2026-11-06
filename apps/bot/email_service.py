@@ -279,7 +279,11 @@ def send_offline_alert_email(
 
     if reconnect_attempted:
         reconnect_result = (
-            "Reconexao bem-sucedida" if reconnect_success else "Reconexao falhou apos 3 tentativas"
+            "Sessao reiniciada automaticamente"
+            if reconnect_success
+            else "Reinicio automatico nao resolveu - se o status for SCAN_QR_CODE ou "
+            "FAILED persistente, pareie de novo em /admin/status-bot/ "
+            "(botao 'Desconectar numero' e depois 'Mostrar QR Code')"
         )
         body_lines.append(
             BOT_MESSAGES.tasks.alert_reconnect_line.text.format(reconnect_result=reconnect_result)

@@ -185,8 +185,8 @@ class IterBotAdminSite(UnfoldAdminSite):
             return JsonResponse({"error": "Method not allowed"}, status=405)
 
         try:
-            client = WahaClient()
-            success = client.start_session()
+            # restart, não start: em sessão FAILED o start é no-op ("already running")
+            success = WahaClient().restart_session()
         except Exception:
             success = False
 

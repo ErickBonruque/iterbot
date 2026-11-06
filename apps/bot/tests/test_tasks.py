@@ -71,7 +71,8 @@ class TestHealthMonitorReconnectFlow:
 
         mock_config.get_active.return_value = MagicMock()
         mock_client = MagicMock()
-        mock_client.start_session.return_value = False
+        mock_client.get_session_status.return_value = "FAILED"
+        mock_client.restart_session.return_value = False
         mock_client_cls.return_value = mock_client
 
         monitor = BotHealthMonitor()
@@ -94,7 +95,8 @@ class TestHealthMonitorReconnectFlow:
 
         mock_config.get_active.return_value = MagicMock()
         mock_client = MagicMock()
-        mock_client.start_session.return_value = True
+        mock_client.get_session_status.return_value = "FAILED"
+        mock_client.restart_session.return_value = True
         mock_client_cls.return_value = mock_client
 
         monitor = BotHealthMonitor()
@@ -113,7 +115,8 @@ class TestHealthMonitorReconnectFlow:
 
         mock_config.get_active.return_value = MagicMock()
         mock_client = MagicMock()
-        mock_client.start_session.return_value = False
+        mock_client.get_session_status.return_value = "FAILED"
+        mock_client.restart_session.return_value = False
         mock_client_cls.return_value = mock_client
 
         monitor = BotHealthMonitor()
@@ -147,6 +150,68 @@ class TestHealthMonitorReconnectFlow:
         monitor.check_and_reconnect()
 
         mock_alert.assert_called_once()
+
+
+class TestReconnectRespectsSessionState:
+    """A recuperação só reinicia sessões quebradas: reiniciar durante o
+    pareamento invalidaria o QR que o operador está escaneando."""
+
+    def _monitor_with_status(self, mock_config, mock_client_cls, status):
+        from apps.bot.health import BotHealthMonitor
+
+        mock_config.get_active.return_value = MagicMock()
+        mock_client = MagicMock()
+        mock_client.get_session_status.return_value = status
+        mock_client.restart_session.return_value = True
+        mock_client_cls.return_value = mock_client
+        return BotHealthMonitor(), mock_client
+
+    @patch("apps.bot.tasks.attempt_waha_reconnect")
+    @patch("infra.waha.client.WahaClient")
+    @patch("apps.bot.models.BotConfiguration")
+    def test_failed_session_is_restarted(self, mock_config, mock_client_cls, mock_task):
+        monitor, client = self._monitor_with_status(mock_config, mock_client_cls, "FAILED")
+        assert monitor.attempt_reconnect(attempt=1) is True
+        client.restart_session.assert_called_once()
+        client.start_session.assert_not_called()
+
+    @patch("apps.bot.tasks.attempt_waha_reconnect")
+    @patch("infra.waha.client.WahaClient")
+    @patch("apps.bot.models.BotConfiguration")
+    def test_working_session_is_left_alone(self, mock_config, mock_client_cls, mock_task):
+        monitor, client = self._monitor_with_status(mock_config, mock_client_cls, "WORKING")
+        assert monitor.attempt_reconnect(attempt=1) is True
+        client.restart_session.assert_not_called()
+
+    @pytest.mark.parametrize("status", ["SCAN_QR_CODE", "STARTING"])
+    @patch("apps.bot.tasks.attempt_waha_reconnect")
+    @patch("infra.waha.client.WahaClient")
+    @patch("apps.bot.models.BotConfiguration")
+    def test_pairing_or_starting_session_is_not_restarted(
+        self, mock_config, mock_client_cls, mock_task, status
+    ):
+        monitor, client = self._monitor_with_status(mock_config, mock_client_cls, status)
+        assert monitor.attempt_reconnect(attempt=1) is False
+        client.restart_session.assert_not_called()
+        mock_task.apply_async.assert_not_called()
+
+
+class TestOfflineAlertOncePerOutage:
+    """A chave de alerta dura 24h (ver test_health.TestAlertThrottle) e some quando o bot volta."""
+
+    @patch("apps.bot.health.send_offline_alert_email")
+    @patch("apps.bot.health.BotHealthMonitor.check_bot_status")
+    @patch("apps.bot.health.cache")
+    def test_recovery_clears_alert_flag(self, mock_cache, mock_check, mock_alert):
+        from apps.bot.health import ALERT_THROTTLE_KEY, BotHealthMonitor
+
+        mock_cache.get.return_value = {"status": "offline"}
+        mock_check.return_value = {"status": "online", "session_status": "WORKING"}
+
+        BotHealthMonitor().check_and_reconnect()
+
+        mock_cache.delete.assert_called_once_with(ALERT_THROTTLE_KEY)
+        mock_alert.assert_not_called()
 
 
 class TestSendConfirmationTask:

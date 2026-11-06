@@ -76,22 +76,26 @@ class TestWahaStatusEndpoint:
 
 @pytest.mark.django_db
 class TestWahaRestartEndpoint:
-    """POST /admin/api/waha-restart/ deve chamar WahaClient.start_session() e retornar JSON."""
+    """POST /admin/api/waha-restart/ deve chamar WahaClient.restart_session() e retornar JSON."""
 
     def test_returns_success_true_or_false(self, staff_client):
         """POST por staff retorna JsonResponse com chave 'success' (bool)."""
         from unittest.mock import patch
 
-        with patch("infra.waha.client.WahaClient.start_session", return_value=True):
+        with (
+            patch("infra.waha.client.WahaClient.restart_session", return_value=True) as restart,
+            patch("infra.waha.client.WahaClient.start_session") as start,
+        ):
             response = staff_client.post(
                 "/admin/api/waha-restart/",
                 HTTP_X_REQUESTED_WITH="XMLHttpRequest",
             )
 
         assert response.status_code == 200
-        data = response.json()
-        assert "success" in data
-        assert isinstance(data["success"], bool)
+        assert response.json() == {"success": True}
+        # `start` é no-op em sessão FAILED — o botão precisa reiniciar de verdade
+        restart.assert_called_once()
+        start.assert_not_called()
 
     def test_post_requires_staff(self, non_staff_client):
         """POST por usuário não-staff deve ser redirecionado (não 200)."""

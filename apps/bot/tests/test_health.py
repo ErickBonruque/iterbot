@@ -162,8 +162,8 @@ class TestAlertThrottle:
 
         mock_email.assert_called_once()
 
-    def test_redis_key_ttl_is_1800s(self):
-        """cache.set('waha_alert_sent', True, timeout=1800) deve ser chamado ao enviar alerta."""
+    def test_redis_key_ttl_is_one_day(self):
+        """Um alerta por queda: a chave dura 24h (lembrete diário), não 30 min."""
         from unittest.mock import call, patch
 
         monitor = self._make_monitor()
@@ -195,4 +195,4 @@ class TestAlertThrottle:
             c for c in mock_cache.set.call_args_list if c.args and c.args[0] == "waha_alert_sent"
         ]
         assert len(throttle_calls) == 1
-        assert throttle_calls[0] == call("waha_alert_sent", True, timeout=1800)
+        assert throttle_calls[0] == call("waha_alert_sent", True, timeout=24 * 60 * 60)
