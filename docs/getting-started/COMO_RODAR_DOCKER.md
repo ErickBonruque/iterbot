@@ -510,7 +510,7 @@ docker-compose exec backend pytest -v
 
 ```bash
 # Formatação
-docker-compose exec backend black .
+docker-compose exec backend ruff format .
 
 # Linting
 docker-compose exec backend ruff check .
