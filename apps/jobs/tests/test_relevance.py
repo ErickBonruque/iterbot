@@ -102,6 +102,33 @@ class TestRemote:
         record = job("Estágio em Desenvolvimento de Software", "São Paulo, SP, Brazil")
         assert verdict(record, CC, REMOTE) == "nao_remoto"
 
+    @pytest.mark.parametrize(
+        "description",
+        [
+            # Vagas de suporte de TI presenciais que a Adzuna devolveu como "remoto"
+            "Auxiliar no suporte help desk, acesso remoto. Levantar melhorias.",
+            "Atendimento de chamados aos usuários no formato local e remoto.",
+            "Ferramentas de acesso remoto; tipo de vaga: estágio.",
+            "Atendimento ao usuário remoto e presencial; apoio nas reuniões.",
+            "Suporte técnico aos usuários, presenciais e remotos.",
+        ],
+    )
+    def test_remote_support_jargon_is_not_remote_work(self, description):
+        record = job("Estágio em TI", "Belo Horizonte, Minas Gerais", description=description)
+        assert verdict(record, CC, REMOTE) == "nao_remoto"
+
+    def test_remote_support_role_in_title_is_kept(self):
+        record = job("Estágio Suporte Técnico - Remoto", "Brasil")
+        assert verdict(record, CC, REMOTE) == "ok"
+
+    def test_remote_work_in_description_is_kept(self):
+        record = job(
+            "Estágio em Análise de Dados",
+            "São Paulo, Estado de São Paulo",
+            description="Vaga para estágio. Você poderá trabalhar remoto de qualquer lugar.",
+        )
+        assert verdict(record, CC, REMOTE) == "ok"
+
     def test_hybrid_is_not_remote_even_with_board_flag(self):
         record = job("Pessoa Desenvolvedora Fullstack Jr (Híbrido - Manaus)", "Manaus, AM, Brazil")
         assert verdict(record, CC, REMOTE, board_remote=True) == "nao_remoto"

@@ -87,6 +87,15 @@ _REMOTE_SIGNAL = re.compile(
     r"\bremot\w*|\bhome ?office\b|\bteletrabalho\b|\b100% online\b|\banywhere\b"
 )
 _NOT_REMOTE = re.compile(r"\b(hibrid\w*|hybrid|presencial)\b")
+# "Remoto" que descreve a tarefa, não o modelo de trabalho — típico de vaga de
+# suporte de TI presencial: "acesso remoto", "atendimento ao usuário remoto e
+# presencial", "usuários presenciais e remotos". Sai do texto antes de procurar
+# o sinal de remoto.
+_REMOTE_JARGON = re.compile(
+    r"\b(acesso|suporte|atendimento|usuarios?|chamados?|conexao|assistencia)\b"
+    r"[^.;:]{0,25}?\bremot\w*"
+    r"|\bremot\w* e presencia\w*|\bpresencia\w* e remot\w*|\blocal e remot\w*"
+)
 
 # Quanto da descrição ler atrás de "remoto": o começo traz o modelo de
 # trabalho; o resto costuma ser texto institucional que gera falso positivo.
@@ -153,7 +162,10 @@ def _scope_rejection(
     elif scope == REMOTE:
         if _NOT_REMOTE.search(title):
             return "nao_remoto"
-        remote_text = f"{title} {normalize(location)} {description[:_REMOTE_DESCRIPTION_CHARS]}"
+        # No título, "remoto" é o modelo de trabalho ("Suporte Técnico - Remoto");
+        # o jargão de suporte só confunde na descrição.
+        description_head = _REMOTE_JARGON.sub(" ", description[:_REMOTE_DESCRIPTION_CHARS])
+        remote_text = f"{title} {normalize(location)} {description_head}"
         if not (flagged_remote or _REMOTE_SIGNAL.search(remote_text)):
             return "nao_remoto"
         if not (is_internship or _ENTRY_LEVEL.search(title)):
