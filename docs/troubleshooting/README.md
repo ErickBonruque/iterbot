@@ -28,7 +28,8 @@ estado que a primeira acabou de criar. Reentregas acontecem quando:
 - o POST do webhook estoura o timeout (backend com 1 worker gunicorn no host
   `gosh`, 1 vCPU) ou devolve erro — o WAHA reenvia;
 - ha mais de um hook apontando para o backend (`WHATSAPP_HOOK_URL` global do
-  compose **e** webhook salvo na config da sessao pelo dashboard);
+  compose **e** webhook salvo na config da sessao pelo dashboard) — foi a causa
+  confirmada em 2026-11-06: cada evento chegava 2x com o mesmo `event.id`;
 - a sessao reconecta e o engine NOWEB entrega o backlog de mensagens offline;
 - a task `process_webhook_message` falha depois de ja ter respondido e o retry
   do Celery reexecuta o fluxo inteiro.
@@ -47,9 +48,18 @@ Diagnostico no host:
 # Quantas entregas por mensagem chegaram ao backend
 docker logs iterbot_backend --since 30m | grep -E "webhook_message_enqueued|webhook_duplicate_ignored"
 
-# Hooks configurados na sessao (deve haver apenas um)
-curl -s -H "X-Api-Key: $WAHA_API_KEY" http://localhost:3000/api/sessions/default | jq '.config.webhooks'
+# Hooks salvos na config da sessao (deve ser [] — o unico hook e o global do compose)
+cd ~/iterbot && KEY=$(grep '^WAHA_API_KEY=' .env | cut -d= -f2-)
+curl -s -H "X-Api-Key: $KEY" http://localhost:3000/api/sessions/iterbot | python3 -m json.tool | grep -A3 webhooks
 ```
 
-Se `.config.webhooks` listar um hook alem do global do compose, remova-o pelo
-dashboard/API — os dois somados dobram cada evento.
+Se `.config.webhooks` listar qualquer hook, remova-o (o WAHA reinicia a sessao
+reaproveitando o login, sem QR):
+
+```bash
+curl -s -X PUT http://localhost:3000/api/sessions/iterbot \
+  -H "X-Api-Key: $KEY" -H 'Content-Type: application/json' \
+  -d '{"config":{"webhooks":[],"noweb":{"markOnline":true,"store":{"enabled":true,"fullSync":true}}}}'
+```
+
+Ao parear pelo dashboard do WAHA, **nao** cadastre webhook na sessao.

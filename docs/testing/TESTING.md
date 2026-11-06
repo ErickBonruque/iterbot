@@ -313,7 +313,7 @@ apps/
     test_protocol_di.py             # DI por Protocol (injeção de dependência)
     test_state_machine.py           # State machine do bot (current_action)
     test_tasks.py                   # Celery tasks: health check, reconexão, alertas
-    test_waha_client.py             # WahaClient: send_message, start_session, structlog
+    test_waha_client.py             # WahaClient: send_message, start/restart_session, get_session_status, structlog
     test_webhook_security.py        # Segurança do webhook: SSL redirect, isenção de rota
     test_webhook_views.py           # Views de webhook: parsing, dispatch
   companies/tests/

@@ -119,13 +119,21 @@ O caminho normal é pelo próprio admin do IterBot, sem túnel:
 
 1. Acesse **Status do Bot** (`/admin/status-bot/`)
 2. No painel **Conexão do WhatsApp**, clique em **Mostrar QR Code**
-   - Sessão em `FAILED`/`STOPPED`: clique antes em **Reiniciar sessão**
+   - Sessão em `FAILED`/`STOPPED`: clique antes em **Reiniciar sessão** (chama
+     `/restart` e reaproveita o login salvo). Se continuar `FAILED`, o login
+     foi invalidado no celular: use **Desconectar número** e mostre o QR
    - Trocar o número do bot: **Desconectar número** e então mostrar o QR
 3. No celular do bot: WhatsApp › Dispositivos conectados › Conectar dispositivo
 4. A tela troca o código sozinho a cada 8s e avisa quando a sessão vira `WORKING`
 
 O QR só existe enquanto a sessão está em `SCAN_QR_CODE`; nos demais estados a
 API responde 422 e a tela mostra o estado atual.
+
+**Recuperação automática:** a task `check_waha_health` (a cada 5 min) reinicia
+sozinha uma sessão em `FAILED`/`STOPPED` após 2 checks ruins seguidos. Ela
+**não** mexe em sessão `SCAN_QR_CODE` (trocaria o QR na mão de quem está
+pareando) nem em `STARTING`. O alerta "Bot offline" vai para `ALERT_EMAIL` uma
+vez por queda, com lembrete a cada 24h, e volta a valer quando o bot se recupera.
 
 ## 🔐 Credenciais
 

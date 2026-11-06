@@ -1,9 +1,19 @@
-# Email Runbook — Brevo Migration
+# Email Runbook
 
 Guia operacional para o provider de email do IterBot UTFPR.
-Cobre rotação de chave, revogação de emergência, troubleshooting e rollback.
+Cobre rotação de credencial, revogação de emergência, troubleshooting e rollback.
 
-> **Migração ativa:** Em abril/2026 migramos de Resend/SES para **Brevo** (ex-Sendinblue) por causa da ausência de domínio próprio. Brevo permite envio para qualquer destinatário com apenas o *sender* verificado, 300 e-mails/dia grátis. Todo o conteúdo anterior deste runbook referente a Resend permanece válido trocando `resend`→`brevo` e `RESEND_API_KEY`→`BREVO_API_KEY`.
+> **Produção atual (desde 2026-11-06): SMTP institucional da UTFPR.**
+> `EMAIL_PROVIDER=smtp`, servidor `smtp.utfpr.edu.br:587` (STARTTLS), conta
+> `smartcampus-sh@utfpr.edu.br`, senha no Docker secret `email_password`
+> (`secrets/email_password.txt`). Saiu do Brevo porque o remetente era um
+> endereço `@alunos.utfpr.edu.br`: o SPF desse domínio só autoriza o Google
+> (`include:_spf.google.com -all`) e o DMARC de `utfpr.edu.br` é
+> `p=quarantine` — enviado pelo Brevo, o e-mail de confirmação tendia a cair em
+> spam/quarentena. Pelo SMTP da própria UTFPR o envio sai de um IP listado no
+> SPF de `utfpr.edu.br`. Veja [SMTP institucional](#smtp-institucional-produção).
+>
+> **Histórico — Brevo (abr–nov/2026):** Em abril/2026 migramos de Resend/SES para **Brevo** (ex-Sendinblue) por causa da ausência de domínio próprio. Brevo permite envio para qualquer destinatário com apenas o *sender* verificado, 300 e-mails/dia grátis. Todo o conteúdo anterior deste runbook referente a Resend permanece válido trocando `resend`→`brevo` e `RESEND_API_KEY`→`BREVO_API_KEY`.
 >
 > **Caminho unificado:** `apps/users/adapters.py` (UTFPRAccountAdapter) intercepta 100% dos e-mails do allauth (signup, confirmation, password reset) e os envia via `infra/email/factory.py`, que resolve o provider por `EMAIL_PROVIDER`. O mesmo factory é usado pelo bot WhatsApp. Não existe mais caminho que passe direto por `django.core.mail.send_mail` para fluxos de produção.
 
@@ -11,6 +21,7 @@ Cobre rotação de chave, revogação de emergência, troubleshooting e rollback
 
 ## Sumário
 
+- [SMTP institucional (produção)](#smtp-institucional-produção)
 - [Escopo e Providers](#escopo-e-providers)
 - [Pre-Checks Operacionais](#pre-checks-operacionais)
 - [Walkthrough de Validação E2E](#walkthrough-de-validação-e2e)
@@ -21,22 +32,49 @@ Cobre rotação de chave, revogação de emergência, troubleshooting e rollback
 
 ---
 
+## SMTP institucional (produção)
+
+| Variável | Valor em Produção |
+|----------|-------------------|
+| `EMAIL_PROVIDER` | `smtp` |
+| `EMAIL_BACKEND` | `django.core.mail.backends.smtp.EmailBackend` |
+| `EMAIL_HOST` / `EMAIL_PORT` / `EMAIL_USE_TLS` | `smtp.utfpr.edu.br` / `587` / `True` |
+| `EMAIL_HOST_USER` | `smartcampus-sh@utfpr.edu.br` (endereço completo) |
+| `DEFAULT_FROM_EMAIL` | `smartcampus-sh@utfpr.edu.br` |
+| `EMAIL_FALLBACK_PROVIDER` | vazio (o Brevo não tem esse remetente verificado) |
+| senha | Docker secret `email_password` → `secrets/email_password.txt` |
+
+Trocar a senha da conta: grave a nova em `secrets/email_password.txt` (sem
+quebra de linha: `printf '%s' '<senha>' > secrets/email_password.txt`) e recrie
+os serviços — `restart` não relê secrets nem `.env`:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.resources.yml \
+  up -d backend celery_worker celery_beat
+```
+
+O health check (`/health/` → `email`) só testa a conexão TCP com
+`smtp.utfpr.edu.br:587`; credencial errada só aparece no envio
+(`django_send_mail_failed` nos logs do worker). Valide sempre com um envio real.
+
 ## Escopo e Providers
 
-| Variável | Valor Esperado em Produção | Descrição |
-|----------|---------------------------|-----------|
+Configuração do Brevo, mantida como alternativa (não é mais a de produção):
+
+| Variável | Valor com Brevo | Descrição |
+|----------|-----------------|-----------|
 | `EMAIL_PROVIDER` | `brevo` | Provider principal (antes: `resend`/`ses`) |
 | `EMAIL_FALLBACK_PROVIDER` | vazio ou `console` | Provider de fallback automático |
 | `BREVO_API_KEY` | Docker secret `brevo_api_key` (arquivo `secrets/brevo_api_key.txt`) | Chave de API Brevo |
-| `DEFAULT_FROM_EMAIL` | Sender verificado no dashboard Brevo | `bonruque@alunos.utfpr.edu.br` (DMARC ok) |
+| `DEFAULT_FROM_EMAIL` | Sender verificado no dashboard Brevo | Não use `@alunos.utfpr.edu.br`/`@utfpr.edu.br`: o SPF desses domínios não autoriza o Brevo e o DMARC é `p=quarantine` |
 
 > **Pré-requisito Brevo:** o endereço em `DEFAULT_FROM_EMAIL` precisa estar cadastrado em *Senders, Domains & Dedicated IPs → Senders* no dashboard Brevo e verificado via link. Sem isso, a API devolve `brevo_sender_not_verified`.
 
 ### Rotação de BREVO_API_KEY
 
 1. Gere uma nova chave em https://app.brevo.com/settings/keys/api
-2. No EC2: `echo "<NOVA_CHAVE>" > /home/ubuntu/iterbot/secrets/brevo_api_key.txt`
-3. `sudo docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --force-recreate backend celery_worker celery_beat`
+2. No host gosh: `printf '%s' "<NOVA_CHAVE>" > ~/iterbot/secrets/brevo_api_key.txt`
+3. `docker compose -f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.resources.yml up -d --force-recreate backend celery_worker celery_beat`
 4. Valide com um envio transacional (ver seção *Walkthrough*).
 5. Delete a chave antiga no dashboard Brevo.
 
