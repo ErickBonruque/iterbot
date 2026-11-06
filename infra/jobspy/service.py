@@ -83,6 +83,16 @@ def _run_scrape(scrape_kwargs: dict[str, Any], timeout_seconds: float) -> tuple[
     if "error" in payload:
         return "error", payload["error"]
 
+    if payload.get("board_errors"):
+        # Site bloqueado (ex.: 429 do LinkedIn) devolve 0 vagas sem exceção —
+        # sem este log, "bloqueado" e "dia sem vagas" ficam indistinguíveis.
+        logger.warning(
+            "jobspy_board_errors",
+            term=scrape_kwargs.get("search_term"),
+            board_errors=payload["board_errors"],
+            board_warnings=payload.get("board_warnings"),
+        )
+
     return "ok", payload.get("records", [])
 
 
@@ -218,7 +228,9 @@ class JobSearchService:
             "distance": distance,
             "job_type": job_type or None,
             "is_remote": is_remote,
-            "linkedin_fetch_description": linkedin_fetch_description,
+            # Nome atual no jobspy 1.4 (`linkedin_fetch_description` é deprecated).
+            # Busca a descrição de cada vaga nos sites cuja listagem não traz.
+            "fetch_description": linkedin_fetch_description,
             "linkedin_company_ids": linkedin_company_ids,
             "offset": offset,
         }

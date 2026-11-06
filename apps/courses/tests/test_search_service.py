@@ -177,6 +177,30 @@ with open({str(heartbeat)!r}, "a", buffering=1) as fh:
         assert threading.active_count() == threads_before
 
 
+RUNNER_BOARD_ERROR = """
+import json, sys
+json.load(sys.stdin)
+json.dump({"records": [], "board_errors": {"linkedin": "429 blocked"}}, sys.stdout)
+"""
+
+
+class TestBoardDiagnostics:
+    def test_board_errors_are_logged(self, tmp_path):
+        with (
+            fake_runner(tmp_path, RUNNER_BOARD_ERROR),
+            patch.object(service_module, "logger") as mock_logger,
+        ):
+            status, payload = service_module._run_scrape({"search_term": "python"}, 30)
+
+        assert (status, payload) == ("ok", [])
+        mock_logger.warning.assert_called_once_with(
+            "jobspy_board_errors",
+            term="python",
+            board_errors={"linkedin": "429 blocked"},
+            board_warnings=None,
+        )
+
+
 @pytest.mark.django_db
 class TestJobSearchServiceParams:
     """Os kwargs são verificados na fronteira `_run_scrape` porque `scrape_jobs`
@@ -199,6 +223,15 @@ class TestJobSearchServiceParams:
         assert scrape_kwargs["country_indeed"] == "Brazil"
         assert scrape_kwargs["is_remote"] is False
         assert scrape_kwargs["offset"] == 0
+
+    @patch("infra.jobspy.service._run_scrape")
+    def test_fetch_description_uses_current_jobspy_name(self, mock_run, service):
+        # `linkedin_fetch_description` é deprecated no jobspy 1.4 (sai na 2.0).
+        mock_run.return_value = ("ok", [])
+        service.search(terms=["python"], linkedin_fetch_description=True)
+        scrape_kwargs = mock_run.call_args[0][0]
+        assert scrape_kwargs["fetch_description"] is True
+        assert "linkedin_fetch_description" not in scrape_kwargs
 
     @patch("infra.jobspy.service._run_scrape")
     def test_search_backward_compatible(self, mock_run, service):
@@ -311,6 +344,21 @@ class TestScrapeRunner:
         assert code == 0
         assert payload["records"][0]["title"] == "Python Developer"
         assert "log solto do scraper" in capsys.readouterr().err
+
+    @patch("jobspy.scrape_jobs")
+    def test_main_forwards_board_errors_and_warnings(self, mock_scrape, monkeypatch, sample_df):
+        # jobspy >= 1.2 reporta em `attrs` o site bloqueado (429) e o filtro
+        # ignorado (ex.: is_remote no LinkedIn) — sem isso, "bloqueado" e "sem
+        # vagas" ficam indistinguíveis.
+        sample_df.attrs["errors"] = {"linkedin": "response status code 429"}
+        sample_df.attrs["warnings"] = {"linkedin": ["is_remote isn't supported, ignoring it"]}
+        mock_scrape.return_value = sample_df
+
+        code, payload = self._run_main(monkeypatch, {"search_term": "python"})
+
+        assert code == 0
+        assert payload["board_errors"] == {"linkedin": "response status code 429"}
+        assert payload["board_warnings"] == {"linkedin": ["is_remote isn't supported, ignoring it"]}
 
     def test_main_reports_invalid_stdin(self, monkeypatch):
         response = io.StringIO()

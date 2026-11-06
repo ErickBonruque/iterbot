@@ -6,7 +6,6 @@ from apps.bot.messages import BOT_MESSAGES
 from apps.bot.models import ConversationState
 from apps.jobs.services import build_review_for_user, format_review_message
 from apps.users.models import UserProfile
-from infra.waha.protocols import JobSearcher, MessageSender
 
 from .base import BaseHandler
 
@@ -14,11 +13,7 @@ logger = structlog.get_logger(__name__)
 
 
 class JobReviewHandler(BaseHandler):
-    """Sends on-demand job review to the student."""
-
-    def __init__(self, waha_client: MessageSender, job_service: JobSearcher) -> None:
-        super().__init__(waha_client)
-        self.job_service = job_service
+    """Envia ao aluno o review sob demanda: empresas parceiras + vagas online coletadas."""
 
     def _get_conversation_state(self, user: UserProfile) -> ConversationState:
         conversation_state, _ = ConversationState.objects.get_or_create(user=user)
@@ -63,7 +58,7 @@ class JobReviewHandler(BaseHandler):
         )
 
         try:
-            jobs = build_review_for_user(selected_course, self.job_service)
+            jobs = build_review_for_user(selected_course)
         except Exception as exc:
             logger.error(
                 "review_on_demand_failed",

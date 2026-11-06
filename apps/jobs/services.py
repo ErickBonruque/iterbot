@@ -1,15 +1,16 @@
-"""Servicos de curadoria e formatacao para review de vagas."""
+"""Serviços de vagas: coleta diária filtrada, reviews e resumo semanal."""
 
 import time
 from typing import Any
 
 import structlog
 from django.conf import settings
-from django.db.models import Q
+from django.db.models import Max
 
 from apps.bot.messages import BOT_MESSAGES
 from apps.core.portal_links import build_portal_url
 from apps.jobs.models import Job, JobSearchLog, JobStatus
+from apps.jobs.relevance import classify, dedupe, parse_terms
 from apps.users.models import UserProfile
 from infra.waha.protocols import JobSearcher, MessageSender
 
@@ -29,39 +30,11 @@ def _serialize_local_job(job) -> dict[str, Any]:
     return {
         "title": job.titulo,
         "company": job.company.nome,
-        "location": job.company.endereco or "Curitiba, PR",
+        "location": job.company.endereco or "",
         "job_type": job.tipo,
         "job_url": job_url,
         "source": "local",
     }
-
-
-def get_local_jobs_for_course(course) -> list[dict[str, Any]]:
-    """Return approved local jobs relevant to the given course."""
-    terms = list(
-        course.search_terms.filter(is_default=True)
-        .order_by("-priority")
-        .values_list("term", flat=True)
-    )
-    if not terms:
-        logger.warning(
-            "no_search_terms_for_course_local_jobs",
-            course_id=course.id,
-            course_name=course.name,
-        )
-        return []
-
-    term_query = Q()
-    for term in terms:
-        term_query |= Q(titulo__icontains=term) | Q(descricao__icontains=term)
-
-    jobs = (
-        Job.objects.filter(status=JobStatus.APPROVED)
-        .filter(term_query)
-        .select_related("company")
-        .order_by("-created_at")[:10]
-    )
-    return [_serialize_local_job(job) for job in jobs]
 
 
 def get_local_jobs_queryset_for_area(area):
@@ -92,76 +65,81 @@ def build_weekly_local_review(course, limit: int = 5) -> list[dict[str, Any]]:
     """Review semanal **só com vagas locais** da área do curso. NÃO chama jobspy.
 
     Usa `course.area` e a regra centralizada de áreas. Diferente de
-    `build_review_for_user` (review sob demanda), aqui não há busca online —
-    o envio semanal fica rápido e confiável (sem scraping ao vivo no loop).
+    `build_review_for_user` (review sob demanda), aqui não entram as vagas
+    online (jobspy) — o resumo semanal divulga as empresas parceiras.
     """
     area = getattr(course, "area", None)
     return get_local_jobs_for_area(area, limit=limit)
 
 
-def search_with_config(
-    course, job_searcher: JobSearcher, limit_per_term: int = 10
-) -> list[dict[str, Any]]:
-    """Search online jobs using each SearchTerm's own configuration.
+# Uma empresa não pode ocupar a lista inteira (a BairesDev publica a mesma vaga
+# em 20 cidades, com títulos levemente diferentes).
+MAX_JOBS_PER_COMPANY = 2
 
-    This is the SSoT (Single Source of Truth) for online job search.
-    Each SearchTerm's to_search_kwargs() is used individually, so
-    location, is_remote, job_type, country_indeed, etc. are respected
-    per-term — matching the "Testar busca" admin behavior exactly.
+
+def get_latest_daily_jobs(course):
+    """Vagas online pré-buscadas da última coleta do curso, por termo.
+
+    Usa a data mais recente com vaga (não "hoje"): antes das 07:00, ou se o
+    scraper falhar num dia, o aluno ainda vê a coleta anterior.
+
+    Returns:
+        QuerySet de DailyJob dos termos ativos do curso, ordenado pela
+        prioridade do termo — vazio se o curso nunca teve vaga coletada.
     """
-    search_terms = list(course.search_terms.filter(is_default=True).order_by("-priority"))
-    if not search_terms:
-        logger.warning(
-            "no_search_terms_for_course",
-            course_id=course.id,
-            course_name=course.name,
+    from apps.jobs.models import DailyJob
+
+    jobs = DailyJob.objects.filter(search_term__course=course, search_term__is_default=True)
+    latest = jobs.aggregate(latest=Max("fetched_date"))["latest"]
+    if latest is None:
+        return DailyJob.objects.none()
+    return jobs.filter(fetched_date=latest).order_by("-search_term__priority", "id")
+
+
+def build_review_for_user(course, limit: int = 5) -> list[dict[str, Any]]:
+    """Review sob demanda: vagas de empresas parceiras + vagas online do curso.
+
+    Lê as vagas que `fetch_daily_jobs` já coletou e filtrou — antes rodava o
+    jobspy ao vivo para todos os termos do curso, com o aluno esperando.
+    """
+    local_jobs = get_local_jobs_for_area(getattr(course, "area", None), limit=limit)
+    online_jobs = list(
+        get_latest_daily_jobs(course).values("title", "company", "location", "job_url")
+    )
+    return dedupe(local_jobs + online_jobs)[:limit]
+
+
+def select_relevant_jobs(term, records: list[dict[str, Any]]):
+    """Aplica o filtro de relevância do termo às vagas que a busca trouxe.
+
+    Returns:
+        (vagas mantidas, Counter com o motivo de cada decisão). Termo sem
+        `scope` mantém tudo (comportamento antigo, para termos do admin).
+    """
+    from collections import Counter
+
+    if not term.scope:
+        return records, Counter()
+
+    course = term.course
+    title_keywords = parse_terms(course.job_title_keywords)
+    course_names = parse_terms(course.job_course_names)
+    reasons: Counter = Counter()
+    kept = []
+    for record in records:
+        # O Indeed aplica "apenas remotas"; o LinkedIn ignora o filtro.
+        board_remote = term.is_remote and record.get("site") == "indeed"
+        verdict = classify(
+            record,
+            title_keywords=title_keywords,
+            course_names=course_names,
+            scope=term.scope,
+            board_remote=board_remote,
         )
-        return []
-
-    results: list[dict[str, Any]] = []
-    for term in search_terms:
-        kwargs = term.to_search_kwargs(limit_override=limit_per_term)
-        try:
-            term_results = job_searcher.search(terms=[term.term], **kwargs)
-            results.extend(term_results)
-        except Exception:
-            logger.warning(
-                "search_with_config_term_failed",
-                term=term.term,
-                course_id=course.id,
-                exc_info=True,
-            )
-    return results
-
-
-def get_online_jobs_for_course(course, job_searcher: JobSearcher) -> list[dict[str, Any]]:
-    """Search online jobs via JobSpy using default course terms.
-
-    Delegates to search_with_config for SSoT search behavior.
-    """
-    return search_with_config(course, job_searcher, limit_per_term=10)
-
-
-def deduplicate_jobs(jobs: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """Remove duplicate jobs by normalized title and company."""
-    seen: set[tuple[str, str]] = set()
-    unique: list[dict[str, Any]] = []
-    for job in jobs:
-        title = (job.get("title") or job.get("titulo") or "").lower().strip()
-        company = (job.get("company") or "").lower().strip()
-        key = (title, company)
-        if key not in seen:
-            seen.add(key)
-            unique.append(job)
-    return unique
-
-
-def build_review_for_user(course, job_searcher: JobSearcher) -> list[dict[str, Any]]:
-    """Combine local and online jobs, deduplicate, and return top entries."""
-    local_jobs = get_local_jobs_for_course(course)
-    online_jobs = get_online_jobs_for_course(course, job_searcher)
-    combined = deduplicate_jobs(local_jobs + online_jobs)
-    return combined[:5]
+        reasons[verdict] += 1
+        if verdict == "ok":
+            kept.append(record)
+    return dedupe(kept, max_per_company=MAX_JOBS_PER_COMPANY), reasons
 
 
 def _job_field(value: Any, max_length: int | None = None) -> str:
@@ -178,12 +156,22 @@ def _job_field(value: Any, max_length: int | None = None) -> str:
     return text[:max_length] if max_length else text
 
 
-def fetch_and_save_daily_jobs(job_searcher) -> dict[str, int]:
-    """Scrapa todos os SearchTerms ativos e persiste em DailyJob (BOT-02).
+def fetch_and_save_daily_jobs(job_searcher: JobSearcher) -> dict[str, int]:
+    """Scrapa todos os SearchTerms ativos, filtra e persiste em DailyJob (BOT-02).
 
     Chamada pela task fetch_daily_jobs — não chamar diretamente no webhook.
-    Retorna estatísticas de execução para logging e monitoramento.
+
+    - Buscas idênticas (mesmo termo e parâmetros) rodam uma vez só: a busca
+      regional e a remota amplas se repetem nos três cursos, e cada scrape a
+      mais é uma requisição a mais para o LinkedIn bloquear.
+    - Cada termo passa pelo filtro de relevância do seu curso
+      (`select_relevant_jobs`) antes de salvar.
+
+    Stats: `jobs_found` (o que os sites devolveram), `jobs_filtered`
+    (recusadas pelo filtro), `jobs_saved`/`jobs_skipped` (novas/repetidas),
+    `terms_empty` (sites devolveram zero), `errors`.
     """
+    import json
     from datetime import date, timedelta
 
     from apps.courses.models import SearchTerm
@@ -194,19 +182,28 @@ def fetch_and_save_daily_jobs(job_searcher) -> dict[str, int]:
     stats: dict[str, int] = {
         "terms_processed": 0,
         "terms_empty": 0,
+        "jobs_found": 0,
+        "jobs_filtered": 0,
         "jobs_saved": 0,
         "jobs_skipped": 0,
         "errors": 0,
     }
+    scrape_cache: dict[str, list[dict[str, Any]]] = {}
 
     for term in search_terms:
         kwargs = term.to_search_kwargs()
+        cache_key = json.dumps([term.term, kwargs], sort_keys=True, default=str)
         try:
-            results = job_searcher.search(terms=[term.term], **kwargs)
+            if cache_key not in scrape_cache:
+                scrape_cache[cache_key] = job_searcher.search(terms=[term.term], **kwargs)
+            results = scrape_cache[cache_key]
             if not results:
                 # `search()` engole falhas de scrape e devolve lista vazia, então
                 # esta contagem é o que separa "dia sem vagas" de "scraper quebrado".
                 stats["terms_empty"] += 1
+            relevant, reasons = select_relevant_jobs(term, results)
+            stats["jobs_found"] += len(results)
+            stats["jobs_filtered"] += len(results) - len(relevant)
             to_create = [
                 DailyJob(
                     search_term=term,
@@ -218,7 +215,7 @@ def fetch_and_save_daily_jobs(job_searcher) -> dict[str, int]:
                     description=_job_field(r.get("description")),
                     job_type=_job_field(r.get("job_type"), 50),
                 )
-                for r in results
+                for r in relevant
                 if r.get("job_url") or r.get("job_url_direct")
             ]
             # `bulk_create(ignore_conflicts=True)` devolve a lista que recebeu —
@@ -232,14 +229,23 @@ def fetch_and_save_daily_jobs(job_searcher) -> dict[str, int]:
             )
             stats["jobs_saved"] += saved
             stats["jobs_skipped"] += len(to_create) - saved
+            logger.info(
+                "fetch_daily_jobs_term",
+                term=term.term,
+                course=term.course.name,
+                scope=term.scope or None,
+                found=len(results),
+                kept=len(relevant),
+                reasons=dict(reasons),
+            )
             JobSearchLog.objects.create(
                 user=None,
                 search_term=term.term,
                 location=term.location,
                 job_type=term.job_type,
-                results_count=len(results),
-                filters=term.to_search_kwargs(),
-                results_preview=results[:5],
+                results_count=len(relevant),
+                filters=kwargs,
+                results_preview=relevant[:5],
             )
         except Exception:
             stats["errors"] += 1
@@ -255,11 +261,13 @@ def fetch_and_save_daily_jobs(job_searcher) -> dict[str, int]:
     logger.info(
         "fetch_daily_jobs_completed",
         deleted_old=deleted,
+        scrapes=len(scrape_cache),
         **stats,
     )
-    if search_terms and not stats["jobs_saved"] and not stats["jobs_skipped"]:
-        # Nenhum termo entregou vaga alguma: é falha sistêmica (scraper bloqueado,
-        # rede, runner quebrado), não um dia fraco. Evento próprio para alarme.
+    if search_terms and not stats["jobs_found"]:
+        # Nenhum site devolveu vaga alguma: é falha sistêmica (scraper bloqueado,
+        # rede, runner quebrado), não um dia fraco nem o filtro. Evento próprio
+        # para alarme.
         logger.error("fetch_daily_jobs_no_results", **stats)
     return stats
 
@@ -270,16 +278,17 @@ def _format_job_lines(jobs: list[dict[str, Any]]) -> list[str]:
     for i, job in enumerate(jobs, 1):
         title = job.get("title") or job.get("titulo") or "Vaga"
         company = job.get("company") or "Empresa"
-        location = job.get("location") or "Curitiba, PR"
+        location = job.get("location") or ""
         job_type = job.get("job_type") or job.get("tipo") or ""
         url = job.get("job_url") or ""
 
         lines.append(f"*{i}. {title}* — {company}")
 
-        loc_parts = [f"📍 {location}"]
+        loc_parts = [f"📍 {location}"] if location else []
         if job_type:
             loc_parts.append(f"💼 {job_type}")
-        lines.append(" | ".join(loc_parts))
+        if loc_parts:
+            lines.append(" | ".join(loc_parts))
 
         if url:
             lines.append(f"🔗 {url}")

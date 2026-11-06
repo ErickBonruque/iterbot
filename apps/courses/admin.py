@@ -4,6 +4,7 @@ from unfold.decorators import action
 from unfold.enums import ActionVariant
 
 from apps.jobs.models import JobSearchLog
+from apps.jobs.services import select_relevant_jobs
 from infra.jobspy.service import JobSearchService
 
 from .models import Area, Course, SearchTerm
@@ -14,7 +15,7 @@ ACTION_KEY = "courses_searchterm_test_search"
 class SearchTermInline(TabularInline):
     model = SearchTerm
     extra = 1
-    fields = ("term", "is_default", "priority")
+    fields = ("label", "term", "scope", "is_default", "priority")
 
 
 @admin.register(Area)
@@ -48,6 +49,16 @@ class CourseAdmin(ModelAdmin):
 
     fieldsets = (
         (None, {"fields": ("name", "code", "area", "description", "is_active", "order")}),
+        (
+            "Filtro de vagas online",
+            {
+                "fields": ("job_title_keywords", "job_course_names"),
+                "description": (
+                    "Usado pelos termos de busca com filtro de relevância: só chega ao "
+                    "aluno a vaga da área do curso."
+                ),
+            },
+        ),
         ("Detalhes", {"fields": ("level", "modality", "duration"), "classes": ("wide",)}),
         ("Datas", {"fields": ("created_at", "updated_at"), "classes": ("collapse",)}),
     )
@@ -60,14 +71,17 @@ class SearchTermAdmin(ModelAdmin):
     change_form_template = "admin/courses/searchterm/change_form.html"
     actions_submit_line = ["test_search"]
 
-    list_display = ["term", "course", "is_default", "priority"]
-    list_filter = ["is_default", "course", "created_at"]
-    search_fields = ["term", "course__name"]
+    list_display = ["term", "label", "course", "scope", "is_default", "priority"]
+    list_filter = ["is_default", "scope", "course", "created_at"]
+    search_fields = ["term", "label", "course__name"]
     readonly_fields = ["created_at", "updated_at"]
     ordering = ["priority"]
 
     fieldsets = (
-        ("Identificação", {"fields": ("course", "term", "is_default", "priority")}),
+        (
+            "Identificação",
+            {"fields": ("course", "term", "label", "scope", "is_default", "priority")},
+        ),
         ("Sites de Busca", {"fields": ("site_name",), "classes": ("wide",)}),
         (
             "Filtros de Busca",
@@ -101,7 +115,10 @@ class SearchTermAdmin(ModelAdmin):
     def test_search(self, request, obj):
         service = JobSearchService()
         try:
-            results = service.search(terms=[obj.term], **obj.to_search_kwargs())
+            found = service.search(terms=[obj.term], **obj.to_search_kwargs())
+            # Mostra o que o aluno vai ver: o resultado depois do filtro de
+            # relevância do curso, com o motivo de cada recusa.
+            results, reasons = select_relevant_jobs(obj, found)
             JobSearchLog.objects.create(
                 user=None,
                 search_term=obj.term,
@@ -112,9 +129,19 @@ class SearchTermAdmin(ModelAdmin):
                 results_preview=results[:5],
             )
             request.session["job_search_results"] = results
-            if not results:
+            if not found:
                 messages.warning(
                     request, "Nenhuma vaga encontrada com os parâmetros de busca atuais."
+                )
+            elif obj.scope:
+                refused = ", ".join(
+                    f"{reason}: {n}" for reason, n in reasons.most_common() if reason != "ok"
+                )
+                messages.warning(
+                    request,
+                    f"{len(results)} de {len(found)} vagas passaram no filtro de relevância"
+                    + (f" (recusadas — {refused})" if refused else "")
+                    + ". A lista abaixo é o que o aluno vê.",
                 )
         except Exception as exc:
             request.session["job_search_results"] = []

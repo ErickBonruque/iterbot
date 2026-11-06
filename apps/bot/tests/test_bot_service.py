@@ -41,8 +41,7 @@ class BotServiceFlowTests(TestCase):
     def setUp(self):
         self.waha_client = MagicMock()
         self.waha_client.settings = MagicMock(session_name="test-session")
-        self.job_service = MagicMock()
-        self.service = BotService(waha_client=self.waha_client, job_service=self.job_service)
+        self.service = BotService(waha_client=self.waha_client)
 
     def _authenticate_user(self, chat_id: str) -> UserProfile:
         user = UserProfile.objects.create(phone_number=chat_id, is_authenticated_utfpr=True)
@@ -97,7 +96,7 @@ class BotServiceFlowTests(TestCase):
         user.refresh_from_db()
         self.assertIsNone(user.conversation_state.current_action)
         self.assertEqual(user.conversation_state.selected_term.term, "Python")
-        # Bot agora consulta DailyJob em vez de job_service.search
+        # A busca do aluno lê DailyJob (coletado às 7h), sem scraping na conversa
         sent_text = self.waha_client.send_message.call_args[0][1]
         self.assertIn("Engenharia", sent_text)
         self.assertIn("Python", sent_text)

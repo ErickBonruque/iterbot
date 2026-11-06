@@ -4,12 +4,11 @@ from django.test import TestCase
 
 
 class TestSendWeeklyReviewsService(TestCase):
-    @patch("apps.jobs.services.search_with_config")
     @patch("apps.jobs.services.time.sleep")
     @patch("apps.jobs.services.UserProfile.objects.filter")
     @patch("apps.jobs.services.build_weekly_local_review")
     def test_service_returns_stats_and_uses_interval(
-        self, mock_build_review, mock_filter, mock_sleep, mock_search
+        self, mock_build_review, mock_filter, mock_sleep
     ):
         from apps.jobs.services import send_weekly_reviews
 
@@ -38,15 +37,10 @@ class TestSendWeeklyReviewsService(TestCase):
         self.assertEqual(stats, {"sent": 1, "empty_notice": 0, "errors": 0})
         sender.send_message.assert_called_once()
         mock_sleep.assert_called_once_with(2)
-        # Caminho semanal é local-only: jobspy/online não pode ser chamado.
-        mock_search.assert_not_called()
 
-    @patch("apps.jobs.services.search_with_config")
     @patch("apps.jobs.services.UserProfile.objects.filter")
     @patch("apps.jobs.services.build_weekly_local_review", return_value=[])
-    def test_service_sends_empty_notice_when_no_local_jobs(
-        self, _mock_review, mock_filter, mock_search
-    ):
+    def test_service_sends_empty_notice_when_no_local_jobs(self, _mock_review, mock_filter):
         from apps.jobs.services import send_weekly_reviews
 
         course = MagicMock()
@@ -73,7 +67,6 @@ class TestSendWeeklyReviewsService(TestCase):
         # Vazio agora ENVIA aviso amigável (não fica em silêncio).
         self.assertEqual(stats, {"sent": 0, "empty_notice": 1, "errors": 0})
         sender.send_message.assert_called_once()
-        mock_search.assert_not_called()
 
 
 class TestWeeklyTaskWrapper(TestCase):

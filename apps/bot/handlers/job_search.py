@@ -1,4 +1,5 @@
 import structlog
+from django.db.models import Count
 
 from apps.bot.messages import BOT_MESSAGES
 from apps.bot.models import ConversationState
@@ -11,8 +12,8 @@ from apps.bot.state_machine import (
 )
 from apps.courses.models import Course
 from apps.jobs.models import JobSearchLog
+from apps.jobs.services import get_latest_daily_jobs
 from apps.users.models import UserProfile
-from infra.waha.protocols import JobSearcher, MessageSender
 
 from .base import BaseHandler
 
@@ -20,12 +21,6 @@ logger = structlog.get_logger(__name__)
 
 
 class JobSearchHandler(BaseHandler):
-    def __init__(
-        self, waha_client: MessageSender, job_service: "JobSearcher | None" = None
-    ) -> None:
-        super().__init__(waha_client)
-        self.job_service = job_service
-
     def _get_conversation_state(self, user: UserProfile) -> ConversationState:
         conversation_state, _ = ConversationState.objects.get_or_create(user=user)
         return conversation_state
@@ -230,15 +225,15 @@ class JobSearchHandler(BaseHandler):
             )
             return
 
-        terms = list(selected_course.search_terms.filter(is_default=True).order_by("-priority"))
-        if not terms:
+        menu = self._menu_terms(selected_course)
+        if not menu:
+            # Nenhum termo com vaga na última coleta: dizer isso direto é melhor
+            # do que um menu em que toda opção responde "nenhuma vaga".
             self.send_msg(
                 user,
                 chat_id,
                 self.resolve_message(
-                    BOT_MESSAGES.search.no_terms_for_course.key,
-                    BOT_MESSAGES.search.no_terms_for_course.text,
-                    course_name=selected_course.name,
+                    BOT_MESSAGES.search.no_jobs.key, BOT_MESSAGES.search.no_jobs.text
                 ),
             )
             apply_state_transition(
@@ -247,7 +242,10 @@ class JobSearchHandler(BaseHandler):
             )
             return
 
-        lines = [f"*{i + 1}*) {t.term}" for i, t in enumerate(terms)]
+        lines = [
+            f"*{i + 1}*) {term.display_name} ({count} vaga{'s' if count != 1 else ''})"
+            for i, (term, count) in enumerate(menu)
+        ]
         msg = self.resolve_message(
             BOT_MESSAGES.search.term_selection_intro.key,
             BOT_MESSAGES.search.term_selection_intro.text,
@@ -264,7 +262,7 @@ class JobSearchHandler(BaseHandler):
             "term_selection_started",
             user_id=user.id,
             course_id=selected_course.id,
-            terms=len(terms),
+            terms=len(menu),
         )
 
     def handle_term_selection(self, user: UserProfile, chat_id: str, text: str) -> None:
@@ -281,7 +279,7 @@ class JobSearchHandler(BaseHandler):
             )
             return
 
-        terms = list(selected_course.search_terms.filter(is_default=True).order_by("-priority"))
+        terms = [term for term, _ in self._menu_terms(selected_course)]
         try:
             idx = int(text) - 1
         except ValueError:
@@ -310,13 +308,28 @@ class JobSearchHandler(BaseHandler):
         conversation_state.selected_term = term
         conversation_state.save(update_fields=["selected_term", "updated_at"])
         selected_search_terms = [term]
-        term_name = term.term
+        term_name = term.display_name
 
         apply_state_transition(
             conversation_state=conversation_state,
             next_state=STATE_IDLE,
         )
         self.perform_search(user, chat_id, selected_search_terms, term_name)
+
+    def _menu_terms(self, course: Course) -> list[tuple]:
+        """Termos do curso com vaga na última coleta, com a contagem.
+
+        A mesma lista monta o menu e interpreta o número digitado — se cada um
+        calculasse a sua, o "2" do aluno poderia apontar para outro termo.
+        """
+        counts = dict(
+            get_latest_daily_jobs(course)
+            .values_list("search_term")
+            .annotate(total=Count("id"))
+            .order_by()
+        )
+        terms = course.search_terms.filter(is_default=True).order_by("-priority", "id")
+        return [(term, counts[term.id]) for term in terms if counts.get(term.id)]
 
     # Limite de vagas retornadas por termo ao usuário do WhatsApp (UX: evita
     # mensagens muito longas mesmo que o SearchTerm.results_wanted seja maior).
@@ -329,15 +342,11 @@ class JobSearchHandler(BaseHandler):
         search_terms: list,
         term_name: str,
     ) -> None:
-        """Consulta DailyJob pré-fetched ao invés de chamar jobspy (BOT-03).
+        """Mostra as vagas da última coleta (DailyJob) dos termos escolhidos (BOT-03).
 
-        Elimina o timeout silencioso que causava "Nenhuma vaga encontrada".
-        DailyJob é populado diariamente pela task fetch_daily_jobs às 07:00.
+        DailyJob é populado (e filtrado por relevância) diariamente pela task
+        fetch_daily_jobs às 07:00 — aqui não há scraping.
         """
-        from datetime import date
-
-        from apps.jobs.models import DailyJob
-
         self.send_msg(
             user,
             chat_id,
@@ -348,24 +357,17 @@ class JobSearchHandler(BaseHandler):
             ),
         )
 
-        today = date.today()
         limit = self.BOT_RESULTS_PER_TERM * len(search_terms)
-
-        jobs = list(
-            DailyJob.objects.filter(
-                search_term__in=search_terms,
-                fetched_date=today,
+        course = search_terms[0].course if search_terms else None
+        jobs = (
+            list(
+                get_latest_daily_jobs(course)
+                .filter(search_term__in=search_terms)
+                .values("title", "company", "location", "job_url")[:limit]
             )
-            .values("title", "company", "location", "job_url")
-            .order_by("-created_at")[:limit]
+            if course
+            else []
         )
-
-        if not jobs:
-            jobs = list(
-                DailyJob.objects.filter(search_term__in=search_terms)
-                .values("title", "company", "location", "job_url")
-                .order_by("-fetched_date")[:limit]
-            )
 
         for search_term in search_terms:
             JobSearchLog.objects.create(
@@ -404,7 +406,9 @@ class JobSearchHandler(BaseHandler):
             title = job.get("title", "Vaga")
             company = job.get("company", "Empresa")
             url = job.get("job_url") or "#"
-            lines.append(f"\n💼 *{title}*\n🏢 {company}\n🔗 {url}")
+            location = job.get("location")
+            place = f"\n📍 {location}" if location else ""
+            lines.append(f"\n💼 *{title}*\n🏢 {company}{place}\n🔗 {url}")
 
         self.send_msg(user, chat_id, "\n".join(lines))
 

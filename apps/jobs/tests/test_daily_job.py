@@ -1,5 +1,5 @@
 from datetime import date, timedelta
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 from django.db import IntegrityError
@@ -218,6 +218,8 @@ class TestFetchAndSaveDailyJobs:
         assert set(stats.keys()) == {
             "terms_processed",
             "terms_empty",
+            "jobs_found",
+            "jobs_filtered",
             "jobs_saved",
             "jobs_skipped",
             "errors",
@@ -481,3 +483,97 @@ class TestDailyJobAdmin:
         daily_job_admin.mark_as_manual(request, job)
         job.refresh_from_db()
         assert job.is_manual is True
+
+
+@pytest.mark.django_db
+class TestFetchRelevanceFilter:
+    """O filtro de relevância roda antes de salvar: o aluno só vê vaga útil."""
+
+    def setup_method(self):
+        self.course = Course.objects.create(
+            name="Agronomia",
+            job_title_keywords="agronomia, agricola",
+            job_course_names="agronomia",
+        )
+        self.regional = SearchTerm.objects.create(
+            course=self.course,
+            term="estágio",
+            scope="regional",
+            site_name="indeed",
+            location="Santa Helena, PR",
+        )
+
+    def _searcher(self, results):
+        mock = MagicMock()
+        mock.search.return_value = results
+        return mock
+
+    def _job(self, title, location="Cascavel, PR, Brazil", n=1):
+        return {
+            "title": title,
+            "company": f"C{n}",
+            "location": location,
+            "job_url": f"https://example.com/{n}",
+            "site": "indeed",
+        }
+
+    def test_only_relevant_jobs_are_saved(self):
+        from apps.jobs.models import DailyJob
+        from apps.jobs.services import fetch_and_save_daily_jobs
+
+        results = [
+            self._job("Estagiário de Agronomia", n=1),
+            self._job("Estágio - Agência Sicredi", n=2),  # fora da área
+            self._job("Jovem Aprendiz Agrícola", n=3),  # excluído
+            self._job("Estágio Agronomia", "Sarandi, Paraná, Brazil", n=4),  # fora da região
+        ]
+
+        stats = fetch_and_save_daily_jobs(self._searcher(results))
+
+        titles = list(DailyJob.objects.values_list("title", flat=True))
+        assert titles == ["Estagiário de Agronomia"]
+        assert stats["jobs_found"] == 4
+        assert stats["jobs_filtered"] == 3
+
+    def test_identical_searches_run_once_per_day(self):
+        # Busca regional ampla é igual nos três cursos: um scrape só
+        from apps.jobs.services import fetch_and_save_daily_jobs
+
+        other = Course.objects.create(name="Ciências Biológicas", job_title_keywords="biologia")
+        SearchTerm.objects.create(
+            course=other,
+            term="estágio",
+            scope="regional",
+            site_name="indeed",
+            location="Santa Helena, PR",
+        )
+        searcher = self._searcher([self._job("Estágio em Biologia", n=9)])
+
+        fetch_and_save_daily_jobs(searcher)
+
+        assert searcher.search.call_count == 1
+
+    def test_filter_emptying_a_term_is_not_a_scraper_failure(self):
+        # "fetch_daily_jobs_no_results" é alarme de scraper quebrado; vagas
+        # recusadas pelo filtro não podem disparar isso
+        from apps.jobs.services import fetch_and_save_daily_jobs
+
+        with patch("apps.jobs.services.logger") as mock_logger:
+            stats = fetch_and_save_daily_jobs(
+                self._searcher([self._job("Estágio - Agência Sicredi")])
+            )
+
+        assert stats["jobs_saved"] == 0
+        events = [c.args[0] for c in mock_logger.error.call_args_list]
+        assert "fetch_daily_jobs_no_results" not in events
+
+    def test_term_without_scope_keeps_everything(self):
+        from apps.jobs.models import DailyJob
+        from apps.jobs.services import fetch_and_save_daily_jobs
+
+        self.regional.scope = ""
+        self.regional.save()
+
+        fetch_and_save_daily_jobs(self._searcher([self._job("Vendedor Interno")]))
+
+        assert DailyJob.objects.count() == 1

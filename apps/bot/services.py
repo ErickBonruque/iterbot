@@ -30,12 +30,10 @@ from apps.bot.tasks import CeleryEmailConfirmationDispatcher
 from apps.companies.company_auth_service import CompanyAuthService
 from apps.users.models import UserProfile
 from apps.users.services import UTFPRAuthService
-from infra.jobspy.service import JobSearchService
 from infra.waha.client import WahaClient
 from infra.waha.protocols import (
     Authenticator,
     EmailConfirmationDispatcher,
-    JobSearcher,
     MessageSender,
 )
 
@@ -48,7 +46,6 @@ class BotService:
     def __init__(
         self,
         auth_service: Authenticator | None = None,
-        job_service: JobSearcher | None = None,
         waha_client: MessageSender | None = None,
         email_dispatcher: EmailConfirmationDispatcher | None = None,
     ) -> None:
@@ -56,7 +53,6 @@ class BotService:
         self.email_dispatcher = email_dispatcher or CeleryEmailConfirmationDispatcher()
         self.auth_service = auth_service or UTFPRAuthService(email_dispatcher=self.email_dispatcher)
         self.company_auth_service = CompanyAuthService()
-        self.job_service = job_service or JobSearchService()
         self.waha_client = waha_client or WahaClient(settings=waha_settings)
 
         self.auth_handler = AuthenticationHandler(
@@ -69,9 +65,9 @@ class BotService:
             self.company_auth_service,
             self.email_dispatcher,
         )
-        self.job_handler = JobSearchHandler(self.waha_client, self.job_service)
+        self.job_handler = JobSearchHandler(self.waha_client)
         self.menu_handler = MenuHandler(self.waha_client)
-        self.review_handler = JobReviewHandler(self.waha_client, self.job_service)
+        self.review_handler = JobReviewHandler(self.waha_client)
         self.application_handler = ApplicationHandler(self.waha_client)
         self.local_jobs_handler = LocalJobsHandler(
             self.waha_client, application_handler=self.application_handler

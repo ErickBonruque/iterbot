@@ -85,6 +85,26 @@ class Course(TimeStampedModel):
         verbose_name="Área",
         help_text="Grande área de conhecimento do curso",
     )
+    job_title_keywords = models.TextField(
+        blank=True,
+        default="",
+        verbose_name="Palavras-chave da área (título da vaga)",
+        help_text=(
+            "Uma por linha ou separadas por vírgula, sem se preocupar com acento. "
+            "Uma vaga online só chega ao aluno deste curso se o título tiver uma "
+            "delas (ex.: desenvolvedor, programação, dados). Casa no início da "
+            "palavra: 'desenvolv' pega 'desenvolvedora'. Vazio = não filtra por área."
+        ),
+    )
+    job_course_names = models.TextField(
+        blank=True,
+        default="",
+        verbose_name="Nomes do curso na descrição da vaga",
+        help_text=(
+            "Se a descrição da vaga citar um destes nomes (ex.: 'cursando Ciência "
+            "da Computação'), a vaga também conta como da área, mesmo com título genérico."
+        ),
+    )
 
     class Meta:
         ordering = ["order", "name"]
@@ -109,6 +129,14 @@ class SearchTerm(TimeStampedModel):
         ("temporary", "Temporário"),
         ("other", "Outro"),
     ]
+    SCOPE_NONE = ""
+    SCOPE_REGIONAL = "regional"
+    SCOPE_REMOTE = "remoto"
+    SCOPE_CHOICES = [
+        (SCOPE_NONE, "Sem filtro (mostra tudo o que a busca trouxer)"),
+        (SCOPE_REGIONAL, "Regional: estágio presencial no Oeste do Paraná, da área do curso"),
+        (SCOPE_REMOTE, "Remoto: estágio ou vaga inicial remota, da área do curso"),
+    ]
     COUNTRY_CHOICES = [
         ("Brazil", "Brasil"),
         ("USA", "Estados Unidos"),
@@ -126,6 +154,24 @@ class SearchTerm(TimeStampedModel):
 
     course = models.ForeignKey(Course, related_name="search_terms", on_delete=models.CASCADE)
     term = models.CharField(max_length=100, help_text="Termo de busca para vagas")
+    label = models.CharField(
+        max_length=60,
+        blank=True,
+        default="",
+        verbose_name="Nome no menu do bot",
+        help_text="Como a opção aparece para o aluno no WhatsApp. Vazio = mostra o próprio termo.",
+    )
+    scope = models.CharField(
+        max_length=10,
+        blank=True,
+        default=SCOPE_NONE,
+        choices=SCOPE_CHOICES,
+        verbose_name="Filtro de relevância",
+        help_text=(
+            "Aplicado depois da busca, com as palavras-chave do curso. Tira vaga de "
+            "fora do Brasil, 'Jovem Aprendiz', sênior e vaga de outra área."
+        ),
+    )
     is_default = models.BooleanField(default=True, help_text="Termo padrão/ativo")
     priority = models.IntegerField(
         default=0, help_text="Prioridade na busca (maior = mais importante)"
@@ -134,7 +180,10 @@ class SearchTerm(TimeStampedModel):
     site_name = models.CharField(
         max_length=100,
         default="linkedin,indeed,glassdoor",
-        help_text="Sites de busca separados por vírgula: linkedin, indeed, glassdoor, zip_recruiter, google",
+        help_text=(
+            "Sites de busca separados por vírgula: linkedin, indeed, glassdoor. "
+            "LinkedIn ignora cidade e 'apenas remotas'; Indeed respeita os dois."
+        ),
     )
     location = models.CharField(
         max_length=100,
@@ -194,6 +243,11 @@ class SearchTerm(TimeStampedModel):
 
     def __str__(self):
         return f"{self.term} ({self.course.name})"
+
+    @property
+    def display_name(self) -> str:
+        """Nome mostrado ao aluno no menu do bot."""
+        return self.label or self.term
 
     def to_search_kwargs(self, limit_override: int | None = None) -> dict:
         """Retorna kwargs completos para `JobSearchService.search()` derivados

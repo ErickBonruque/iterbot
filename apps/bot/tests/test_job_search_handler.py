@@ -45,8 +45,7 @@ class JobSearchHandlerCourseSelectionTests(TestCase):
     def setUp(self):
         self.waha_client = MagicMock()
         self.waha_client.settings = MagicMock(session_name="test-session")
-        self.job_service = MagicMock()
-        self.service = BotService(waha_client=self.waha_client, job_service=self.job_service)
+        self.service = BotService(waha_client=self.waha_client)
 
     def _authenticate_user(self, chat_id: str) -> UserProfile:
         user = UserProfile.objects.create(phone_number=chat_id, is_authenticated_utfpr=True)
@@ -109,8 +108,7 @@ class CoursePreferenceTests(TestCase):
     def setUp(self):
         self.waha_client = MagicMock()
         self.waha_client.settings = MagicMock(session_name="test-session")
-        self.job_service = MagicMock()
-        self.service = BotService(waha_client=self.waha_client, job_service=self.job_service)
+        self.service = BotService(waha_client=self.waha_client)
         self.chat_id = "5541999900001@c.us"
         self.course = Course.objects.create(
             name="Engenharia de Software",
@@ -269,3 +267,76 @@ class PerformSearchDailyJobTests(TestCase):
         handler = self.service.job_handler
         handler.perform_search(self.user, self.chat_id, [self.st], term_name="python developer")
         self.assertEqual(self.waha_client.send_message.call_count, 2)
+
+
+class TermMenuTests(TestCase):
+    """Menu de termos: só opções com vaga, com o nome amigável e a contagem."""
+
+    def setUp(self):
+        self.waha_client = MagicMock()
+        self.waha_client.settings = MagicMock(session_name="test-session")
+        self.service = BotService(waha_client=self.waha_client)
+        self.chat_id = "5541999920001@c.us"
+        self.course = Course.objects.create(name="Agronomia", is_active=True)
+        self.user = UserProfile.objects.create(
+            phone_number=self.chat_id, is_authenticated_utfpr=True, course=self.course
+        )
+        ConversationState.objects.update_or_create(
+            user=self.user, defaults={"selected_course": self.course}
+        )
+        self.regional = SearchTerm.objects.create(
+            course=self.course, term="estágio", label="Estágios na região", priority=10
+        )
+        self.empty = SearchTerm.objects.create(
+            course=self.course, term="estágio agronomia", label="Estágio em agronomia", priority=5
+        )
+        self.remote = SearchTerm.objects.create(
+            course=self.course, term="estágio OR estagiário", priority=1
+        )
+
+    def _daily(self, term, title, n, location="Cascavel, PR, Brazil"):
+        DailyJob.objects.create(
+            search_term=term,
+            fetched_date=date.today(),
+            title=title,
+            company=f"C{n}",
+            location=location,
+            job_url=f"https://example.com/{n}",
+        )
+
+    def _sent(self):
+        return "\n".join(call[0][1] for call in self.waha_client.send_message.call_args_list)
+
+    def test_menu_lists_only_terms_with_jobs_using_label_and_count(self):
+        self._daily(self.regional, "Estagiário de Agronomia", 1)
+        self._daily(self.regional, "Estágio Agrícola", 2)
+        self._daily(self.remote, "Estágio remoto em agronegócio", 3, "Remoto, Brazil")
+
+        self.service.job_handler.start_term_selection(self.user, self.chat_id)
+
+        sent = self._sent()
+        self.assertIn("*1*) Estágios na região (2 vagas)", sent)
+        self.assertIn("*2*) estágio OR estagiário (1 vaga)", sent)
+        self.assertNotIn("Estágio em agronomia", sent)
+
+    def test_selection_number_follows_the_visible_menu(self):
+        self._daily(self.regional, "Estagiário de Agronomia", 1)
+        self._daily(self.remote, "Estágio remoto em agronegócio", 3, "Remoto, Brazil")
+        handler = self.service.job_handler
+        handler.start_term_selection(self.user, self.chat_id)
+        self.waha_client.send_message.reset_mock()
+
+        handler.handle_term_selection(self.user, self.chat_id, "2")
+
+        sent = self._sent()
+        self.assertIn("Estágio remoto em agronegócio", sent)
+        self.assertIn("📍 Remoto, Brazil", sent)
+
+    def test_no_jobs_in_any_term_skips_the_menu(self):
+        self.service.job_handler.start_term_selection(self.user, self.chat_id)
+
+        sent = self._sent()
+        self.assertNotIn("Escolha", sent)
+        self.assertIn("vaga", sent.lower())
+        state = ConversationState.objects.get(user=self.user)
+        self.assertNotEqual(state.current_action, "term_selection")

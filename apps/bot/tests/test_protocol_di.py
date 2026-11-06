@@ -9,7 +9,6 @@ from apps.users.models import UserProfile
 from infra.waha.protocols import (
     Authenticator,
     EmailConfirmationDispatcher,
-    JobSearcher,
     MessageSender,
 )
 
@@ -22,17 +21,6 @@ class StubMessageSender:
     def send_message(self, chat_id: str, text: str) -> bool:
         self.messages.append((chat_id, text))
         return True
-
-
-class StubJobSearcher:
-    def __init__(self) -> None:
-        self.calls: list[tuple[list[str], int]] = []
-
-    def search(self, terms: list[str], **kwargs):
-        # limit_override do bot vira kwarg `limit`; default 5 do
-        # SearchTerm.results_wanted quando não sobrescrito.
-        self.calls.append((terms, kwargs.get("limit", 5)))
-        return [{"company": "Capy", "title": "Dev", "url": "https://example.com"}]
 
 
 class StubAuthenticator:
@@ -72,12 +60,10 @@ class StubEmailDispatcher:
 class ProtocolDITests(TestCase):
     def setUp(self):
         self.sender: MessageSender = StubMessageSender()
-        self.searcher: JobSearcher = StubJobSearcher()
         self.auth: Authenticator = StubAuthenticator()
         self.dispatcher: EmailConfirmationDispatcher = StubEmailDispatcher()
         self.service = BotService(
             waha_client=self.sender,
-            job_service=self.searcher,
             auth_service=self.auth,
             email_dispatcher=self.dispatcher,
         )
@@ -89,7 +75,7 @@ class ProtocolDITests(TestCase):
         sent_texts = [text for _, text in self.sender.messages]
         self.assertTrue(any("IterBot" in text for text in sent_texts))
 
-    def test_course_search_uses_injected_job_searcher_double(self):
+    def test_course_search_reads_prefetched_daily_jobs(self):
         course = Course.objects.create(name="Engenharia", is_active=True)
         term = SearchTerm.objects.create(course=course, term="Python", priority=1)
 
@@ -109,6 +95,6 @@ class ProtocolDITests(TestCase):
         self.service.process_message(chat_id, "1", from_me=False)
         self.service.process_message(chat_id, "1", from_me=False)
 
-        # perform_search agora consulta DailyJob em vez de job_service.search
+        # A busca do aluno lê DailyJob (coletado às 7h), sem scraping na conversa
         sent_texts = [text for _, text in self.sender.messages]
         self.assertTrue(any("Dev Python" in text for text in sent_texts))

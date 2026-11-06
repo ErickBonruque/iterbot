@@ -317,7 +317,7 @@ class TestSearchTermInline:
     def test_inline_has_simple_fields(self):
         from apps.courses.admin import SearchTermInline
 
-        assert SearchTermInline.fields == ("term", "is_default", "priority")
+        assert SearchTermInline.fields == ("label", "term", "scope", "is_default", "priority")
 
 
 @pytest.mark.django_db
@@ -357,3 +357,46 @@ class TestSearchUsesToSearchKwargs:
         assert "location" in call_kwargs
         assert "country_indeed" in call_kwargs
         assert "hours_old" in call_kwargs
+
+
+@pytest.mark.django_db
+class TestTestSearchAppliesRelevanceFilter:
+    """'Testar busca' mostra o que o aluno vai ver: o resultado depois do filtro."""
+
+    @patch("infra.jobspy.service.JobSearchService.search")
+    def test_shows_only_relevant_jobs_and_summary(self, mock_search, rf, admin_user, course):
+        from django.contrib.messages.storage.fallback import FallbackStorage
+
+        from apps.courses.admin import SearchTermAdmin
+
+        course.job_title_keywords = "software, desenvolvedor"
+        course.save()
+        term = SearchTerm.objects.create(
+            course=course, term="estágio", scope="regional", location="Santa Helena, PR"
+        )
+        mock_search.return_value = [
+            {
+                "title": "Estágio em Desenvolvimento de Software",
+                "company": "A",
+                "location": "Cascavel, PR, Brazil",
+                "job_url": "https://example.com/1",
+            },
+            {
+                "title": "Jovem Aprendiz",
+                "company": "B",
+                "location": "Toledo, PR, Brazil",
+                "job_url": "https://example.com/2",
+            },
+        ]
+        request = rf.post(f"/admin/courses/searchterm/{term.pk}/change/")
+        request.user = admin_user
+        request.session = {}
+        request._messages = FallbackStorage(request)
+
+        SearchTermAdmin(SearchTerm, None).test_search(request, term)
+
+        titles = [job["title"] for job in request.session["job_search_results"]]
+        assert titles == ["Estágio em Desenvolvimento de Software"]
+        summary = " ".join(str(m.message) for m in request._messages)
+        assert "1 de 2" in summary
+        assert "excluido: 1" in summary

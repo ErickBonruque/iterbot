@@ -196,7 +196,7 @@ class SearchMessages:
     )
     term_selection_intro: MessageTemplate = MessageTemplate(
         "search.term_selection_intro",
-        "🔍 Curso: *{course_name}*\nEscolha o termo de busca:\n\n{terms_menu}\n\nDigite o número:",
+        "🔍 Curso: *{course_name}*\nQue vagas você quer ver?\n\n{terms_menu}\n\nDigite o número:",
     )
     invalid_term_non_numeric: MessageTemplate = MessageTemplate(
         "search.invalid_term_non_numeric",
@@ -220,11 +220,12 @@ class SearchMessages:
     )
     no_jobs: MessageTemplate = MessageTemplate(
         "search.no_jobs",
-        "😔 Nenhuma vaga encontrada no momento para esses termos.",
+        "😔 Hoje não encontrei vagas da sua área — estágio na região ou remoto.\n\n"
+        "_A busca roda todo dia às 7h; tente de novo amanhã._",
     )
     results_header: MessageTemplate = MessageTemplate(
         "search.results_header",
-        "🚀 *Vagas para {course_name}* (termo: *{term_name}*)",
+        "🚀 *{term_name}* — {course_name}",
     )
     course_preference_saved: MessageTemplate = MessageTemplate(
         "search.course_preference_saved",

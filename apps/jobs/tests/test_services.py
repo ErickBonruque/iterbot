@@ -1,155 +1,78 @@
-"""Tests for jobs SSoT search function and get_online_jobs_for_course."""
+"""Testes dos serviços de vagas: review sob demanda e resumo semanal."""
 
+from datetime import date, timedelta
 from unittest.mock import MagicMock, patch
 
 import pytest
 
-from apps.courses.models import Course, SearchTerm
-from apps.jobs.services import get_online_jobs_for_course, search_with_config
+from apps.courses.models import Area, Course, SearchTerm
+from apps.jobs.models import DailyJob
+from apps.jobs.services import build_review_for_user
 
 
 @pytest.mark.django_db
-class TestSearchWithConfig:
-    """Test search_with_config uses per-SearchTerm to_search_kwargs()."""
+class TestBuildReviewForUser:
+    """ "Ver Review" lê as vagas pré-buscadas — nada de scraping com o aluno esperando."""
 
     @pytest.fixture
-    def course(self, db):
-        return Course.objects.create(name="Engenharia de Software")
+    def course(self):
+        return Course.objects.create(name="Agronomia")
 
-    @pytest.fixture
-    def mock_searcher(self):
-        """Mock JobSearcher that tracks calls."""
-        searcher = MagicMock()
-        searcher.search.return_value = []
-        return searcher
-
-    def test_uses_per_term_kwargs(self, course, mock_searcher):
-        """Each SearchTerm's to_search_kwargs() is called for its own config."""
-        SearchTerm.objects.create(
-            course=course,
-            term="python",
-            is_default=True,
-            priority=10,
-            location="Curitiba, PR",
-            is_remote=True,
-            job_type="internship",
-        )
-        SearchTerm.objects.create(
-            course=course,
-            term="django",
-            is_default=True,
-            priority=5,
-            location="São Paulo, SP",
-            is_remote=False,
-            job_type="fulltime",
+    def _daily(self, term, title, n, fetched=None):
+        return DailyJob.objects.create(
+            search_term=term,
+            fetched_date=fetched or date.today(),
+            title=title,
+            company=f"Empresa {n}",
+            location="Cascavel, PR, Brazil",
+            job_url=f"https://example.com/{n}",
         )
 
-        mock_searcher.search.side_effect = [
-            [{"title": "Python Dev", "company": "A"}],
-            [{"title": "Django Dev", "company": "B"}],
-        ]
+    def test_uses_latest_fetch_ordered_by_term_priority(self, course):
+        low = SearchTerm.objects.create(course=course, term="remoto", priority=1)
+        high = SearchTerm.objects.create(course=course, term="regional", priority=10)
+        self._daily(low, "Estágio remoto", 1)
+        self._daily(high, "Estágio na região", 2)
+        self._daily(high, "Vaga velha", 3, fetched=date.today() - timedelta(days=2))
 
-        search_with_config(course, mock_searcher)
+        titles = [j["title"] for j in build_review_for_user(course)]
 
-        assert mock_searcher.search.call_count == 2
-        # Verify each call uses its own term's to_search_kwargs()
-        call_args_list = mock_searcher.search.call_args_list
-        kwargs1 = call_args_list[0][1]  # keyword args of first call
-        kwargs2 = call_args_list[1][1]  # keyword args of second call
+        assert titles == ["Estágio na região", "Estágio remoto"]
 
-        # st1 config
-        assert kwargs1["location"] == "Curitiba, PR"
-        assert kwargs1["is_remote"] is True
-        assert kwargs1["job_type"] == "internship"
-
-        # st2 config
-        assert kwargs2["location"] == "São Paulo, SP"
-        assert kwargs2["is_remote"] is False
-        assert kwargs2["job_type"] == "fulltime"
-
-        # Verify terms=[single term] for each call (terms is keyword arg)
-        assert call_args_list[0][1]["terms"] == ["python"]
-        assert call_args_list[1][1]["terms"] == ["django"]
-
-    def test_aggregates_results(self, course, mock_searcher):
-        """Multiple SearchTerms produce combined results."""
-        SearchTerm.objects.create(course=course, term="python", is_default=True, priority=10)
-        SearchTerm.objects.create(course=course, term="django", is_default=True, priority=5)
-
-        mock_searcher.search.side_effect = [
-            [{"title": "Python Dev"}, {"title": "Python Jr"}],
-            [{"title": "Django Dev"}],
-        ]
-
-        result = search_with_config(course, mock_searcher)
-        assert len(result) == 3
-
-    def test_empty_terms_returns_empty(self, course, mock_searcher):
-        """No default SearchTerms → empty list (no search calls)."""
-        result = search_with_config(course, mock_searcher)
-        assert result == []
-        mock_searcher.search.assert_not_called()
-
-    def test_non_default_terms_excluded(self, course, mock_searcher):
-        """Non-default SearchTerms are excluded from search."""
-        SearchTerm.objects.create(course=course, term="python", is_default=True, priority=10)
-        SearchTerm.objects.create(course=course, term="archived", is_default=False, priority=1)
-
-        mock_searcher.search.return_value = [{"title": "Result"}]
-        search_with_config(course, mock_searcher)
-
-        # Only 1 call (for the default term), not for the non-default one
-        assert mock_searcher.search.call_count == 1
-
-    def test_limit_override(self, course, mock_searcher):
-        """limit_per_term overrides SearchTerm.results_wanted."""
-        SearchTerm.objects.create(
-            course=course,
-            term="python",
-            is_default=True,
-            priority=10,
-            results_wanted=20,
+    def test_same_job_from_two_terms_appears_once(self, course):
+        a = SearchTerm.objects.create(course=course, term="a", priority=2)
+        b = SearchTerm.objects.create(course=course, term="b", priority=1)
+        self._daily(a, "Estagiário de Agronomia", 1)
+        DailyJob.objects.create(
+            search_term=b,
+            fetched_date=date.today(),
+            title="Estagiário de Agronomia",
+            company="Empresa 1",
+            location="Cascavel, PR, Brazil",
+            job_url="https://example.com/1",
         )
 
-        mock_searcher.search.return_value = []
-        search_with_config(course, mock_searcher, limit_per_term=5)
+        assert len(build_review_for_user(course)) == 1
 
-        kwargs = mock_searcher.search.call_args[1]
-        assert kwargs["limit"] == 5
+    def test_local_company_jobs_come_first(self, course):
+        term = SearchTerm.objects.create(course=course, term="a")
+        self._daily(term, "Estágio online", 1)
+        local = {"title": "Vaga da empresa parceira", "company": "Coop"}
 
+        with patch("apps.jobs.services.get_local_jobs_for_area", return_value=[local]):
+            jobs = build_review_for_user(course)
 
-@pytest.mark.django_db
-class TestGetOnlineJobsDelegation:
-    """Test get_online_jobs_for_course delegates to search_with_config."""
+        assert jobs[0] == local
+        assert jobs[1]["title"] == "Estágio online"
 
-    @pytest.fixture
-    def course(self, db):
-        return Course.objects.create(name="Engenharia de Software")
+    def test_limits_to_five(self, course):
+        term = SearchTerm.objects.create(course=course, term="a")
+        for n in range(8):
+            self._daily(term, f"Estágio {n}", n)
+        assert len(build_review_for_user(course)) == 5
 
-    @patch("apps.jobs.services.search_with_config")
-    def test_delegates_to_search_with_config(self, mock_search_with_config, course):
-        """get_online_jobs_for_course calls search_with_config with the same arguments."""
-        mock_job_searcher = MagicMock()
-        mock_search_with_config.return_value = [{"title": "Result"}]
-
-        result = get_online_jobs_for_course(course, mock_job_searcher)
-
-        mock_search_with_config.assert_called_once_with(
-            course, mock_job_searcher, limit_per_term=10
-        )
-        assert result == [{"title": "Result"}]
-
-    @patch("apps.jobs.services.search_with_config")
-    def test_limit_per_term_is_10(self, mock_search_with_config, course):
-        """Default limit_per_term=10 is passed through."""
-        mock_job_searcher = MagicMock()
-        mock_search_with_config.return_value = []
-
-        get_online_jobs_for_course(course, mock_job_searcher)
-
-        mock_search_with_config.assert_called_once_with(
-            course, mock_job_searcher, limit_per_term=10
-        )
+    def test_no_jobs_returns_empty(self, course):
+        assert build_review_for_user(course) == []
 
 
 @pytest.mark.django_db
@@ -191,8 +114,6 @@ class TestLocalAreaReview:
 
     @pytest.fixture
     def area(self):
-        from apps.courses.models import Area
-
         return Area.objects.create(name="Área Review Local")
 
     @pytest.fixture
@@ -249,7 +170,6 @@ class TestLocalAreaReview:
         course = Course.objects.create(name="Curso Sem Área Review")
         company = CompanyFactory()
         universal = JobFactory(company=company, status=JobStatus.APPROVED)  # sem áreas
-        from apps.courses.models import Area
 
         other_area = Area.objects.create(name="Outra Área Review")
         targeted = JobFactory(company=company, status=JobStatus.APPROVED)

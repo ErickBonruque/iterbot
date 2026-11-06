@@ -2,7 +2,9 @@
 
 Invocado como `python -m infra.jobspy._scrape_runner` por
 `infra.jobspy.service._run_scrape`. Lê os kwargs de `scrape_jobs` como JSON no
-stdin e escreve no stdout `{"records": [...]}` ou `{"error": "..."}`.
+stdin e escreve no stdout `{"records": [...], "board_errors": ..., "board_warnings": ...}` ou
+`{"error": "..."}`. Os dois campos `board_*` vêm de `DataFrame.attrs` (jobspy
+>= 1.2): site bloqueado (ex.: 429 do LinkedIn) e filtro ignorado pelo site.
 
 Roda fora do Celery e sem carregar o Django: o processo é descartável e pode
 ser morto a qualquer momento (é o que garante o timeout real da busca) sem
@@ -36,12 +38,21 @@ def main() -> int:
 
             from infra.jobspy.records import records_from_dataframe
 
-            records = records_from_dataframe(scrape_jobs(**scrape_kwargs))
+            jobs_df = scrape_jobs(**scrape_kwargs)
+            records = records_from_dataframe(jobs_df)
+            attrs = getattr(jobs_df, "attrs", None) or {}
         except Exception as exc:
             _emit({"error": f"{type(exc).__name__}: {exc}"}, response)
             return 1
 
-    _emit({"records": records}, response)
+    _emit(
+        {
+            "records": records,
+            "board_errors": attrs.get("errors") or None,
+            "board_warnings": attrs.get("warnings") or None,
+        },
+        response,
+    )
     return 0
 
 
