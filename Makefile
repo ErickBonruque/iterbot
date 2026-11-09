@@ -175,10 +175,8 @@ health:
 ## backup: Backup database and secrets
 backup:
 	@echo "$(BLUE)💾 Creating backup...$(NC)"
-	@mkdir -p backups
-	@docker compose exec -T db pg_dump -U iterbot_user iterbot > backups/db_backup_$$(date +%Y%m%d_%H%M%S).sql
-	@tar -czf backups/secrets_backup_$$(date +%Y%m%d_%H%M%S).tar.gz secrets/
-	@echo "$(GREEN)✅ Backup created in backups/$(NC)"
+	@bash deployment/scripts/backup-postgres.sh
+	@echo "$(GREEN)✅ Backup em backups/daily/ (banco + .env/secrets)$(NC)"
 
 ## ci-check: Run all CI quality checks (ruff + mypy)
 ci-check:

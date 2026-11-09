@@ -68,3 +68,6 @@ docs/AWS_STATUS.md
 docs/development/CREDENCIAIS.md
 docs/Relátorio Parcial - Bot.md
 docs/artigo-abnt-iterbot.md
+
+# Backups do banco e da configuracao (dados pessoais + segredos) — nunca versionar
+backups/

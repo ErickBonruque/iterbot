@@ -4,7 +4,7 @@
 # ============================================================================
 # Executa verificacoes rapidas para confirmar que o deploy esta funcional.
 # Uso: ./deployment/scripts/smoke-check.sh [DOMAIN]
-# Exemplo: ./deployment/scripts/smoke-check.sh 54-123-45-67.sslip.io
+# Exemplo: ./deployment/scripts/smoke-check.sh gosh.sh.utfpr.edu.br
 # ============================================================================
 set -euo pipefail
 
@@ -179,15 +179,21 @@ fi
 echo ""
 
 echo "[DEPL-04] Backup"
-# O backup para S3 e heranca da EC2; no host da UTFPR a conta AWS foi encerrada,
-# entao a ausencia do aws cli e o esperado e nao uma falha do deploy. O destino
-# definitivo dos backups no gosh ainda esta em aberto.
-if command -v aws > /dev/null 2>&1 && aws sts get-caller-identity > /dev/null 2>&1; then
-    printf "  %-50s " "Credenciais AWS funcionais (backup S3)"
-    echo "[OK]"
-    pass
+# Backup diario local (backup-postgres.sh via cron); last-success e gravado a
+# cada backup bem-sucedido. Mais de 26 h sem sucesso = cron parado ou falhando.
+LAST_SUCCESS_FILE="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)/backups/last-success"
+if [ -f "$LAST_SUCCESS_FILE" ]; then
+    age_hours=$(( ( $(date +%s) - $(date -d "$(cat "$LAST_SUCCESS_FILE")" +%s) ) / 3600 ))
+    printf "  %-50s " "Ultimo backup bem-sucedido ha ${age_hours} h"
+    if [ "$age_hours" -le 26 ]; then
+        echo "[OK]"
+        pass
+    else
+        echo "[FAIL] (ver backups/backup.log)"
+        fail
+    fi
 else
-    check_skip "Backup S3" "sem AWS no host da UTFPR - definir destino de backup"
+    check_skip "Backup local" "nenhum backup ainda (rode install-backup-cron.sh)"
 fi
 echo ""
 

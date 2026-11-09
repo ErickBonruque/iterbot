@@ -1,52 +1,50 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # ============================================================================
-# IterBot - Restaurar Backup PostgreSQL do S3
+# IterBot - Restaurar o banco a partir de um backup local (.sql.gz)
 # ============================================================================
-# Uso: ./deployment/scripts/restore-postgres.sh s3://iterbot-backups/weekly/iterbot_backup_YYYYMMDD_HHMMSS.sql.gz
+# Uso: deployment/scripts/restore-postgres.sh backups/daily/iterbot_db_AAAAMMDD_HHMMSS.sql.gz
+#      (sem argumento: lista os backups disponiveis)
+#
+# O dump foi gerado com --clean --if-exists: as tabelas atuais sao apagadas e
+# recriadas. Para nao haver escrita no meio, o script para backend/worker/beat
+# e os sobe de novo no fim. Para baixar um backup da copia fora do host:
+#   rclone copy iterbot-offsite:daily/<arquivo> backups/restore/
 # ============================================================================
-set -euo pipefail
+set -Eeuo pipefail
 
-if [ $# -eq 0 ]; then
-    echo "Uso: $0 <s3-path>"
-    echo "Exemplo: $0 s3://iterbot-backups/weekly/iterbot_backup_20260413_020000.sql.gz"
-    echo ""
-    echo "Backups disponiveis:"
-    aws s3 ls "s3://${S3_BACKUP_BUCKET:-iterbot-backups}/weekly/" --human-readable
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="${PROJECT_DIR:-$(cd "${SCRIPT_DIR}/../.." && pwd)}"
+DB_CONTAINER="${DB_CONTAINER:-iterbot_db}"
+APP_CONTAINERS=(iterbot_backend iterbot_celery_worker iterbot_celery_beat)
+
+if [ $# -lt 1 ]; then
+    echo "Uso: $0 <backup.sql.gz>"
+    echo
+    echo "Backups locais:"
+    ls -1t "${PROJECT_DIR}"/backups/{daily,weekly}/iterbot_db_*.sql.gz 2>/dev/null || echo "  (nenhum)"
     exit 1
 fi
 
-S3_PATH="$1"
-RESTORE_FILE="/tmp/iterbot_restore.sql.gz"
-DOCKER_BIN=$(command -v docker || echo "/usr/bin/docker")
-AWS_BIN=$(command -v aws || echo "/usr/local/bin/aws")
-PROJECT_DIR="${PROJECT_DIR:-/home/ubuntu/iterbot}"
+BACKUP_FILE="$1"
+[ -f "${BACKUP_FILE}" ] || { echo "Arquivo nao encontrado: ${BACKUP_FILE}"; exit 1; }
+gzip -t "${BACKUP_FILE}"
 
-if [ -f "${PROJECT_DIR}/.env" ]; then
-    export $(grep -v '^#' "${PROJECT_DIR}/.env" | grep -E '^(POSTGRES_USER|POSTGRES_DB)=' | xargs)
-fi
+DB_USER="$(docker exec "${DB_CONTAINER}" printenv POSTGRES_USER)"
+DB_NAME="$(docker exec "${DB_CONTAINER}" printenv POSTGRES_DB)"
 
-POSTGRES_USER="${POSTGRES_USER:-iterbot_user}"
-POSTGRES_DB="${POSTGRES_DB:-iterbot}"
+echo "Restaurar ${BACKUP_FILE}"
+echo "  sobre o banco ${DB_NAME} em ${DB_CONTAINER} (o conteudo atual sera SUBSTITUIDO)"
+read -r -p "Digite RESTAURAR para continuar: " answer
+[ "${answer}" = "RESTAURAR" ] || { echo "Cancelado."; exit 0; }
 
-echo "[$(date -Iseconds)] Restaurando backup de: ${S3_PATH}"
-echo "  Database: ${POSTGRES_DB}"
+restart_apps() { docker start "${APP_CONTAINERS[@]}" >/dev/null 2>&1 || true; }
+trap restart_apps EXIT
 
-read -p "ATENCAO: Isso vai sobrescrever o banco atual. Continuar? (y/N): " -n 1 -r
-echo
-if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-    echo "Restauracao cancelada."
-    exit 0
-fi
+echo "[$(date -Iseconds)] parando ${APP_CONTAINERS[*]}"
+docker stop "${APP_CONTAINERS[@]}" >/dev/null 2>&1 || true
 
-# Download do S3
-${AWS_BIN} s3 cp "${S3_PATH}" "${RESTORE_FILE}" --quiet
+echo "[$(date -Iseconds)] restaurando..."
+gunzip -c "${BACKUP_FILE}" \
+    | docker exec -i "${DB_CONTAINER}" psql -q -v ON_ERROR_STOP=1 -U "${DB_USER}" -d "${DB_NAME}" >/dev/null
 
-# Restaurar no container PostgreSQL
-gunzip -c "${RESTORE_FILE}" | ${DOCKER_BIN} exec -i iterbot_db psql \
-    -U "${POSTGRES_USER}" \
-    -d "${POSTGRES_DB}"
-
-# Limpeza
-rm -f "${RESTORE_FILE}"
-
-echo "[$(date -Iseconds)] Restauracao concluida."
+echo "[$(date -Iseconds)] restauracao concluida; subindo os containers da aplicacao"

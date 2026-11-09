@@ -1,56 +1,30 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # ============================================================================
-# IterBot - Disk Space Check Script
+# IterBot - Alerta de disco cheio (host gosh)
 # ============================================================================
-# Monitors disk usage and sends alerts via AWS SES when usage exceeds
-# a configurable threshold.
-#
-# Usage: ./deployment/scripts/check-disk-space.sh
-#
-# Environment variables:
-#   DISK_THRESHOLD  - Usage percentage threshold (default: 80)
-#   SENDER_EMAIL    - Sender email for alerts (default: bonruque@alunos.utfpr.edu.br)
-#   ALERT_EMAIL     - Alert recipient email (default: same as SENDER_EMAIL)
+# O disco de 19 GB e o gargalo do host (imagem do WAHA ~4 GB + 3 imagens da
+# aplicacao + build cache). Se o uso de / passar de DISK_THRESHOLD (padrao 85%),
+# manda alerta por e-mail via `manage.py send_ops_alert` (ALERT_EMAIL).
+# Agendado junto com o backup por install-backup-cron.sh.
 # ============================================================================
-set -euo pipefail
+set -Eeuo pipefail
 
-DISK_THRESHOLD="${DISK_THRESHOLD:-80}"
-SENDER_EMAIL="${SENDER_EMAIL:-bonruque@alunos.utfpr.edu.br}"
-ALERT_EMAIL="${ALERT_EMAIL:-bonruque@alunos.utfpr.edu.br}"
-AWS_BIN=$(command -v aws || echo "/usr/local/bin/aws")
-HOSTNAME_STR=$(hostname 2>/dev/null || echo "unknown")
+DISK_THRESHOLD="${DISK_THRESHOLD:-85}"
+BACKEND_CONTAINER="${BACKEND_CONTAINER:-iterbot_backend}"
 
-# Get disk usage percentage for root partition
-USAGE=$(df -h / | tail -1 | awk '{print $5}' | sed 's/%//')
+usage="$(df -P / | awk 'NR==2 {gsub("%", "", $5); print $5}')"
+echo "[$(date -Iseconds)] uso do disco: ${usage}% (limite ${DISK_THRESHOLD}%)"
 
-echo "[$(date -Iseconds)] Disk usage: ${USAGE}% (threshold: ${DISK_THRESHOLD}%)"
+if [ "${usage}" -ge "${DISK_THRESHOLD}" ]; then
+    body="Disco do host $(hostname) em ${usage}% (limite ${DISK_THRESHOLD}%).
 
-if [ "$USAGE" -ge "$DISK_THRESHOLD" ]; then
-    echo "[ALERT] Disk usage ${USAGE}% exceeds threshold ${DISK_THRESHOLD}%"
+$(df -h /)
 
-    DISK_INFO=$(df -h 2>/dev/null || echo "df command failed")
-    DOCKER_INFO=$(command -v docker &>/dev/null && docker system df 2>/dev/null || echo "Docker not available")
+$(docker system df 2>/dev/null || true)
 
-    ${AWS_BIN} ses send-email \
-        --from "${SENDER_EMAIL}" \
-        --to "${ALERT_EMAIL}" \
-        --subject "[IterBot ALERT] Disk Space ${USAGE}% - $(date +%Y-%m-%d)" \
-        --text "Disk usage on ${HOSTNAME_STR} is at ${USAGE}% (threshold: ${DISK_THRESHOLD}%).
-
-Date: $(date +%Y-%m-%d)
-Host: ${HOSTNAME_STR}
-
-=== Disk Usage ===
-${DISK_INFO}
-
-=== Docker Disk Usage ===
-${DOCKER_INFO}
-
-Action required: Clean up disk space or increase storage capacity." \
-        2>/dev/null || echo "[WARNING] Failed to send SES alert email"
-
+Para liberar: docker builder prune -f && docker image prune -f"
+    docker exec "${BACKEND_CONTAINER}" python manage.py send_ops_alert \
+        --subject "Disco em ${usage}% no host" --body "${body}" >/dev/null \
+        || echo "AVISO: nao consegui enviar o alerta por e-mail"
     exit 1
 fi
-
-echo "[OK] Disk usage ${USAGE}% is below threshold ${DISK_THRESHOLD}%"
-exit 0

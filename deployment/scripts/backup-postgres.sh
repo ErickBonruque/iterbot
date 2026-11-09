@@ -1,120 +1,144 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # ============================================================================
-# IterBot - Backup PostgreSQL para S3
+# IterBot - Backup diario do PostgreSQL (host gosh)
 # ============================================================================
-# Executado via crontab diariamente (02:00).
-# Requer IAM Role attached a EC2 com permissao s3:PutObject no bucket.
+# 1. pg_dump do container iterbot_db -> backups/daily/iterbot_db_AAAAMMDD_HHMMSS.sql.gz
+#    (dump com --clean --if-exists: restaura por cima de um banco existente)
+# 2. Copia da configuracao que NAO esta no git (.env, secrets/,
+#    docker-compose.resources.yml) -> backups/daily/iterbot_config_*.tar.gz
+#    (sem ENCRYPTION_KEY os campos criptografados do banco ficam ilegiveis)
+# 3. Valida (tamanho, gzip -t e rodape "dump complete" do pg_dump)
+# 4. Rotacao: BACKUP_KEEP_DAILY diarios (padrao 14); aos domingos copia para
+#    backups/weekly/ e mantem BACKUP_KEEP_WEEKLY semanais (padrao 4)
+# 5. Copia fora do host (opcional): se OFFSITE_REMOTE estiver definido (ex.:
+#    "iterbot-offsite:" — remote rclone do tipo crypt sobre um bucket B2/R2),
+#    envia os arquivos do dia e apaga la os mais velhos que OFFSITE_KEEP_DAYS.
+# 6. Qualquer falha -> alerta por e-mail (manage.py send_ops_alert) e exit 1.
 #
-# Uso manual: ./deployment/scripts/backup-postgres.sh
-# Uso com verificacao: ./deployment/scripts/backup-postgres.sh --verify
+# Agendamento: deployment/scripts/install-backup-cron.sh (cron do usuario).
+# Restauracao: restore-postgres.sh <arquivo>; teste: restore-test.sh.
+#
+# Variaveis (todas opcionais; podem vir do .env do projeto):
+#   BACKUP_DIR, BACKUP_KEEP_DAILY, BACKUP_KEEP_WEEKLY, OFFSITE_REMOTE,
+#   OFFSITE_KEEP_DAYS, DB_CONTAINER, BACKEND_CONTAINER
 # ============================================================================
-set -euo pipefail
+set -Eeuo pipefail
+umask 077
+# cron roda com PATH minimo; sem root o rclone fica em ~/bin ou ~/.local/bin.
+export PATH="${HOME}/bin:${HOME}/.local/bin:/usr/local/bin:${PATH}"
 
-TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-BACKUP_FILE="iterbot_backup_${TIMESTAMP}.sql.gz"
-S3_BUCKET="${S3_BACKUP_BUCKET:-iterbot-utfpr-backups}"
-S3_PREFIX="${S3_BACKUP_PREFIX:-daily}"
-S3_PATH="${S3_PREFIX}/${BACKUP_FILE}"
-PROJECT_DIR="${PROJECT_DIR:-/home/ubuntu/iterbot}"
-DOCKER_BIN=$(command -v docker || echo "/usr/bin/docker")
-AWS_BIN=$(command -v aws || echo "/usr/local/bin/aws")
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="${PROJECT_DIR:-$(cd "${SCRIPT_DIR}/../.." && pwd)}"
 
-# Carregar variaveis do .env se disponivel
+# Le so as chaves de backup do .env (sem "source": o .env tem segredos e
+# valores que o bash interpretaria).
 if [ -f "${PROJECT_DIR}/.env" ]; then
-    set -a
     while IFS='=' read -r key value; do
-        case "$key" in
-            POSTGRES_USER|POSTGRES_DB|S3_BACKUP_BUCKET|S3_BACKUP_PREFIX)
-                export "$key=$value"
-                ;;
-        esac
-    done < <(grep -v '^#' "${PROJECT_DIR}/.env" | grep -E '^(POSTGRES_USER|POSTGRES_DB|S3_BACKUP_BUCKET|S3_BACKUP_PREFIX)=')
-    set +a
+        if [ -z "${!key:-}" ]; then export "${key}=${value}"; fi
+    done < <(grep -E '^(BACKUP_DIR|BACKUP_KEEP_DAILY|BACKUP_KEEP_WEEKLY|OFFSITE_REMOTE|OFFSITE_KEEP_DAYS)=' "${PROJECT_DIR}/.env" || true)
 fi
 
-POSTGRES_USER="${POSTGRES_USER:-iterbot_user}"
-POSTGRES_DB="${POSTGRES_DB:-iterbot}"
+BACKUP_DIR="${BACKUP_DIR:-${PROJECT_DIR}/backups}"
+BACKUP_KEEP_DAILY="${BACKUP_KEEP_DAILY:-14}"
+BACKUP_KEEP_WEEKLY="${BACKUP_KEEP_WEEKLY:-4}"
+OFFSITE_REMOTE="${OFFSITE_REMOTE:-}"
+OFFSITE_KEEP_DAYS="${OFFSITE_KEEP_DAYS:-30}"
+DB_CONTAINER="${DB_CONTAINER:-iterbot_db}"
+BACKEND_CONTAINER="${BACKEND_CONTAINER:-iterbot_backend}"
+MIN_DUMP_BYTES=1000
 
-START_TIME=$(date +%s)
+TIMESTAMP="$(date +%Y%m%d_%H%M%S)"
+DAILY_DIR="${BACKUP_DIR}/daily"
+WEEKLY_DIR="${BACKUP_DIR}/weekly"
+DUMP_FILE="${DAILY_DIR}/iterbot_db_${TIMESTAMP}.sql.gz"
+CONFIG_FILE="${DAILY_DIR}/iterbot_config_${TIMESTAMP}.tar.gz"
+STEP="inicio"
 
-# Verification mode: download and verify most recent backup
-if [ "${1:-}" = "--verify" ]; then
-    echo "[$(date -Iseconds)] Modo verificacao: baixando backup mais recente..."
+log() { echo "[$(date -Iseconds)] $*"; }
 
-    LATEST_BACKUP=$(${AWS_BIN} s3 ls "s3://${S3_BUCKET}/${S3_PREFIX}/" 2>/dev/null | sort | tail -1 | awk '{print $4}')
-
-    if [ -z "$LATEST_BACKUP" ]; then
-        echo "[ERROR] Nenhum backup encontrado em s3://${S3_BUCKET}/${S3_PREFIX}/"
-        exit 1
+alert() {
+    local body="$1"
+    if docker exec "${BACKEND_CONTAINER}" python manage.py send_ops_alert \
+        --subject "Backup do banco FALHOU em $(hostname)" --body "${body}" >/dev/null 2>&1; then
+        log "alerta enviado por e-mail"
+    else
+        log "AVISO: nao consegui enviar o alerta por e-mail"
     fi
+}
 
-    LATEST_SIZE=$(${AWS_BIN} s3 ls "s3://${S3_BUCKET}/${S3_PREFIX}/${LATEST_BACKUP}" 2>/dev/null | awk '{print $3}')
-
-    echo "  Backup: ${LATEST_BACKUP}"
-    echo "  Tamanho S3: ${LATEST_SIZE} bytes"
-
-    ${AWS_BIN} s3 cp "s3://${S3_BUCKET}/${S3_PREFIX}/${LATEST_BACKUP}" "/tmp/${LATEST_BACKUP}" --quiet
-
-    LOCAL_SIZE=$(stat -c%s "/tmp/${LATEST_BACKUP}" 2>/dev/null || stat -f%z "/tmp/${LATEST_BACKUP}" 2>/dev/null)
-    echo "  Tamanho local: ${LOCAL_SIZE} bytes"
-
-    if [ "$LOCAL_SIZE" -le 1000 ]; then
-        echo "[ERROR] Backup muito pequeno (${LOCAL_SIZE} bytes) — possivelmente vazio ou corrompido"
-        rm -f "/tmp/${LATEST_BACKUP}"
-        exit 1
-    fi
-
-    if ! gzip -t "/tmp/${LATEST_BACKUP}" 2>/dev/null; then
-        echo "[ERROR] Backup falhou na verificacao de integridade gzip"
-        rm -f "/tmp/${LATEST_BACKUP}"
-        exit 1
-    fi
-
-    echo "[$(date -Iseconds)] Verificacao concluida: backup integro (${LOCAL_SIZE} bytes)"
-    rm -f "/tmp/${LATEST_BACKUP}"
-    exit 0
-fi
-
-echo "[$(date -Iseconds)] Iniciando backup do PostgreSQL..."
-echo "  Database: ${POSTGRES_DB}"
-echo "  Destino: s3://${S3_BUCKET}/${S3_PATH}"
-
-# pg_dump dentro do container PostgreSQL
-${DOCKER_BIN} exec iterbot_db pg_dump \
-    -U "${POSTGRES_USER}" \
-    "${POSTGRES_DB}" \
-    | gzip > "/tmp/${BACKUP_FILE}"
-
-# File size check: valid PostgreSQL dumps should be > 1000 bytes
-FILESIZE=$(stat -c%s "/tmp/${BACKUP_FILE}" 2>/dev/null || stat -f%z "/tmp/${BACKUP_FILE}" 2>/dev/null)
-echo "  Tamanho do backup: ${FILESIZE} bytes"
-
-if [ "$FILESIZE" -le 1000 ]; then
-    echo "[ERROR] Backup muito pequeno (${FILESIZE} bytes) — possivelmente vazio ou falhou"
-    rm -f "/tmp/${BACKUP_FILE}"
+on_error() {
+    local code=$?
+    rm -f "${DUMP_FILE}.partial" "${CONFIG_FILE}.partial"
+    log "ERRO na etapa '${STEP}' (codigo ${code})"
+    alert "Etapa: ${STEP}
+Codigo de saida: ${code}
+Host: $(hostname)
+Data: $(date -Iseconds)
+Log: ${BACKUP_DIR}/backup.log"
     exit 1
+}
+trap on_error ERR
+
+prune() {
+    # mantem os N mais novos de um padrao, apaga o resto
+    local dir="$1" pattern="$2" keep="$3"
+    find "${dir}" -maxdepth 1 -type f -name "${pattern}" -printf '%T@ %p\n' \
+        | sort -rn | tail -n +"$((keep + 1))" | cut -d' ' -f2- \
+        | while read -r old; do log "rotacao: removendo $(basename "${old}")"; rm -f "${old}"; done
+}
+
+mkdir -p "${DAILY_DIR}" "${WEEKLY_DIR}"
+
+STEP="pg_dump"
+DB_USER="$(docker exec "${DB_CONTAINER}" printenv POSTGRES_USER)"
+DB_NAME="$(docker exec "${DB_CONTAINER}" printenv POSTGRES_DB)"
+log "backup de ${DB_NAME} (${DB_CONTAINER}) -> ${DUMP_FILE}"
+docker exec "${DB_CONTAINER}" pg_dump -U "${DB_USER}" -d "${DB_NAME}" \
+    --clean --if-exists --no-owner --no-privileges \
+    | gzip -9 > "${DUMP_FILE}.partial"
+
+STEP="validacao do dump"
+size="$(stat -c%s "${DUMP_FILE}.partial")"
+[ "${size}" -gt "${MIN_DUMP_BYTES}" ] || { log "dump pequeno demais (${size} bytes)"; false; }
+gzip -t "${DUMP_FILE}.partial"
+gunzip -c "${DUMP_FILE}.partial" | tail -n 5 | grep -q "PostgreSQL database dump complete" \
+    || { log "dump sem o rodape 'dump complete' (truncado?)"; false; }
+mv "${DUMP_FILE}.partial" "${DUMP_FILE}"
+log "dump ok (${size} bytes)"
+
+STEP="copia da configuracao"
+config_items=()
+for item in .env secrets docker-compose.resources.yml; do
+    if [ -e "${PROJECT_DIR}/${item}" ]; then config_items+=("${item}"); fi
+done
+if [ "${#config_items[@]}" -gt 0 ]; then
+    tar -czf "${CONFIG_FILE}.partial" -C "${PROJECT_DIR}" "${config_items[@]}"
+    mv "${CONFIG_FILE}.partial" "${CONFIG_FILE}"
+    log "configuracao ok (${config_items[*]})"
 fi
 
-# Gzip integrity check
-if ! gzip -t "/tmp/${BACKUP_FILE}" 2>/dev/null; then
-    echo "[ERROR] Backup falhou na verificacao de integridade gzip"
-    rm -f "/tmp/${BACKUP_FILE}"
-    exit 1
+STEP="rotacao"
+if [ "$(date +%u)" = "7" ]; then
+    cp -p "${DUMP_FILE}" "${WEEKLY_DIR}/"
+    if [ -f "${CONFIG_FILE}" ]; then cp -p "${CONFIG_FILE}" "${WEEKLY_DIR}/"; fi
+    log "copia semanal feita"
+fi
+prune "${DAILY_DIR}" 'iterbot_db_*.sql.gz' "${BACKUP_KEEP_DAILY}"
+prune "${DAILY_DIR}" 'iterbot_config_*.tar.gz' "${BACKUP_KEEP_DAILY}"
+prune "${WEEKLY_DIR}" 'iterbot_db_*.sql.gz' "${BACKUP_KEEP_WEEKLY}"
+prune "${WEEKLY_DIR}" 'iterbot_config_*.tar.gz' "${BACKUP_KEEP_WEEKLY}"
+
+if [ -n "${OFFSITE_REMOTE}" ]; then
+    STEP="copia fora do host (rclone ${OFFSITE_REMOTE})"
+    remote="${OFFSITE_REMOTE%/}"
+    [[ "${remote}" == *: ]] || remote="${remote}/"
+    rclone copy "${DUMP_FILE}" "${remote}daily" --no-traverse
+    if [ -f "${CONFIG_FILE}" ]; then rclone copy "${CONFIG_FILE}" "${remote}daily" --no-traverse; fi
+    rclone delete "${remote}daily" --min-age "${OFFSITE_KEEP_DAYS}d"
+    log "copia fora do host ok (${remote}daily, retencao ${OFFSITE_KEEP_DAYS} dias)"
+else
+    log "OFFSITE_REMOTE vazio: sem copia fora do host"
 fi
 
-# Upload para S3 (autenticado por IAM Role)
-${AWS_BIN} s3 cp "/tmp/${BACKUP_FILE}" "s3://${S3_BUCKET}/${S3_PATH}" --quiet
-
-# Limpeza local
-rm -f "/tmp/${BACKUP_FILE}"
-
-END_TIME=$(date +%s)
-DURATION=$((END_TIME - START_TIME))
-
-echo "[$(date -Iseconds)] Backup concluido: s3://${S3_BUCKET}/${S3_PATH}"
-echo "  Tamanho: ${FILESIZE} bytes | Duracao: ${DURATION}s"
-
-# S3 lifecycle policy (apply once):
-# aws s3api put-bucket-lifecycle-configuration \
-#   --bucket "${S3_BUCKET}" \
-#   --lifecycle-configuration file://deployment/config/s3-lifecycle.json
+date -Iseconds > "${BACKUP_DIR}/last-success"
+log "backup concluido"
