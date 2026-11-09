@@ -54,6 +54,11 @@ Em `iterbot_traefik`, apenas `0.0.0.0:80->80/tcp, 0.0.0.0:443->443/tcp`.
   `ACCOUNT_LOGIN_ATTEMPTS_TIMEOUT`, no cache Redis), e-mail verificado e
   aprovação manual da empresa (`ApprovedCompanyRequiredMixin`) antes de
   publicar vaga ou ver candidatos.
+- **Login de empresa pelo WhatsApp** (mesma senha do portal, fora do allauth):
+  bloqueio próprio por e-mail da empresa com os mesmos números
+  (`ACCOUNT_LOGIN_ATTEMPTS_LIMIT` falhas → trava por até
+  `ACCOUNT_LOGIN_ATTEMPTS_TIMEOUT`), contado no cache — trocar de número não
+  zera; a mensagem com a senha vai mascarada para o `InteractionLog`.
 - **WAHA**: servico interno sem rota publica (`traefik.enable=false`);
   dashboard acessivel apenas via tunel SSH (`ssh -L 3000:localhost:3000`)
   + autenticacao propria do WAHA (`WAHA_DASHBOARD_USERNAME/PASSWORD`).

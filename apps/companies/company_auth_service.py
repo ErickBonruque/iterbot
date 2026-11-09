@@ -4,12 +4,18 @@ import uuid
 from datetime import timedelta
 
 import structlog
+from django.conf import settings
+from django.core.cache import cache
 from django.utils import timezone
 
 from apps.jobs.models.company import Company
 from apps.users.models import UserProfile
 
 logger = structlog.get_logger(__name__)
+
+
+def _login_failures_key(email: str) -> str:
+    return f"company_whatsapp_login_failures:{email}"
 
 
 class CompanyAuthService:
@@ -83,6 +89,13 @@ class CompanyAuthService:
         """
         from django.contrib.auth.models import User
 
+        # Mesmo bloqueio do portal (allauth): N senhas erradas para o e-mail travam
+        # por TIMEOUT segundos — conta por e-mail, então trocar de número não zera.
+        email_key = _login_failures_key(company_email.strip().lower())
+        if cache.get(email_key, 0) >= settings.ACCOUNT_LOGIN_ATTEMPTS_LIMIT:
+            logger.warning("company_auth_locked", email=company_email)
+            return None
+
         try:
             company = Company.objects.get(email=company_email.strip().lower())
         except Company.DoesNotExist:
@@ -97,8 +110,12 @@ class CompanyAuthService:
             return None
 
         if not auth_user.check_password(password):
+            cache.add(email_key, 0, timeout=settings.ACCOUNT_LOGIN_ATTEMPTS_TIMEOUT)
+            cache.incr(email_key)
             logger.info("company_auth_wrong_password", email=company_email)
             return None
+
+        cache.delete(email_key)
 
         profile, _ = UserProfile.objects.get_or_create(phone_number=phone_number)
         profile.company = company
