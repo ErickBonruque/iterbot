@@ -34,19 +34,12 @@ sequenceDiagram
     Estudante->>WAHA: "123456"
     WAHA->>BotService: process_message(chat_id, "123456")
     BotService->>AuthHandler: handle_login_ra(user, chat_id, "123456")
-    AuthHandler-->>Estudante: Solicita senha
-
-    Estudante->>WAHA: "minha_senha"
-    WAHA->>BotService: process_message(chat_id, "minha_senha")
-    BotService->>AuthHandler: handle_login_password(user, chat_id, "minha_senha")
-    AuthHandler->>UTFPRAuth: authenticate(ra, password)
-    UTFPRAuth-->>AuthHandler: True (credenciais válidas)
     AuthHandler-->>Estudante: Solicita e-mail @alunos.utfpr.edu.br
 
     Estudante->>WAHA: "aluno@alunos.utfpr.edu.br"
     WAHA->>BotService: process_message(chat_id, "aluno@alunos.utfpr.edu.br")
     BotService->>AuthHandler: handle_login_email(user, chat_id, email)
-    AuthHandler->>UTFPRAuth: link_user(chat_id, ra, password, email)
+    AuthHandler->>UTFPRAuth: link_user(chat_id, ra, email)
     UTFPRAuth-->>AuthHandler: UserProfile criado/atualizado
     AuthHandler->>Email: dispatch_confirmation_email(user_id)
     AuthHandler-->>Estudante: "Aguardando confirmação — verifique seu e-mail"
@@ -57,19 +50,28 @@ sequenceDiagram
 
 ### Passos
 
-1. Estudante envia "cadastrar", "login", "entrar" ou "1" (menu não autenticado) — `apps/bot/services.py:_handle_text_alias()` linha 166 / `_handle_numeric_unauthenticated()` linha 203
-2. `BotService` chama `AuthenticationHandler.start_login_flow()` — `apps/bot/handlers/authentication.py:L44`
-3. Handler verifica `user.is_authenticated_utfpr`; se já autenticado, informa o usuário e retorna — `apps/bot/handlers/authentication.py:L45`
-4. Handler aplica transição para `STATE_LOGIN_STEP_RA` e solicita o RA — `apps/bot/handlers/authentication.py:L61`
-5. Próxima mensagem entra em `handle()` → `handle_login_ra()` — `apps/bot/handlers/authentication.py:L76`; RA é validado (mínimo 5 chars) e salvo em `flow_data["temp_ra"]`
-6. Estado avança para `STATE_LOGIN_STEP_PASSWORD`; estudante envia senha — `apps/bot/handlers/authentication.py:L107`
-7. `handle_login_password()` chama `UTFPRAuthService.authenticate(ra, password)` — `apps/users/services.py`; se falhar, informa erro e permanece no estado
-8. Se credenciais válidas e e-mail já verificado anteriormente → re-login direto, estado volta para `STATE_IDLE` — `apps/bot/handlers/authentication.py:L138`
-9. Para primeiro cadastro: estado avança para `STATE_LOGIN_STEP_EMAIL`; estudante envia e-mail — `apps/bot/handlers/authentication.py:L164`
-10. `handle_login_email()` valida o domínio `@alunos.utfpr.edu.br` via `validate_utfpr_email()` — `apps/bot/handlers/authentication.py:L191`
-11. Chama `link_user()` para criar/associar o `UserProfile` — `apps/bot/handlers/authentication.py:L234`
-12. Estado avança para `STATE_LOGIN_STEP_WAITING_CONFIRMATION`; `dispatch_confirmation_email()` envia link — `apps/bot/handlers/authentication.py:L259`
-13. Estudante clica no link; `ConfirmEmailView` seta `email_verified=True` e `is_authenticated_utfpr=True` — `apps/users/views.py`
+1. Estudante envia "cadastrar", "login", "entrar" ou "1" (menu não autenticado) — `BotService._handle_text_alias()` / `_handle_numeric_unauthenticated()` em `apps/bot/services.py`
+2. `BotService` chama `AuthenticationHandler.start_login_flow()` — `apps/bot/handlers/authentication.py`
+3. Se `user.is_authenticated_utfpr`, informa que já está cadastrado e retorna
+4. Transição para `STATE_LOGIN_STEP_RA` e pedido do RA
+5. `handle_login_ra()` valida o RA (mínimo 5 caracteres)
+6. **Re-login:** se o número já tem e-mail verificado, `link_user()` autentica direto e o estado volta para `STATE_IDLE` (sem pedir e-mail de novo)
+7. Primeiro cadastro: RA vai para `flow_data["temp_ra"]` e o estado avança para `STATE_LOGIN_STEP_EMAIL`
+8. `handle_login_email()` valida o domínio `@alunos.utfpr.edu.br` via `validate_utfpr_email()`
+9. `link_user(chat_id, ra, email)` cria/associa o `UserProfile` com um token novo
+10. Estado avança para `STATE_LOGIN_STEP_WAITING_CONFIRMATION`; `dispatch_confirmation_email()` envia o link
+11. Estudante clica no link; `ConfirmEmailView` seta `email_verified=True` e `is_authenticated_utfpr=True` — `apps/users/views.py`
+
+> **Não há senha.** O bot não pede nem guarda senha do aluno — a prova de que a
+> pessoa é aluna é o link enviado ao e-mail `@alunos`. Até nov/2026 havia um
+> passo de senha (sugerindo a do Portal do Aluno) que não validava nada e
+> deixava a senha em texto puro no `InteractionLog`; ele foi removido e a
+> migração `bot.0009` apagou o que tinha sido coletado. Estados antigos
+> `login_step_password`/`waiting_password` caem no passo de e-mail.
+>
+> No login de **empresa** pelo WhatsApp (que pede a senha do portal), a mensagem
+> com a senha é gravada no `InteractionLog` como `[conteúdo sensível omitido]`
+> (`SENSITIVE_INPUT_STATES` em `apps/bot/services.py`).
 
 **Re-login:** Qualquer mensagem enquanto em `STATE_LOGIN_STEP_WAITING_CONFIRMATION` é tratada por `handle_login_waiting_confirmation()` — `apps/bot/handlers/authentication.py:L284`. O estudante pode digitar "reenviar" para receber o e-mail novamente.
 

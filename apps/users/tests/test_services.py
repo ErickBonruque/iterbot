@@ -28,7 +28,7 @@ class LinkUserTests(TestCase):
         self.email = "aluno@alunos.utfpr.edu.br"
 
     def test_first_signup_generates_token_and_keeps_unverified(self):
-        user = self.service.link_user(self.phone, "a1234567", "senha", self.email)
+        user = self.service.link_user(self.phone, "a1234567", self.email)
 
         self.assertIsNotNone(user)
         self.assertFalse(user.is_authenticated_utfpr)
@@ -37,7 +37,7 @@ class LinkUserTests(TestCase):
 
     def test_relogin_after_verification_skips_token_regeneration(self):
         # Primeiro cadastro
-        user = self.service.link_user(self.phone, "a1234567", "senha", self.email)
+        user = self.service.link_user(self.phone, "a1234567", self.email)
         original_token = user.email_confirmation_token
 
         # Simula confirmação manual do e-mail
@@ -54,7 +54,7 @@ class LinkUserTests(TestCase):
         self.assertTrue(user.email_verified)
 
         # Aluno tenta logar de novo com mesmo e-mail
-        relogged = self.service.link_user(self.phone, "a1234567", "senha", self.email)
+        relogged = self.service.link_user(self.phone, "a1234567", self.email)
 
         self.assertIsNotNone(relogged)
         self.assertTrue(relogged.is_authenticated_utfpr)
@@ -63,22 +63,26 @@ class LinkUserTests(TestCase):
         self.assertEqual(relogged.email_confirmation_token, original_token)
 
     def test_relogin_with_different_email_triggers_new_verification(self):
-        user = self.service.link_user(self.phone, "a1234567", "senha", self.email)
+        user = self.service.link_user(self.phone, "a1234567", self.email)
         user.is_authenticated_utfpr = True
         user.email_verified = True
         user.save()
 
         new_email = "outro@alunos.utfpr.edu.br"
-        result = self.service.link_user(self.phone, "a1234567", "senha", new_email)
+        result = self.service.link_user(self.phone, "a1234567", new_email)
 
         self.assertIsNotNone(result)
         self.assertFalse(result.is_authenticated_utfpr)
         self.assertFalse(result.email_verified)
         self.assertEqual(result.email, new_email)
 
-    def test_link_user_returns_none_when_authentication_fails(self):
-        result = self.service.link_user(self.phone, "000000", "senha", self.email)
-        self.assertIsNone(result)
+    def test_service_has_no_password_authentication(self):
+        """Não existe validação de senha do portal: a prova é o link no e-mail."""
+        self.assertFalse(hasattr(self.service, "authenticate"))
+
+    def test_userprofile_does_not_store_portal_password(self):
+        field_names = {f.name for f in UserProfile._meta.get_fields()}
+        self.assertNotIn("utfpr_password", field_names)
 
 
 class ResendConfirmationTests(TestCase):

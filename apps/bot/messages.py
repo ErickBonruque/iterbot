@@ -23,21 +23,9 @@ class AuthMessages:
         "auth.login_ra_too_short",
         "❌ RA muito curto. Tente novamente ou digite 'cancelar'.",
     )
-    login_prompt_password: MessageTemplate = MessageTemplate(
-        "auth.login_prompt_password",
-        "🔑 *Crie sua senha de acesso ao IterBot:*\n\nVocê pode usar qualquer senha, mas sugerimos usar a *mesma do Portal do Aluno* — assim fica mais fácil de lembrar!\n\n_(Seus dados são criptografados e armazenados com segurança)_",
-    )
-    login_validating_credentials: MessageTemplate = MessageTemplate(
-        "auth.login_validating_credentials",
-        "🔄 Validando credenciais...",
-    )
     login_prompt_email: MessageTemplate = MessageTemplate(
         "auth.login_prompt_email",
         "🔐 *Verificação de E-mail*\n\nPor favor, digite seu **e-mail institucional** (@alunos.utfpr.edu.br):\n\n_(Digite 'cancelar' para voltar)_",
-    )
-    login_error: MessageTemplate = MessageTemplate(
-        "auth.login_error",
-        "❌ **Falha no login.**\nRA ou senha incorretos.\n\nTente digitar a senha novamente ou digite 'cancelar' para sair.",
     )
     login_flow_error: MessageTemplate = MessageTemplate(
         "auth.login_flow_error",

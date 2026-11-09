@@ -11,28 +11,19 @@ logger = structlog.get_logger(__name__)
 
 
 class UTFPRAuthService:
-    """Service for UTFPR student authentication."""
+    """Cadastro de aluno: RA + e-mail @alunos confirmado por link."""
 
     def __init__(self, email_dispatcher: EmailConfirmationDispatcher | None = None) -> None:
         self.email_dispatcher = email_dispatcher
 
-    def authenticate(self, ra: str, password: str) -> bool:
-        """Authenticate user against UTFPR student portal."""
-        logger.info(f"Tentando autenticar RA: {ra}")
-        return ra != "000000"
+    def link_user(self, phone_number: str, ra: str, email: str | None = None) -> UserProfile | None:
+        """Vincula RA e e-mail @alunos ao número de telefone.
 
-    def link_user(
-        self, phone_number: str, ra: str, password: str, email: str | None = None
-    ) -> UserProfile | None:
-        """Vincula RA ao número de telefone após autenticação bem-sucedida.
-
-        Se o usuário já foi verificado anteriormente com o mesmo e-mail,
-        autentica diretamente sem reenviar o link de confirmação.
-        Caso contrário, gera novo token e dispara fluxo de confirmação.
+        Não há senha: a prova de que a pessoa é aluna é o link de confirmação
+        enviado ao e-mail institucional. Se o usuário já foi verificado com o
+        mesmo e-mail, autentica direto sem reenviar o link; caso contrário,
+        gera novo token (o envio do e-mail fica a cargo de quem chama).
         """
-        if not self.authenticate(ra, password):
-            return None
-
         existing = UserProfile.objects.filter(phone_number=phone_number).first()
         normalized_email = email.lower() if email else None
         existing_email = existing.email.lower() if existing and existing.email else None
@@ -46,16 +37,8 @@ class UTFPRAuthService:
 
         if already_verified_same_email:
             existing.ra = ra
-            existing.utfpr_password = password
             existing.is_authenticated_utfpr = True
-            existing.save(
-                update_fields=[
-                    "ra",
-                    "utfpr_password",
-                    "is_authenticated_utfpr",
-                    "updated_at",
-                ]
-            )
+            existing.save(update_fields=["ra", "is_authenticated_utfpr", "updated_at"])
             logger.info("user_relogged_in_without_email_verification", user_id=existing.id)
             return existing
 
@@ -64,7 +47,6 @@ class UTFPRAuthService:
             phone_number=phone_number,
             defaults={
                 "ra": ra,
-                "utfpr_password": password,
                 "email": email,
                 "is_authenticated_utfpr": False,
                 "email_verified": False,
@@ -128,7 +110,7 @@ class UTFPRAuthService:
     def logout(self, phone_number: str) -> bool:
         """Encerra a sessão do aluno preservando o vínculo já verificado.
 
-        Mantém ``email``, ``email_verified``, ``utfpr_password`` e ``ra`` para
+        Mantém ``email``, ``email_verified`` e ``ra`` para
         permitir re-login sem nova verificação por e-mail. Apenas o flag
         ``is_authenticated_utfpr`` é desligado.
         """

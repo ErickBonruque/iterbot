@@ -5,12 +5,12 @@
 ### Estudantes
 
 - **Requisito:** e-mail institucional `@alunos.utfpr.edu.br` — validado por `validate_utfpr_email()` durante o fluxo de autenticação — `apps/users/validators.py`
-- **Fluxo de acesso:** RA + senha do portal do aluno → e-mail institucional → link de confirmação enviado por e-mail → clique no link ativa `is_authenticated_utfpr=True` e `email_verified=True` no `UserProfile` — `apps/users/services.py:L87`
-- **Token de confirmação:** expira em 24 horas — `apps/users/services.py:L82`
-- **Re-login:** se e-mail já verificado anteriormente, autenticação com RA + senha autentica diretamente sem reenvio de link — `apps/users/services.py:L47`
+- **Fluxo de acesso:** RA → e-mail institucional → link de confirmação enviado por e-mail → clique no link ativa `is_authenticated_utfpr=True` e `email_verified=True` no `UserProfile` — `UTFPRAuthService.confirm_email()` em `apps/users/services.py`. **O bot não pede nem guarda senha** (a prova de identidade é o link no e-mail @alunos).
+- **Token de confirmação:** expira em 24 horas — `apps/users/services.py`
+- **Re-login:** se o número já tem e-mail verificado, informar o RA autentica direto, sem pedir e-mail nem reenviar link — `UTFPRAuthService.link_user()`
 - **Após autenticação:** acesso ao menu completo (busca de vagas, review semanal, trocar curso, logout)
 - **Sem autenticação:** apenas opção de iniciar cadastro/login — `apps/bot/services.py:_handle_numeric_unauthenticated()` linha 203
-- **Logout:** desliga apenas `is_authenticated_utfpr=False`; RA, e-mail e senha UTFPR são preservados para re-login sem nova verificação — `apps/users/services.py:L128`
+- **Logout:** desliga apenas `is_authenticated_utfpr=False`; RA e e-mail verificado são preservados para re-login sem nova verificação — `UTFPRAuthService.logout()`
 
 ### Empresas
 

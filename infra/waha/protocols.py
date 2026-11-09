@@ -27,19 +27,15 @@ class JobSearcher(Protocol):
 
 
 class Authenticator(Protocol):
-    """Contract for UTFPR authentication and account lifecycle."""
-
-    def authenticate(self, ra: str, password: str) -> bool:
-        """Validate UTFPR credentials."""
+    """Contract for student sign-up (RA + institutional e-mail) and lifecycle."""
 
     def link_user(
         self,
         phone_number: str,
         ra: str,
-        password: str,
         email: str | None = None,
     ) -> "UserProfile | None":
-        """Link a phone number to UTFPR credentials."""
+        """Link a phone number to an RA and a @alunos e-mail."""
 
     def resend_confirmation(self, phone_number: str) -> bool:
         """Resend confirmation flow for a user."""

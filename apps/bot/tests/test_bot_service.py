@@ -55,11 +55,6 @@ class BotServiceFlowTests(TestCase):
         self.assertEqual(user.conversation_state.current_action, "login_step_ra")
 
         self.service.process_message(chat_id, "ra123", from_me=False)
-        user.refresh_from_db()
-        self.assertEqual(user.conversation_state.current_action, "login_step_password")
-
-        self.service.auth_service.authenticate = MagicMock(return_value=True)
-        self.service.process_message(chat_id, "senha123", from_me=False)
 
         user.refresh_from_db()
         self.assertEqual(user.conversation_state.current_action, "login_step_email")

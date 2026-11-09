@@ -8,7 +8,6 @@ from statemachine import State, StateMachine
 
 STATE_IDLE = "idle"
 STATE_LOGIN_STEP_RA = "login_step_ra"
-STATE_LOGIN_STEP_PASSWORD = "login_step_password"
 STATE_LOGIN_STEP_EMAIL = "login_step_email"
 STATE_LOGIN_STEP_WAITING_CONFIRMATION = "login_step_waiting_confirmation"
 STATE_COURSE_SELECTION = "course_selection"
@@ -26,7 +25,6 @@ STATE_CONFIRM_APPLICATION = "confirm_application"
 
 CANONICAL_STATES = {
     STATE_LOGIN_STEP_RA,
-    STATE_LOGIN_STEP_PASSWORD,
     STATE_LOGIN_STEP_EMAIL,
     STATE_LOGIN_STEP_WAITING_CONFIRMATION,
     STATE_COURSE_SELECTION,
@@ -42,9 +40,13 @@ CANONICAL_STATES = {
     STATE_CONFIRM_APPLICATION,
 }
 
+# O passo de senha do aluno foi removido (o bot não valida senha nenhuma — a
+# prova de identidade é o link no e-mail @alunos). Quem ficou parado nele cai
+# no passo de e-mail, que é o seguinte do fluxo e usa o RA já guardado.
 LEGACY_STATE_ALIASES = {
     "waiting_ra": STATE_LOGIN_STEP_RA,
-    "waiting_password": STATE_LOGIN_STEP_PASSWORD,
+    "waiting_password": STATE_LOGIN_STEP_EMAIL,
+    "login_step_password": STATE_LOGIN_STEP_EMAIL,
     "waiting_email": STATE_LOGIN_STEP_EMAIL,
     "waiting_confirmation": STATE_LOGIN_STEP_WAITING_CONFIRMATION,
     "menu": STATE_IDLE,
@@ -60,7 +62,6 @@ ROUTE_APPLICATION = "application"
 
 AUTH_ROUTE_STATES = {
     STATE_LOGIN_STEP_RA,
-    STATE_LOGIN_STEP_PASSWORD,
     STATE_LOGIN_STEP_EMAIL,
     STATE_LOGIN_STEP_WAITING_CONFIRMATION,
 }
@@ -90,7 +91,6 @@ class ConversationFlowStateMachine(StateMachine):
 
     idle = State(STATE_IDLE, initial=True)
     login_step_ra = State(STATE_LOGIN_STEP_RA)
-    login_step_password = State(STATE_LOGIN_STEP_PASSWORD)
     login_step_email = State(STATE_LOGIN_STEP_EMAIL)
     login_step_waiting_confirmation = State(STATE_LOGIN_STEP_WAITING_CONFIRMATION)
     course_selection = State(STATE_COURSE_SELECTION)
@@ -110,8 +110,7 @@ class ConversationFlowStateMachine(StateMachine):
         | login_step_waiting_confirmation.to(login_step_ra)
         | company_onboarding_selection.to(login_step_ra)
     )
-    submit_ra = login_step_ra.to(login_step_password)
-    submit_password = login_step_password.to(login_step_email)
+    submit_ra = login_step_ra.to(login_step_email)
     await_confirmation = login_step_email.to(login_step_waiting_confirmation)
     resend_confirmation = login_step_waiting_confirmation.to.itself()
 
@@ -139,7 +138,6 @@ class ConversationFlowStateMachine(StateMachine):
 
     cancel = (
         login_step_ra.to(idle)
-        | login_step_password.to(idle)
         | login_step_email.to(idle)
         | login_step_waiting_confirmation.to(idle)
         | course_selection.to(idle)

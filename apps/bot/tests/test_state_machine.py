@@ -10,7 +10,6 @@ from apps.bot.state_machine import (
     STATE_COURSE_SELECTION,
     STATE_IDLE,
     STATE_LOGIN_STEP_EMAIL,
-    STATE_LOGIN_STEP_PASSWORD,
     STATE_LOGIN_STEP_RA,
     STATE_LOGIN_STEP_WAITING_CONFIRMATION,
     STATE_TERM_SELECTION,
@@ -38,7 +37,6 @@ class ConversationStateMachineContractTests(TestCase):
 
         expected = {
             STATE_LOGIN_STEP_RA,
-            STATE_LOGIN_STEP_PASSWORD,
             STATE_LOGIN_STEP_EMAIL,
             STATE_LOGIN_STEP_WAITING_CONFIRMATION,
             STATE_COURSE_SELECTION,
@@ -66,9 +64,14 @@ class ConversationStateMachineContractTests(TestCase):
         self.assertEqual(idle_state.runtime, STATE_IDLE)
         self.assertIsNone(idle_state.persisted)
 
-        active_state = normalized_flow_state(STATE_LOGIN_STEP_PASSWORD)
-        self.assertEqual(active_state.runtime, STATE_LOGIN_STEP_PASSWORD)
-        self.assertEqual(active_state.persisted, STATE_LOGIN_STEP_PASSWORD)
+        active_state = normalized_flow_state(STATE_LOGIN_STEP_EMAIL)
+        self.assertEqual(active_state.runtime, STATE_LOGIN_STEP_EMAIL)
+        self.assertEqual(active_state.persisted, STATE_LOGIN_STEP_EMAIL)
+
+    def test_removed_password_step_maps_to_email_step(self):
+        """O passo de senha do aluno foi removido; estados antigos caem no e-mail."""
+        self.assertEqual(normalize_current_action("login_step_password"), STATE_LOGIN_STEP_EMAIL)
+        self.assertEqual(normalize_current_action("waiting_password"), STATE_LOGIN_STEP_EMAIL)
 
     def test_route_resolution_for_all_state_groups(self):
         self.assertEqual(route_for_action(STATE_LOGIN_STEP_RA), ROUTE_AUTH)

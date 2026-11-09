@@ -8,7 +8,6 @@ from apps.bot.models import ConversationState
 from apps.bot.state_machine import (
     STATE_IDLE,
     STATE_LOGIN_STEP_EMAIL,
-    STATE_LOGIN_STEP_PASSWORD,
     STATE_LOGIN_STEP_RA,
     STATE_LOGIN_STEP_WAITING_CONFIRMATION,
     apply_state_transition,
@@ -88,10 +87,34 @@ class AuthenticationHandler(BaseHandler):
             return
 
         conversation_state = self._get_conversation_state(user)
+
+        # Re-login direto: o número já tem e-mail @alunos verificado, então não
+        # há o que provar de novo — autentica sem pedir o e-mail outra vez.
+        existing = UserProfile.objects.filter(phone_number=chat_id).first()
+        if existing and existing.email_verified and existing.email:
+            linked_user = self.auth_service.link_user(chat_id, ra, existing.email)
+            if linked_user and linked_user.email_verified and linked_user.is_authenticated_utfpr:
+                apply_state_transition(
+                    conversation_state=conversation_state,
+                    next_state=STATE_IDLE,
+                    clear_flow_data=True,
+                )
+                self.send_msg(
+                    user,
+                    chat_id,
+                    self.resolve_message(
+                        BOT_MESSAGES.auth.login_welcome_back.key,
+                        BOT_MESSAGES.auth.login_welcome_back.text,
+                        email=existing.email,
+                    ),
+                )
+                logger.info("user_relogged_in_skipping_email_step", user_id=linked_user.id)
+                return
+
         conversation_state.flow_data["temp_ra"] = ra
         apply_state_transition(
             conversation_state=conversation_state,
-            next_state=STATE_LOGIN_STEP_PASSWORD,
+            next_state=STATE_LOGIN_STEP_EMAIL,
             update_fields=["flow_data"],
         )
 
@@ -99,94 +122,10 @@ class AuthenticationHandler(BaseHandler):
             user,
             chat_id,
             self.resolve_message(
-                BOT_MESSAGES.auth.login_prompt_password.key,
-                BOT_MESSAGES.auth.login_prompt_password.text,
+                BOT_MESSAGES.auth.login_prompt_email.key,
+                BOT_MESSAGES.auth.login_prompt_email.text,
             ),
         )
-
-    def handle_login_password(self, user: UserProfile, chat_id: str, text: str) -> bool:
-        password = text.strip()
-        conversation_state = self._get_conversation_state(user)
-        ra = conversation_state.flow_data.get("temp_ra")
-
-        if not ra:
-            self.send_msg(
-                user,
-                chat_id,
-                self.resolve_message(
-                    BOT_MESSAGES.auth.login_flow_error.key,
-                    BOT_MESSAGES.auth.login_flow_error.text,
-                ),
-            )
-            self.reset_state(user)
-            return False
-
-        self.send_msg(
-            user,
-            chat_id,
-            self.resolve_message(
-                BOT_MESSAGES.auth.login_validating_credentials.key,
-                BOT_MESSAGES.auth.login_validating_credentials.text,
-            ),
-        )
-
-        if self.auth_service.authenticate(ra, password):
-            # Re-login direto: se já existe perfil com este phone e e-mail
-            # verificado, pula a etapa de e-mail e a confirmação. Sem esse
-            # short-circuit, o usuário precisaria redigitar o e-mail e o
-            # link_user só decidiria pelo welcome_back depois disso.
-            existing = UserProfile.objects.filter(phone_number=chat_id).first()
-            if existing and existing.email_verified and existing.email:
-                linked_user = self.auth_service.link_user(chat_id, ra, password, existing.email)
-                if (
-                    linked_user
-                    and linked_user.email_verified
-                    and linked_user.is_authenticated_utfpr
-                ):
-                    apply_state_transition(
-                        conversation_state=conversation_state,
-                        next_state=STATE_IDLE,
-                        clear_flow_data=True,
-                    )
-                    self.send_msg(
-                        user,
-                        chat_id,
-                        self.resolve_message(
-                            BOT_MESSAGES.auth.login_welcome_back.key,
-                            BOT_MESSAGES.auth.login_welcome_back.text,
-                            email=existing.email,
-                        ),
-                    )
-                    logger.info("user_relogged_in_skipping_email_step", user_id=linked_user.id)
-                    return True
-
-            conversation_state.flow_data["temp_password"] = password
-            apply_state_transition(
-                conversation_state=conversation_state,
-                next_state=STATE_LOGIN_STEP_EMAIL,
-                update_fields=["flow_data"],
-            )
-
-            self.send_msg(
-                user,
-                chat_id,
-                self.resolve_message(
-                    BOT_MESSAGES.auth.login_prompt_email.key,
-                    BOT_MESSAGES.auth.login_prompt_email.text,
-                ),
-            )
-            return True
-
-        self.send_msg(
-            user,
-            chat_id,
-            self.resolve_message(
-                BOT_MESSAGES.auth.login_error.key,
-                BOT_MESSAGES.auth.login_error.text,
-            ),
-        )
-        logger.warning("authentication_failed", user_id=user.id, ra=ra)
-        return False
 
     def handle_login_email(self, user: UserProfile, chat_id: str, text: str) -> bool:
         email = text.strip().lower()
@@ -217,9 +156,8 @@ class AuthenticationHandler(BaseHandler):
 
         conversation_state = self._get_conversation_state(user)
         ra = conversation_state.flow_data.get("temp_ra")
-        password = conversation_state.flow_data.get("temp_password")
 
-        if not ra or not password:
+        if not ra:
             self.send_msg(
                 user,
                 chat_id,
@@ -231,7 +169,7 @@ class AuthenticationHandler(BaseHandler):
             self.reset_state(user)
             return False
 
-        linked_user = self.auth_service.link_user(chat_id, ra, password, email)
+        linked_user = self.auth_service.link_user(chat_id, ra, email)
 
         if linked_user:
             # Re-login: e-mail já verificado anteriormente — autentica direto sem reenviar link.
@@ -350,9 +288,6 @@ class AuthenticationHandler(BaseHandler):
 
         if action == STATE_LOGIN_STEP_RA:
             self.handle_login_ra(user, chat_id, text)
-            return True
-        if action == STATE_LOGIN_STEP_PASSWORD:
-            self.handle_login_password(user, chat_id, text)
             return True
         if action == STATE_LOGIN_STEP_EMAIL:
             self.handle_login_email(user, chat_id, text)

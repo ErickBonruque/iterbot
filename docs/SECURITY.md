@@ -82,7 +82,7 @@ Ver `docker-compose.yml` `secrets:` e `config/_helpers.py`
 
 ### 5. Criptografia de campos sensiveis
 
-Campos sensiveis no banco (`utfpr_password`, `waha_api_key`, etc.) usam
+Campos sensiveis no banco (`waha_api_key`, senhas do `BotConfiguration`, etc.) usam
 `EncryptedCharField` com criptografia Fernet (`infra/security/`).
 
 - **Chave primaria**: Docker Secret `encryption_key` ou variavel de

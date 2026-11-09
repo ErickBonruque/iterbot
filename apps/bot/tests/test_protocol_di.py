@@ -25,14 +25,9 @@ class StubMessageSender:
 
 class StubAuthenticator:
     def __init__(self) -> None:
-        self.authenticate_calls: list[tuple[str, str]] = []
         self.logout_calls: list[str] = []
 
-    def authenticate(self, ra: str, password: str) -> bool:
-        self.authenticate_calls.append((ra, password))
-        return True
-
-    def link_user(self, phone_number: str, ra: str, password: str, email: str | None = None):
+    def link_user(self, phone_number: str, ra: str, email: str | None = None):
         user, _ = UserProfile.objects.get_or_create(phone_number=phone_number)
         user.ra = ra
         user.email = email

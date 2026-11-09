@@ -18,6 +18,7 @@ from apps.bot.messages import BOT_MESSAGES
 from apps.bot.models import BotConfiguration, ConversationState, InteractionLog
 from apps.bot.state_machine import (
     ROUTE_COMPANY,
+    STATE_COMPANY_LOGIN_PASSWORD,
     STATE_COMPANY_ONBOARDING_SELECTION,
     STATE_IDLE,
     apply_state_transition,
@@ -38,6 +39,11 @@ from infra.waha.protocols import (
 )
 
 logger = structlog.get_logger(__name__)
+
+# Estados em que a próxima mensagem do usuário é um segredo (senha do portal da
+# empresa). O conteúdo dela nunca vai para o InteractionLog.
+SENSITIVE_INPUT_STATES = frozenset({STATE_COMPANY_LOGIN_PASSWORD})
+SENSITIVE_INPUT_PLACEHOLDER = "[conteúdo sensível omitido]"
 
 
 class BotService:
@@ -91,7 +97,10 @@ class BotService:
             logger.info("new_user_created", chat_id=chat_id)
 
         conversation_state = self._get_conversation_state(user)
-        self._log_received(user, message)
+        if normalize_current_action(conversation_state.current_action) in SENSITIVE_INPUT_STATES:
+            self._log_received(user, SENSITIVE_INPUT_PLACEHOLDER)
+        else:
+            self._log_received(user, message)
 
         try:
             self._dispatch(user, chat_id, text, conversation_state, raw_text=raw_text)

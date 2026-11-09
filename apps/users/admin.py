@@ -46,7 +46,7 @@ class UserProfileAdmin(ModelAdmin):
         ("Dados Pessoais", {"fields": ("user", "phone_number", "email", "ra", "course")}),
         (
             "Autenticação UTFPR",
-            {"fields": ("is_authenticated_utfpr", "utfpr_password"), "classes": ("wide",)},
+            {"fields": ("is_authenticated_utfpr", "email_verified"), "classes": ("wide",)},
         ),
         (
             "Datas",

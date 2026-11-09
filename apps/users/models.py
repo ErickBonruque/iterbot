@@ -2,13 +2,13 @@ from django.contrib.auth.models import User
 from django.db import models
 
 from apps.core.models import TimeStampedModel
-from infra.security.fields import EncryptedCharField
 
 
 class UserProfile(TimeStampedModel):
     """
     Representa um usuário do sistema, vinculado ao número de telefone (WAHA ID).
-    Armazena credenciais da UTFPR (criptografadas idealmente, aqui simplificado para MVP).
+    Aluno se identifica por RA + e-mail @alunos confirmado por link; o bot não
+    coleta senha do Portal do Aluno.
     """
 
     user = models.OneToOneField(
@@ -45,9 +45,6 @@ class UserProfile(TimeStampedModel):
         help_text="Senha hash (Django User integração futura)",
     )
     ra = models.CharField(max_length=20, blank=True, null=True, help_text="Registro Acadêmico")
-    utfpr_password = EncryptedCharField(
-        max_length=512, blank=True, null=True, help_text="Senha do Portal (criptografada)"
-    )
     is_authenticated_utfpr = models.BooleanField(default=False)
     course = models.ForeignKey(
         "courses.Course",
