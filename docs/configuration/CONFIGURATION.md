@@ -110,6 +110,7 @@ A configuração é centralizada no módulo `config/env.py`, que define dataclas
 | Variável | Obrigatória | Descrição | Docker Secret |
 |---|---|---|---|
 | `PRIVACY_CONTACT_EMAIL` | Recomendada | E-mail exibido no texto de privacidade do bot para pedidos de titulares (ver, corrigir, apagar dados). Padrão: `DEFAULT_FROM_EMAIL`. | — |
+| `FEEDBACK_FORM_URL` | Não | Link do formulário de opinião (ex.: Google Forms) que o bot manda quando o aluno digita *opinião*. Vazio = responde que ainda não está disponível. | — |
 | `WEEKLY_REVIEW_MIN_INTERVAL_SECONDS` | Não | Pausa mínima entre mensagens do resumo semanal. Padrão: `8`. | — |
 | `WEEKLY_REVIEW_MAX_INTERVAL_SECONDS` | Não | Pausa máxima (o valor é sorteado entre mín. e máx.). Padrão: `20`. | — |
 | `WEEKLY_REVIEW_MAX_PER_RUN` | Não | Mensagens por lote. Padrão: `40`. | — |

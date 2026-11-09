@@ -12,6 +12,7 @@ Quem executa precisa de: um celular com WhatsApp (o "aluno"), acesso a uma caixa
 
 - [ ] Deploy feito com `deployment/scripts/deploy.sh` e smoke-check verde
 - [ ] `PRIVACY_CONTACT_EMAIL` definido no `.env` (aparece no texto de privacidade)
+- [ ] `FEEDBACK_FORM_URL` definido no `.env` com o link do Google Forms de opinião
 - [ ] Coleta de vagas online rodou depois do deploy (admin → Vagas do Dia → botão "Buscar Vagas Agora", ou espera as 07:00)
 - [ ] `/admin/status-bot/` mostra a sessão `iterbot` **WORKING**
 - [ ] O número do aluno de teste **não** tem perfil antigo (admin → *User profiles* → buscar pelo número; se existir, apague para testar o primeiro contato)
@@ -54,6 +55,7 @@ Quem executa precisa de: um celular com WhatsApp (o "aluno"), acesso a uma caixa
 | 2.18 | `3` → mesma vaga → `candidatar` | "✅ Você já se candidatou a esta vaga." |
 | 2.19 | `parar` / depois `retomar` | "🔕 ... não vai mais receber o resumo semanal" / "🔔 ... voltará a receber" |
 | 2.20 | `4` (Sair) e depois `1` → mesmo RA | Entra direto ("Bem-vindo de volta"), sem pedir e-mail |
+| 2.21 | `opinião` | "💬 Sua opinião sobre o IterBot" com o link do formulário |
 
 ## 3. Empresa recebe a candidatura
 

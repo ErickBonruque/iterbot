@@ -178,6 +178,16 @@ class MenuMessages:
         "🔕 Pronto, você não vai mais receber o resumo semanal de vagas.\n\n"
         "Para voltar a receber, digite *retomar*.",
     )
+    feedback_link: MessageTemplate = MessageTemplate(
+        "menu.feedback_link",
+        "💬 *Sua opinião sobre o IterBot*\n\n"
+        "Leva 2 minutos e ajuda muito a melhorar o bot:\n{feedback_url}\n\n"
+        "Obrigado! Digite *menu* para voltar.",
+    )
+    feedback_unavailable: MessageTemplate = MessageTemplate(
+        "menu.feedback_unavailable",
+        "💬 O formulário de opinião ainda não está disponível. Digite *menu* para voltar.",
+    )
     weekly_review_opt_in: MessageTemplate = MessageTemplate(
         "menu.weekly_review_opt_in",
         "🔔 Pronto, você voltará a receber o resumo semanal de vagas.",

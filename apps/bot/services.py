@@ -200,6 +200,7 @@ class BotService:
         "retomar resumo": False,
         "voltar a receber": False,
     }
+    _ALIAS_FEEDBACK = frozenset({"opinião", "opiniao", "feedback"})
     _ALIAS_LOGIN = frozenset({"cadastrar", "login", "entrar"})
     _ALIAS_COMPANY = frozenset({"empresa", "sou empresa", "cadastrar vaga", "publicar vaga"})
     _ALIAS_LOGOUT = frozenset({"logout", "deslogar", "sair da conta"})
@@ -221,6 +222,17 @@ class BotService:
             chat_id, self.menu_handler.resolve_message(template.key, template.text)
         )
         logger.info("weekly_review_opt_out_changed", user_id=user.id, opt_out=opt_out)
+
+    def _send_feedback_link(self, chat_id: str) -> None:
+        """'opinião': link do formulário de opinião (FEEDBACK_FORM_URL)."""
+        url = settings.FEEDBACK_FORM_URL
+        template = (
+            BOT_MESSAGES.menu.feedback_link if url else BOT_MESSAGES.menu.feedback_unavailable
+        )
+        self.waha_client.send_message(
+            chat_id,
+            self.menu_handler.resolve_message(template.key, template.text, feedback_url=url),
+        )
 
     def _handle_sair(self, user: UserProfile, chat_id: str) -> None:
         """'sair' desloga a sessão ativa: empresa tem prioridade, depois aluno."""
@@ -273,6 +285,9 @@ class BotService:
             self.menu_handler.send_unknown_command(user, chat_id)
 
     def _handle_text_alias(self, user: UserProfile, chat_id: str, text: str) -> bool:
+        if text in self._ALIAS_FEEDBACK:
+            self._send_feedback_link(chat_id)
+            return True
         if text in self._ALIAS_LOGIN:
             self.auth_handler.start_login_flow(user, chat_id)
             return True

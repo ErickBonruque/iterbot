@@ -182,6 +182,9 @@ DEFAULT_FROM_EMAIL = settings.email.from_email
 # Contato para pedidos de titulares (LGPD) exibido no texto de privacidade do bot.
 PRIVACY_CONTACT_EMAIL = env("PRIVACY_CONTACT_EMAIL", default="") or DEFAULT_FROM_EMAIL
 
+# Link do formulário de opinião (Google Forms) enviado pelo comando "opinião" do bot.
+FEEDBACK_FORM_URL = env("FEEDBACK_FORM_URL", default="")
+
 # Resumo semanal em massa — ritmo conservador para não parecer spam ao WhatsApp
 # (intervalo aleatório entre mensagens, lote máximo por execução e pausa entre
 # lotes). Ver apps/jobs/services.py:send_weekly_reviews.
