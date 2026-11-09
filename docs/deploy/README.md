@@ -77,9 +77,14 @@ WhatsApp, TLS), ver [MIGRACAO-GOSH-UTFPR.md](MIGRACAO-GOSH-UTFPR.md).
 
 ### BasicAuth (Traefik)
 
-O Django Admin/Portal e protegido por BasicAuth via Traefik middleware:
+O Django Admin é protegido por BasicAuth via Traefik middleware (router `admin-secure`):
 
-- **Django Admin/Portal:** `https://${DOMAIN}/admin/` e `https://${DOMAIN}/portal/` — requer `admin-auth`
+- **Django Admin:** `https://${DOMAIN}/admin/` — requer `admin-auth` **e** o login do Django
+- **Portal das empresas:** `https://${DOMAIN}/empresas/` — **sem BasicAuth** desde nov/2026 (router
+  `portal-secure`): empresa entra só com o login do Django. Defesas: rate-limit por IP no Traefik
+  (`login-rate-limit` no login, `admin-rate-limit` no resto), bloqueio da conta após 5 senhas
+  erradas por 5 min (`ACCOUNT_LOGIN_ATTEMPTS_LIMIT`, allauth) e aprovação manual da empresa no
+  admin antes de publicar vaga
 - **WAHA Dashboard:** servico interno, sem rota publica — acesso via tunel SSH:
   `ssh -L 3000:localhost:3000 <usuario>@<host>` e abrir `http://localhost:3000/dashboard`
 

@@ -137,6 +137,11 @@ ACCOUNT_EMAIL_VERIFICATION = "mandatory"
 ACCOUNT_UNIQUE_EMAIL = True
 ACCOUNT_USERNAME_REQUIRED = False
 ACCOUNT_ADAPTER = "apps.users.adapters.UTFPRAccountAdapter"
+# Bloqueio por conta após senhas erradas (padrão do allauth 0.57, explícito
+# porque o portal /empresas não tem mais BasicAuth na frente). Fica no cache
+# (Redis em produção). O Traefik limita por IP (login-rate-limit).
+ACCOUNT_LOGIN_ATTEMPTS_LIMIT = 5
+ACCOUNT_LOGIN_ATTEMPTS_TIMEOUT = 300
 LOGIN_REDIRECT_URL = "/accounts/success/"
 ACCOUNT_LOGOUT_REDIRECT_URL = "/accounts/login/"
 ACCOUNT_EMAIL_CONFIRMATION_ANONYMOUS_REDIRECT_URL = "/accounts/email-confirmed/"

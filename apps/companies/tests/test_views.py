@@ -2,6 +2,7 @@ from unittest.mock import patch
 
 from django.contrib.auth.models import User
 from django.contrib.messages import get_messages
+from django.core.cache import cache
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 
@@ -65,6 +66,9 @@ class TestCompanyLoginView(TestCase):
     """Testes da view de login de empresa."""
 
     def setUp(self):
+        # O bloqueio de tentativas do allauth fica no cache; sem limpar, um
+        # teste herda o bloqueio do anterior.
+        cache.clear()
         self.client = Client()
         self.user = User.objects.create_user(
             username="empresa1", email="contato@empresa.com", password="TestPass123!"
@@ -115,6 +119,34 @@ class TestCompanyLoginView(TestCase):
             },
         )
         self.assertIn(response.status_code, [200, 302])
+
+    def _verify_email(self):
+        from allauth.account.models import EmailAddress
+
+        EmailAddress.objects.create(
+            user=self.user, email=self.user.email, verified=True, primary=True
+        )
+
+    def _login(self, password: str):
+        return self.client.post(
+            "/empresas/login/", {"login": "contato@empresa.com", "password": password}
+        )
+
+    def test_correct_password_opens_a_session(self):
+        self._verify_email()
+        self._login("TestPass123!")
+        self.assertIn("_auth_user_id", self.client.session)
+
+    def test_account_is_locked_after_five_wrong_passwords(self):
+        """Sem o BasicAuth na frente do portal, o bloqueio do allauth é a defesa
+        contra força bruta por conta (o Traefik limita por IP)."""
+        self._verify_email()
+        for _ in range(5):
+            self._login("senha-errada")
+
+        self._login("TestPass123!")
+
+        self.assertNotIn("_auth_user_id", self.client.session)
 
 
 @override_settings(CACHES=CACHES_LOCMEM)

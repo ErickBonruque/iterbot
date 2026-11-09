@@ -44,14 +44,25 @@ services:
       - "traefik.http.routers.login-secure.middlewares=security-headers@file,login-rate-limit@file"
       - "traefik.http.routers.login-secure.priority=110"
       - "traefik.http.routers.login-secure.service=backend"
-      # Router dedicado para admin e empresas — BasicAuth + rate-limit restrito
-      - "traefik.http.routers.admin-secure.rule=Host(`${DOMAIN}`) && (PathPrefix(`/admin`) || PathPrefix(`/empresas`))"
+      # Router dedicado ao Django Admin — BasicAuth compartilhado + rate-limit restrito
+      - "traefik.http.routers.admin-secure.rule=Host(`${DOMAIN}`) && PathPrefix(`/admin`)"
       - "traefik.http.routers.admin-secure.entrypoints=websecure"
       - "traefik.http.routers.admin-secure.tls=true"
       - "traefik.http.routers.admin-secure.tls.certresolver=letsencrypt"
       - "traefik.http.routers.admin-secure.middlewares=admin-auth@file,security-headers@file,admin-rate-limit@file"
       - "traefik.http.routers.admin-secure.priority=100"
       - "traefik.http.routers.admin-secure.service=backend"
+      # Portal das empresas — SEM BasicAuth (decisão nov/2026): empresa real entra
+      # só com o login do Django. Defesas: rate-limit por IP aqui, login-rate-limit
+      # no router de login (prioridade maior), bloqueio do allauth após 5 senhas
+      # erradas e aprovação manual da empresa no admin antes de publicar vaga.
+      - "traefik.http.routers.portal-secure.rule=Host(`${DOMAIN}`) && PathPrefix(`/empresas`)"
+      - "traefik.http.routers.portal-secure.entrypoints=websecure"
+      - "traefik.http.routers.portal-secure.tls=true"
+      - "traefik.http.routers.portal-secure.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.portal-secure.middlewares=security-headers@file,admin-rate-limit@file"
+      - "traefik.http.routers.portal-secure.priority=100"
+      - "traefik.http.routers.portal-secure.service=backend"
       - "traefik.http.services.backend.loadbalancer.server.port=8000"
     environment:
       - DJANGO_SETTINGS_MODULE=waha_bot.settings.production

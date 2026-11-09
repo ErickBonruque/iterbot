@@ -43,9 +43,17 @@ Em `iterbot_traefik`, apenas `0.0.0.0:80->80/tcp, 0.0.0.0:443->443/tcp`.
 
 ### 2. Autenticacao em camadas
 
-- **Rotas admin (`/admin`, `/portal`)**: BasicAuth no Traefik
+- **Django Admin (`/admin`)**: BasicAuth no Traefik
   (`admin-auth@file`, `usersFile: /etc/traefik/users/admin-users.txt`)
   **mais** login/session do Django.
+- **Portal das empresas (`/empresas`)**: só login do Django (allauth), sem
+  BasicAuth desde nov/2026 — empresa real não deve precisar de senha
+  compartilhada. Mitigações: `login-rate-limit` (5/min por IP) no
+  `/empresas/login`, `admin-rate-limit` no resto, bloqueio da conta após 5
+  senhas erradas por 5 min (`ACCOUNT_LOGIN_ATTEMPTS_LIMIT` /
+  `ACCOUNT_LOGIN_ATTEMPTS_TIMEOUT`, no cache Redis), e-mail verificado e
+  aprovação manual da empresa (`ApprovedCompanyRequiredMixin`) antes de
+  publicar vaga ou ver candidatos.
 - **WAHA**: servico interno sem rota publica (`traefik.enable=false`);
   dashboard acessivel apenas via tunel SSH (`ssh -L 3000:localhost:3000`)
   + autenticacao propria do WAHA (`WAHA_DASHBOARD_USERNAME/PASSWORD`).
