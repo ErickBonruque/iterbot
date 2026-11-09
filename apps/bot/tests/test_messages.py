@@ -81,3 +81,21 @@ class BotMessageKeyChoicesTests(TestCase):
             "unknown_command",  # compatibilidade legada
         }
         self.assertTrue(expected.issubset(keys))
+
+
+class BotMessageAdminCoverageTests(TestCase):
+    def test_every_registered_message_is_editable_in_admin(self):
+        """Toda mensagem do registro precisa estar em BotMessage.KEY_CHOICES —
+        senão o admin não deixa criar o override e o texto não é editável."""
+        from dataclasses import fields
+
+        registry_keys = {
+            getattr(group, f.name).key
+            for group_field in fields(BOT_MESSAGES)
+            for group in [getattr(BOT_MESSAGES, group_field.name)]
+            for f in fields(group)
+            if isinstance(getattr(group, f.name), MessageTemplate)
+        }
+        choice_keys = {key for key, _label in BotMessage.KEY_CHOICES}
+
+        self.assertEqual(sorted(registry_keys - choice_keys), [])

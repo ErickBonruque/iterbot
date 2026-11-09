@@ -1,6 +1,32 @@
+from dataclasses import fields
+
 from django.db import models
 
+from apps.bot.messages import BOT_MESSAGES, MessageTemplate
 from apps.core.models import TimeStampedModel
+
+
+def _registry_keys() -> list[str]:
+    keys = []
+    for group_field in fields(BOT_MESSAGES):
+        group = getattr(BOT_MESSAGES, group_field.name)
+        for f in fields(group):
+            template = getattr(group, f.name)
+            if isinstance(template, MessageTemplate):
+                keys.append(template.key)
+    return keys
+
+
+def _auto_label(key: str) -> str:
+    namespace, _, name = key.partition(".")
+    return f"{namespace.replace('_', ' ').capitalize()}: {name.replace('_', ' ')}"
+
+
+def _with_registry_keys(choices: tuple) -> tuple:
+    labeled = {key for key, _label in choices}
+    return choices + tuple(
+        (key, _auto_label(key)) for key in _registry_keys() if key not in labeled
+    )
 
 
 class BotMessage(TimeStampedModel):
@@ -93,6 +119,9 @@ class BotMessage(TimeStampedModel):
         ("tasks.confirm_email_subject", "Tasks: assunto confirmação"),
         ("tasks.confirm_email_greeting", "Tasks: saudação confirmação"),
     )
+    # Toda mensagem do registro (apps/bot/messages.py) fica editável no admin,
+    # mesmo sem rótulo escrito à mão acima.
+    KEY_CHOICES = _with_registry_keys(KEY_CHOICES)
 
     key = models.CharField(
         max_length=50,
