@@ -33,10 +33,10 @@ django-unfold = "^0.90.0"
 django-ses = "^4.0.0"
 
 [tool.poetry.group.dev.dependencies]
-pytest = "^7.4.3"
-pytest-django = "^4.7.0"
-pytest-mock = "^3.12.0"
-pytest-cov = "^4.1.0"
+pytest = "^9.0"
+pytest-django = "^4.11"
+pytest-mock = "^3.15"
+pytest-cov = "^7.0"
 ruff = "^0.14.0"
 mypy = "^1.7.1"
 factory-boy = "^3.3.0"
@@ -122,7 +122,6 @@ omit = [
 fail_under = 70
 show_missing = true
 skip_covered = false
-show_contexts = true
 exclude_lines = [
     "pragma: no cover",
     "def __repr__",
