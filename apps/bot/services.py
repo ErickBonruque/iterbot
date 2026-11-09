@@ -1,6 +1,7 @@
 """Refactored bot service using handler pattern and separation of concerns."""
 
 import time
+from typing import ClassVar
 
 import structlog
 from django.conf import settings
@@ -9,10 +10,12 @@ from apps.bot.handlers import (
     ApplicationHandler,
     AuthenticationHandler,
     CompanyAuthHandler,
+    ConsentOutcome,
     JobReviewHandler,
     JobSearchHandler,
     LocalJobsHandler,
     MenuHandler,
+    PrivacyConsentHandler,
 )
 from apps.bot.messages import BOT_MESSAGES
 from apps.bot.models import BotConfiguration, ConversationState, InteractionLog
@@ -73,6 +76,7 @@ class BotService:
         )
         self.job_handler = JobSearchHandler(self.waha_client)
         self.menu_handler = MenuHandler(self.waha_client)
+        self.privacy_handler = PrivacyConsentHandler(self.waha_client)
         self.review_handler = JobReviewHandler(self.waha_client)
         self.application_handler = ApplicationHandler(self.waha_client)
         self.local_jobs_handler = LocalJobsHandler(
@@ -108,7 +112,8 @@ class BotService:
             from apps.bot.models.bot_action_log import BotActionLog
 
             BotActionLog.objects.create(
-                user=user,
+                # user.pk vira None quando quem recusou a privacidade é apagado.
+                user=user if user.pk else None,
                 action_type="MENU",
                 status="SUCCESS",
                 duration_ms=int((time.time() - start) * 1000),
@@ -117,7 +122,7 @@ class BotService:
             from apps.bot.models.bot_action_log import BotActionLog
 
             BotActionLog.objects.create(
-                user=user,
+                user=user if user.pk else None,
                 action_type="MENU",
                 status="ERROR",
                 error_type="EXCEPTION",
@@ -151,9 +156,18 @@ class BotService:
         conversation_state: ConversationState,
         raw_text: str | None = None,
     ) -> None:
+        # Portão LGPD: nada acontece antes do aceite do texto de privacidade.
+        if self.privacy_handler.needs_consent(user):
+            outcome = self.privacy_handler.process(user, chat_id, raw_text or text)
+            if outcome is ConsentOutcome.ACCEPTED:
+                self.menu_handler.send_menu(user, chat_id)
+            return
+
         if text in self._GREETINGS:
             self._reset_state(user)
             self.menu_handler.send_menu(user, chat_id)
+        elif text in self._ALIAS_WEEKLY_REVIEW:
+            self._set_weekly_review_opt_out(user, chat_id, opt_out=self._ALIAS_WEEKLY_REVIEW[text])
         elif text in {"cancelar", "voltar"}:
             self._reset_state(user)
             self.waha_client.send_message(
@@ -177,6 +191,15 @@ class BotService:
         else:
             self._handle_main_menu_command(user, chat_id, text)
 
+    # palavra → opt_out ("parar" desliga o resumo semanal, "retomar" religa)
+    _ALIAS_WEEKLY_REVIEW: ClassVar[dict[str, bool]] = {
+        "parar": True,
+        "parar resumo": True,
+        "parar avisos": True,
+        "retomar": False,
+        "retomar resumo": False,
+        "voltar a receber": False,
+    }
     _ALIAS_LOGIN = frozenset({"cadastrar", "login", "entrar"})
     _ALIAS_COMPANY = frozenset({"empresa", "sou empresa", "cadastrar vaga", "publicar vaga"})
     _ALIAS_LOGOUT = frozenset({"logout", "deslogar", "sair da conta"})
@@ -184,6 +207,20 @@ class BotService:
     _ALIAS_REVIEW = frozenset({"review", "vagas da semana"})
     _ALIAS_CHANGE_COURSE = frozenset({"trocar curso", "mudar curso", "alterar curso"})
     _ALIAS_LOCAL_JOBS = frozenset({"minhas vagas", "vagas do curso", "vagas do meu curso"})
+
+    def _set_weekly_review_opt_out(self, user: UserProfile, chat_id: str, *, opt_out: bool) -> None:
+        """'parar' / 'retomar': liga/desliga o resumo semanal (revogação simples, LGPD)."""
+        user.weekly_review_opt_out = opt_out
+        user.save(update_fields=["weekly_review_opt_out", "updated_at"])
+        template = (
+            BOT_MESSAGES.menu.weekly_review_opt_out
+            if opt_out
+            else BOT_MESSAGES.menu.weekly_review_opt_in
+        )
+        self.waha_client.send_message(
+            chat_id, self.menu_handler.resolve_message(template.key, template.text)
+        )
+        logger.info("weekly_review_opt_out_changed", user_id=user.id, opt_out=opt_out)
 
     def _handle_sair(self, user: UserProfile, chat_id: str) -> None:
         """'sair' desloga a sessão ativa: empresa tem prioridade, depois aluno."""

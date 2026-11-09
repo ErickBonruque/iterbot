@@ -36,6 +36,7 @@ class ConversationStateMachineContractTests(TestCase):
         )
 
         expected = {
+            "privacy_consent",
             STATE_LOGIN_STEP_RA,
             STATE_LOGIN_STEP_EMAIL,
             STATE_LOGIN_STEP_WAITING_CONFIRMATION,

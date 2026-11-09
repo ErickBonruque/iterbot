@@ -105,6 +105,16 @@ A configuração é centralizada no módulo `config/env.py`, que define dataclas
 | `RESEND_API_KEY` | Não | Chave de API do Resend. | `resend_api_key` |
 | `BREVO_API_KEY` | Condicional | Chave de API do Brevo (Sendinblue). Obrigatória quando `EMAIL_PROVIDER=brevo`. | `brevo_api_key` |
 
+### Privacidade e resumo semanal
+
+| Variável | Obrigatória | Descrição | Docker Secret |
+|---|---|---|---|
+| `PRIVACY_CONTACT_EMAIL` | Recomendada | E-mail exibido no texto de privacidade do bot para pedidos de titulares (ver, corrigir, apagar dados). Padrão: `DEFAULT_FROM_EMAIL`. | — |
+| `WEEKLY_REVIEW_MIN_INTERVAL_SECONDS` | Não | Pausa mínima entre mensagens do resumo semanal. Padrão: `8`. | — |
+| `WEEKLY_REVIEW_MAX_INTERVAL_SECONDS` | Não | Pausa máxima (o valor é sorteado entre mín. e máx.). Padrão: `20`. | — |
+| `WEEKLY_REVIEW_MAX_PER_RUN` | Não | Mensagens por lote. Padrão: `40`. | — |
+| `WEEKLY_REVIEW_BATCH_PAUSE_SECONDS` | Não | Espera até o próximo lote quando ainda há público. Padrão: `1800`. | — |
+
 ### Adzuna (vagas online)
 
 | Variável | Obrigatória | Descrição | Docker Secret |

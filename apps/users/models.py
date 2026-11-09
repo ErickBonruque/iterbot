@@ -81,6 +81,24 @@ class UserProfile(TimeStampedModel):
         help_text="Data/hora do envio do email de confirmação de empresa",
     )
 
+    # Consentimento de privacidade (LGPD) dado no primeiro contato pelo WhatsApp.
+    privacy_consent_at = models.DateTimeField(
+        null=True, blank=True, help_text="Quando o usuário aceitou o texto de privacidade"
+    )
+    privacy_consent_version = models.CharField(
+        max_length=16,
+        blank=True,
+        default="",
+        help_text="Hash curto do texto de privacidade exato que foi aceito",
+    )
+    # Resumo semanal de vagas: opt-out ("parar") e marca do último envio do ciclo.
+    weekly_review_opt_out = models.BooleanField(
+        default=False, help_text="Aluno pediu para não receber o resumo semanal (comando 'parar')"
+    )
+    weekly_review_sent_at = models.DateTimeField(
+        null=True, blank=True, help_text="Último envio do resumo semanal (evita reenvio no ciclo)"
+    )
+
     last_activity = models.DateTimeField(auto_now=True)
 
     def __str__(self):

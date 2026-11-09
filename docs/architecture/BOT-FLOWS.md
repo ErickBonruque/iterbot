@@ -6,6 +6,17 @@
 
 Referência principal: `apps/bot/services.py:BotService`
 
+### Portão de privacidade (LGPD)
+
+Antes de qualquer roteamento, `_dispatch()` verifica `PrivacyConsentHandler.needs_consent(user)` — `apps/bot/handlers/privacy_consent.py`:
+
+1. Quem ainda não aceitou recebe o texto `auth.privacy_consent` (editável no admin; `{contact_email}` vem de `PRIVACY_CONTACT_EMAIL`) e a conversa vai para o estado `privacy_consent`.
+2. Só **depois** do texto exibido, *1* / *aceito* / *sim* registram `privacy_consent_at` e `privacy_consent_version` (hash curto do texto exato) e mostram o menu. Um "1" mandado antes do texto não conta.
+3. *2* / *não aceito* responde `auth.privacy_consent_declined` e **apaga o perfil** (cascata em conversa e `InteractionLog`); a pessoa pode recomeçar com *oi*.
+4. Qualquer outra resposta repete o texto. Vale para todo usuário sem aceite, inclusive os que já existiam.
+
+Comandos globais depois do aceite: *parar* / *retomar* desligam/religam o resumo semanal.
+
 ---
 
 ## 1. Fluxo de Autenticação por E-mail
@@ -224,7 +235,7 @@ sequenceDiagram
 
 ## 5. Task de Review Semanal Automático
 
-Executada toda segunda-feira às 08:00 (horário de Brasília) via Celery Beat. Não requer interação do estudante.
+Disparada toda segunda-feira às 08:00 (horário de Brasília) via Celery Beat e enviada **em lotes**, num ritmo conservador para o número não ser bloqueado pelo WhatsApp por cara de spam.
 
 ### Diagrama
 
@@ -234,40 +245,34 @@ sequenceDiagram
     participant Task as send_weekly_job_review task
     participant Service as send_weekly_reviews()
     participant DB as Banco de Dados
-    participant JobsService as jobs/services.py
     participant WAHA
 
-    CeleryBeat->>Task: Dispara send_weekly_job_review (toda segunda, 08:00 BRT)
-    Task->>Service: send_weekly_reviews(message_sender, interval_seconds=1)
-    Service->>DB: UserProfile.objects.filter(conversation_state__selected_course__isnull=False)
-    DB-->>Service: Lista de usuários com curso selecionado
-
-    loop Para cada usuário elegível
-        Service->>JobsService: build_weekly_local_review(selected_course)
-        JobsService-->>Service: Vagas locais da área do curso (sem jobspy)
-        alt Há vagas locais
-            Service->>JobsService: format_weekly_local_review_message(course_name, jobs)
-            Service->>WAHA: send_message(phone_number, msg)
-            Service->>DB: JobSearchLog.objects.create(user=None, ...)
-        else Sem vagas locais novas
-            Service->>WAHA: send_message(phone_number, aviso amigável)
+    CeleryBeat->>Task: Dispara send_weekly_job_review
+    Task->>Service: send_weekly_reviews(min/max intervalo, max_per_run)
+    Service->>DB: weekly_review_audience()[:max_per_run]
+    loop Para cada aluno do lote
+        Service->>Service: pausa aleatória (8–20 s) — não antes do 1º
+        Service->>WAHA: send_message(vagas locais da área ou aviso amigável)
+        alt WAHA aceitou
+            Service->>DB: weekly_review_sent_at = agora
+        else WAHA recusou (False) ou exceção
+            Service->>Service: errors += 1 (aluno continua pendente)
         end
-        Service->>Service: sleep(1.0s) — throttle de envios
     end
-
-    Service-->>Task: stats = {sent: N, empty_notice: M, errors: K}
+    Service-->>Task: {sent, empty_notice, errors, remaining}
+    opt remaining > 0 e o lote teve algum envio
+        Task->>Task: apply_async(countdown=30 min) — próximo lote
+    end
 ```
 
-### Passos
+### Regras
 
-1. Celery Beat dispara `send_weekly_job_review` toda segunda às 08:00 BRT — `waha_bot/settings/celery.py:L23` (`crontab(hour=8, minute=0, day_of_week="monday")`)
-2. Task thin instancia apenas o `WahaClient` e delega para `send_weekly_reviews()` — o caminho semanal é **local-only** (não constrói `JobSearchService`/jobspy) — `apps/jobs/tasks.py`
-3. `send_weekly_reviews()` filtra `UserProfile` com `selected_course` não nulo na sessão — `apps/jobs/services.py`
-4. Para cada usuário: chama `build_weekly_local_review()` — só vagas locais da **área do curso** (regra centralizada `Job.objects.for_area`), sem busca online no loop — `apps/jobs/services.py`
-5. Se houver vagas: formata com `format_weekly_local_review_message()`, envia via WAHA, cria `JobSearchLog` (`user=None`) e incrementa `stats["sent"]` — `apps/jobs/services.py`
-6. Se não houver vagas locais novas: **sempre envia algo** — um aviso amigável (`review.weekly_no_local_jobs`) e incrementa `stats["empty_notice"]` (não fica em silêncio) — `apps/jobs/services.py`
-7. Aguarda 1 segundo entre envios para não sobrecarregar o WAHA — `apps/jobs/services.py`
-8. Retorna dicionário com estatísticas `{sent, empty_notice, errors}` — `apps/jobs/services.py`
+1. **Público** (`weekly_review_audience()` em `apps/jobs/services.py`): aceitou o texto de privacidade (`privacy_consent_at`), não pediu *parar* (`weekly_review_opt_out=False`), tem curso escolhido e não recebeu nos últimos 6 dias (`weekly_review_sent_at`).
+2. **Conteúdo:** só vagas locais da área do curso (`build_weekly_local_review()`, sem jobspy). Sem vaga nova, **sempre envia** o aviso `review.weekly_no_local_jobs`.
+3. **Ritmo:** no máximo `WEEKLY_REVIEW_MAX_PER_RUN` (40) mensagens por execução, com pausa aleatória entre `WEEKLY_REVIEW_MIN_INTERVAL_SECONDS` (8 s) e `WEEKLY_REVIEW_MAX_INTERVAL_SECONDS` (20 s). Se sobrar público, a task reagenda a si mesma após `WEEKLY_REVIEW_BATCH_PAUSE_SECONDS` (30 min). Ex.: 200 alunos ≈ 5 lotes ≈ 3 h.
+4. **Sem repetição:** `weekly_review_sent_at` é gravado a cada envio aceito; se a task rodar de novo no mesmo dia, ninguém recebe duas vezes.
+5. **Falha:** `send_message` devolvendo `False` (HTTP não-2xx do WAHA) conta como erro e o aluno fica pendente. Um lote sem nenhum envio bem-sucedido **não** reagenda (evita laço com o WAHA fora do ar); a próxima segunda tenta de novo.
+6. O aluno desliga/religa o resumo com *parar* / *retomar* (`BotService._set_weekly_review_opt_out`).
 
 ---
 

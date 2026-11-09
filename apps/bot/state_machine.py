@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from statemachine import State, StateMachine
 
 STATE_IDLE = "idle"
+STATE_PRIVACY_CONSENT = "privacy_consent"
 STATE_LOGIN_STEP_RA = "login_step_ra"
 STATE_LOGIN_STEP_EMAIL = "login_step_email"
 STATE_LOGIN_STEP_WAITING_CONFIRMATION = "login_step_waiting_confirmation"
@@ -24,6 +25,7 @@ STATE_PROFILE_LINK = "profile_link"
 STATE_CONFIRM_APPLICATION = "confirm_application"
 
 CANONICAL_STATES = {
+    STATE_PRIVACY_CONSENT,
     STATE_LOGIN_STEP_RA,
     STATE_LOGIN_STEP_EMAIL,
     STATE_LOGIN_STEP_WAITING_CONFIRMATION,
@@ -59,6 +61,7 @@ ROUTE_JOB_SEARCH = "job_search"
 ROUTE_COMPANY = "company_onboarding"
 ROUTE_LOCAL_JOBS = "local_jobs"
 ROUTE_APPLICATION = "application"
+ROUTE_PRIVACY = "privacy"
 
 AUTH_ROUTE_STATES = {
     STATE_LOGIN_STEP_RA,
@@ -90,6 +93,7 @@ class ConversationFlowStateMachine(StateMachine):
     """Defines valid conversation states and explicit transitions."""
 
     idle = State(STATE_IDLE, initial=True)
+    privacy_consent = State(STATE_PRIVACY_CONSENT)
     login_step_ra = State(STATE_LOGIN_STEP_RA)
     login_step_email = State(STATE_LOGIN_STEP_EMAIL)
     login_step_waiting_confirmation = State(STATE_LOGIN_STEP_WAITING_CONFIRMATION)
@@ -104,6 +108,9 @@ class ConversationFlowStateMachine(StateMachine):
     profile_skills = State(STATE_PROFILE_SKILLS)
     profile_link = State(STATE_PROFILE_LINK)
     confirm_application = State(STATE_CONFIRM_APPLICATION)
+
+    ask_privacy_consent = idle.to(privacy_consent) | privacy_consent.to.itself()
+    accept_privacy_consent = privacy_consent.to(idle)
 
     begin_login = (
         idle.to(login_step_ra)
@@ -188,6 +195,8 @@ def normalized_flow_state(current_action: str | None) -> FlowState:
 def route_for_action(current_action: str | None) -> str:
     """Resolve the route group that should handle the current state."""
     normalized = normalize_current_action(current_action)
+    if normalized == STATE_PRIVACY_CONSENT:
+        return ROUTE_PRIVACY
     if normalized in AUTH_ROUTE_STATES:
         return ROUTE_AUTH
     if normalized in JOB_ROUTE_STATES:

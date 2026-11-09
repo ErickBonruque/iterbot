@@ -1,11 +1,15 @@
 """Serviços de vagas: coleta diária filtrada, reviews e resumo semanal."""
 
+import random
 import time
+from collections.abc import Callable
+from datetime import timedelta
 from typing import Any
 
 import structlog
 from django.conf import settings
-from django.db.models import Max
+from django.db.models import Max, Q
+from django.utils import timezone
 
 from apps.bot.messages import BOT_MESSAGES
 from apps.core.portal_links import build_portal_url
@@ -328,53 +332,82 @@ def format_weekly_local_review_message(course_name: str, jobs: list[dict[str, An
     return "\n".join(lines)
 
 
-def send_weekly_reviews(
-    *,
-    message_sender: MessageSender,
-    interval_seconds: float = 1.0,
-) -> dict[str, int]:
-    """Envia o resumo semanal **só de vagas locais** para usuários elegíveis.
+# Quem recebeu há menos que isto já foi atendido neste ciclo semanal (o beat
+# dispara toda segunda; os lotes seguintes do mesmo dia não repetem ninguém).
+WEEKLY_REVIEW_CYCLE = timedelta(days=6)
 
-    Diferente do review sob demanda, o caminho semanal:
-    - usa apenas vagas locais da área do curso (`build_weekly_local_review`),
-      **sem chamar jobspy** — envio rápido e confiável;
-    - **sempre envia algo**: se não há vaga local nova, manda um aviso amigável
-      (não fica em silêncio como antes).
 
-    Stats: `sent` (lista de vagas enviada), `empty_notice` (aviso de vazio
-    enviado) e `errors`.
+def weekly_review_audience():
+    """Alunos que devem receber o resumo semanal neste ciclo.
+
+    Só quem aceitou o texto de privacidade, não pediu "parar", tem curso
+    escolhido e ainda não recebeu nos últimos `WEEKLY_REVIEW_CYCLE`.
     """
-    users = (
+    cutoff = timezone.now() - WEEKLY_REVIEW_CYCLE
+    return (
         UserProfile.objects.filter(
             conversation_state__selected_course__isnull=False,
             phone_number__isnull=False,
+            privacy_consent_at__isnull=False,
+            weekly_review_opt_out=False,
         )
+        .filter(Q(weekly_review_sent_at__isnull=True) | Q(weekly_review_sent_at__lt=cutoff))
         .exclude(phone_number="")
         .select_related("conversation_state__selected_course__area")
+        .order_by("id")
     )
 
-    stats: dict[str, int] = {"sent": 0, "empty_notice": 0, "errors": 0}
-    logger.info("weekly_review_started", total_users=users.count())
 
-    for user in users:
+def send_weekly_reviews(
+    *,
+    message_sender: MessageSender,
+    min_interval_seconds: float,
+    max_interval_seconds: float,
+    max_per_run: int,
+    sleep: Callable[[float], Any] = time.sleep,
+) -> dict[str, int]:
+    """Envia um lote do resumo semanal **só de vagas locais**.
+
+    - usa apenas vagas locais da área do curso (`build_weekly_local_review`),
+      **sem chamar jobspy**;
+    - **sempre envia algo**: sem vaga local nova, manda um aviso amigável;
+    - ritmo anti-bloqueio do WhatsApp: no máximo `max_per_run` mensagens, com
+      pausa aleatória entre `min_interval_seconds` e `max_interval_seconds`
+      entre elas (nunca depois da última). Quem fica de fora sai nos lotes
+      seguintes (a task reagenda) — `weekly_review_sent_at` impede repetição;
+    - envio recusado pelo WAHA (`send_message` → False) conta como erro e o
+      aluno continua pendente.
+
+    Stats: `sent`, `empty_notice`, `errors` e `remaining` (pendentes após o lote).
+    """
+    batch = list(weekly_review_audience()[:max_per_run])
+    stats: dict[str, int] = {"sent": 0, "empty_notice": 0, "errors": 0, "remaining": 0}
+    logger.info("weekly_review_started", batch_size=len(batch), max_per_run=max_per_run)
+
+    for index, user in enumerate(batch):
+        if index > 0:
+            sleep(random.uniform(min_interval_seconds, max_interval_seconds))
+
         selected_course = user.conversation_state.selected_course
         area = getattr(selected_course, "area", None)
         try:
             jobs = build_weekly_local_review(selected_course)
-            if not jobs:
+            if jobs:
+                msg = format_weekly_local_review_message(selected_course.name, jobs)
+            else:
                 msg = BOT_MESSAGES.review.weekly_no_local_jobs.text.format(
                     course_name=selected_course.name
                 )
-                message_sender.send_message(user.phone_number, msg)
-                stats["empty_notice"] += 1
-                logger.info(
-                    "weekly_review_empty_notice",
-                    user_id=user.id,
-                    area=area.name if area else None,
-                )
-            else:
-                msg = format_weekly_local_review_message(selected_course.name, jobs)
-                message_sender.send_message(user.phone_number, msg)
+
+            if not message_sender.send_message(user.phone_number, msg):
+                stats["errors"] += 1
+                logger.error("weekly_review_send_refused", user_id=user.id)
+                continue
+
+            user.weekly_review_sent_at = timezone.now()
+            user.save(update_fields=["weekly_review_sent_at", "updated_at"])
+
+            if jobs:
                 JobSearchLog.objects.create(
                     user=None,
                     search_term=selected_course.name,
@@ -391,9 +424,13 @@ def send_weekly_reviews(
                     area=area.name if area else None,
                     jobs_count=len(jobs),
                 )
-
-            if interval_seconds > 0:
-                time.sleep(interval_seconds)
+            else:
+                stats["empty_notice"] += 1
+                logger.info(
+                    "weekly_review_empty_notice",
+                    user_id=user.id,
+                    area=area.name if area else None,
+                )
         except Exception as exc:
             stats["errors"] += 1
             logger.error(
@@ -404,5 +441,6 @@ def send_weekly_reviews(
                 exc_info=True,
             )
 
+    stats["remaining"] = weekly_review_audience().count()
     logger.info("weekly_review_completed", **stats)
     return stats

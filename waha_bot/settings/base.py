@@ -4,7 +4,7 @@ import dj_database_url
 from django.templatetags.static import static
 from django.urls import reverse_lazy
 
-from config.env import settings
+from config.env import env, settings
 
 from .celery import *  # noqa: F403
 
@@ -173,6 +173,17 @@ if EMAIL_BACKEND == "django_ses.SESBackend":
     AWS_SECRET_ACCESS_KEY = settings.aws.secret_access_key
 
 DEFAULT_FROM_EMAIL = settings.email.from_email
+
+# Contato para pedidos de titulares (LGPD) exibido no texto de privacidade do bot.
+PRIVACY_CONTACT_EMAIL = env("PRIVACY_CONTACT_EMAIL", default="") or DEFAULT_FROM_EMAIL
+
+# Resumo semanal em massa — ritmo conservador para não parecer spam ao WhatsApp
+# (intervalo aleatório entre mensagens, lote máximo por execução e pausa entre
+# lotes). Ver apps/jobs/services.py:send_weekly_reviews.
+WEEKLY_REVIEW_MIN_INTERVAL_SECONDS = env.float("WEEKLY_REVIEW_MIN_INTERVAL_SECONDS", default=8.0)
+WEEKLY_REVIEW_MAX_INTERVAL_SECONDS = env.float("WEEKLY_REVIEW_MAX_INTERVAL_SECONDS", default=20.0)
+WEEKLY_REVIEW_MAX_PER_RUN = env.int("WEEKLY_REVIEW_MAX_PER_RUN", default=40)
+WEEKLY_REVIEW_BATCH_PAUSE_SECONDS = env.int("WEEKLY_REVIEW_BATCH_PAUSE_SECONDS", default=1800)
 
 
 # Internationalization

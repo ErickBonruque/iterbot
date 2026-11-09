@@ -7,6 +7,8 @@
 - **Requisito:** e-mail institucional `@alunos.utfpr.edu.br` — validado por `validate_utfpr_email()` durante o fluxo de autenticação — `apps/users/validators.py`
 - **Fluxo de acesso:** RA → e-mail institucional → link de confirmação enviado por e-mail → clique no link ativa `is_authenticated_utfpr=True` e `email_verified=True` no `UserProfile` — `UTFPRAuthService.confirm_email()` em `apps/users/services.py`. **O bot não pede nem guarda senha** (a prova de identidade é o link no e-mail @alunos).
 - **Token de confirmação:** expira em 24 horas — `apps/users/services.py`
+- **Privacidade (LGPD):** antes de qualquer coisa, todo usuário do WhatsApp sem aceite recebe o texto de privacidade; o aceite fica em `UserProfile.privacy_consent_at` + `privacy_consent_version` (hash do texto aceito); quem recusa tem perfil e conversa apagados — `apps/bot/handlers/privacy_consent.py`
+- **Resumo semanal:** só para quem aceitou e não digitou *parar* (*retomar* religa); enviado em lotes com pausa aleatória — ver BOT-FLOWS §5
 - **Re-login:** se o número já tem e-mail verificado, informar o RA autentica direto, sem pedir e-mail nem reenviar link — `UTFPRAuthService.link_user()`
 - **Após autenticação:** acesso ao menu completo (busca de vagas, review semanal, trocar curso, logout)
 - **Sem autenticação:** apenas opção de iniciar cadastro/login — `apps/bot/services.py:_handle_numeric_unauthenticated()` linha 203

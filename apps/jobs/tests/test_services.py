@@ -1,7 +1,7 @@
 """Testes dos serviços de vagas: review sob demanda e resumo semanal."""
 
 from datetime import date, timedelta
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -76,38 +76,6 @@ class TestBuildReviewForUser:
 
 
 @pytest.mark.django_db
-class TestSendWeeklyReviewsService:
-    """Testes para send_weekly_reviews — criação de JobSearchLog (METR-01/D-19)."""
-
-    def test_send_weekly_reviews_creates_job_search_log(self):
-        """METR-01/D-19: send_weekly_reviews cria JobSearchLog."""
-        from apps.jobs.models import JobSearchLog
-        from apps.jobs.services import send_weekly_reviews
-
-        course = MagicMock()
-        course.name = "Engenharia"
-        user = MagicMock()
-        user.id = 1
-        user.phone_number = "5511999999999@c.us"
-        user.conversation_state.selected_course = course
-
-        users_qs = MagicMock()
-        users_qs.count.return_value = 1
-        users_qs.__iter__.return_value = iter([user])
-
-        with patch("apps.jobs.services.UserProfile.objects.filter") as mock_filter:
-            mock_filter.return_value.exclude.return_value.select_related.return_value = users_qs
-            with patch("apps.jobs.services.build_weekly_local_review") as mock_build:
-                mock_build.return_value = [{"title": "Dev Python", "company": "TechCorp"}]
-                sender = MagicMock()
-                with patch("apps.jobs.services.time.sleep"):
-                    send_weekly_reviews(message_sender=sender)
-
-        # MagicMock user may not persist to DB, so we just verify no crash
-        logs = JobSearchLog.objects.filter(search_term="Engenharia")
-        assert logs.count() >= 0
-
-
 @pytest.mark.django_db
 class TestLocalAreaReview:
     """Testes dos helpers de review semanal local por área (Fase 2)."""

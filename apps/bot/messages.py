@@ -59,6 +59,28 @@ class AuthMessages:
         "auth.logout_success",
         "🔒 Você saiu do sistema. Até logo!",
     )
+    privacy_consent: MessageTemplate = MessageTemplate(
+        "auth.privacy_consent",
+        "🔒 *Antes de começar: privacidade*\n\n"
+        "O IterBot é um projeto da UTFPR Santa Helena que indica vagas de estágio e emprego. "
+        "Para isso, guardamos: seu número de WhatsApp, RA, e-mail @alunos, curso e, se você se "
+        "candidatar a uma vaga, o mini-perfil que você informar.\n\n"
+        "• Usamos esses dados só para indicar vagas e encaminhar suas candidaturas.\n"
+        "• A empresa só recebe seus dados quando *você* se candidata a uma vaga dela.\n"
+        "• Não pedimos senha.\n"
+        "• Para ver, corrigir ou apagar seus dados: {contact_email}\n"
+        "• Para não receber o resumo semanal de vagas, digite *parar*.\n\n"
+        "Você concorda?\n1️⃣ Aceito\n2️⃣ Não aceito",
+    )
+    privacy_consent_accepted: MessageTemplate = MessageTemplate(
+        "auth.privacy_consent_accepted",
+        "✅ Obrigado! Seu aceite foi registrado.",
+    )
+    privacy_consent_declined: MessageTemplate = MessageTemplate(
+        "auth.privacy_consent_declined",
+        "Tudo bem! Apaguei esta conversa do IterBot e não vou guardar seus dados.\n\n"
+        "Se mudar de ideia, é só mandar *oi*.",
+    )
     login_welcome_back: MessageTemplate = MessageTemplate(
         "auth.login_welcome_back",
         "✅ *Bem-vindo de volta!*\n\nSeu e-mail `{email}` já foi verificado anteriormente, então você está autenticado direto.\n\nDigite *menu* para ver as opções disponíveis.",
@@ -149,6 +171,16 @@ class MenuMessages:
     unknown_command: MessageTemplate = MessageTemplate(
         "menu.unknown_command",
         "❓ Comando não reconhecido.\n\nDigite *menu* para ver as opções disponíveis.",
+    )
+
+    weekly_review_opt_out: MessageTemplate = MessageTemplate(
+        "menu.weekly_review_opt_out",
+        "🔕 Pronto, você não vai mais receber o resumo semanal de vagas.\n\n"
+        "Para voltar a receber, digite *retomar*.",
+    )
+    weekly_review_opt_in: MessageTemplate = MessageTemplate(
+        "menu.weekly_review_opt_in",
+        "🔔 Pronto, você voltará a receber o resumo semanal de vagas.",
     )
 
 
