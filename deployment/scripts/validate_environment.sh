@@ -6,7 +6,7 @@
 # This script validates that the environment is correctly configured before
 # starting the application.
 #
-# Usage: ./deployment/scripts/validate_environment.sh [--ec2]
+# Usage: ./deployment/scripts/validate_environment.sh [--prod]
 # ============================================================================
 
 set -euo pipefail
@@ -29,10 +29,10 @@ inc_warning() {
     WARNINGS=$((WARNINGS + 1))
 }
 
-# Detectar modo EC2
-EC2_MODE=false
-if [[ "${1:-}" == "--ec2" ]]; then
-    EC2_MODE=true
+# Modo producao (host gosh): .env e senha SMTP passam a ser obrigatorios
+PROD_MODE=false
+if [[ "${1:-}" == "--prod" ]]; then
+    PROD_MODE=true
 fi
 
 echo -e "${BLUE}============================================${NC}"
@@ -106,19 +106,7 @@ echo ""
 echo -e "${BLUE}📦 Checking optional commands...${NC}"
 check_command "python3" false
 check_command "openssl" false
-if [ "$EC2_MODE" = true ]; then
-    check_command "aws" true
-    if command -v aws &> /dev/null; then
-        if aws sts get-caller-identity &> /dev/null; then
-            echo -e "${GREEN}IAM Role funcional${NC}"
-        else
-            echo -e "${RED}IAM Role NAO configurada (required para backup S3)${NC}"
-            inc_error
-        fi
-    fi
-else
-    check_command "aws" false
-fi
+check_command "rclone" false  # copia de backup fora do host (docs/deploy/BACKUP.md)
 echo ""
 
 # Check secrets directory
@@ -138,15 +126,15 @@ check_file "./secrets/postgres_password.txt" true
 check_file "./secrets/waha_api_key.txt" true
 check_file "./secrets/waha_dashboard_password.txt" true
 check_file "./secrets/waha_swagger_password.txt" true
-if [ "$EC2_MODE" = true ]; then
+if [ "$PROD_MODE" = true ]; then
     check_file "./secrets/email_password.txt" true
-    check_file "./secrets/aws_access_key_id.txt" true
-    check_file "./secrets/aws_secret_access_key.txt" true
 else
     check_file "./secrets/email_password.txt" false
-    check_file "./secrets/aws_access_key_id.txt" false
-    check_file "./secrets/aws_secret_access_key.txt" false
 fi
+# O compose ainda declara os secrets AWS (provider de e-mail "ses" segue suportado
+# no codigo); placeholders de setup_secrets.sh bastam se o provider nao for SES.
+check_file "./secrets/aws_access_key_id.txt" true
+check_file "./secrets/aws_secret_access_key.txt" true
 echo ""
 
 # Check for invalid characters in secrets
@@ -179,7 +167,7 @@ echo ""
 
 # Check .env file
 echo -e "${BLUE}⚙️  Checking configuration files...${NC}"
-if [ "$EC2_MODE" = true ]; then
+if [ "$PROD_MODE" = true ]; then
     check_file ".env" true
 else
     check_file ".env" false

@@ -370,7 +370,7 @@ iterbot/
 ├── config/
 │   └── env.py                  # Configuração de variáveis de ambiente e secrets
 ├── deployment/
-│   └── scripts/                # Scripts de infra (setup-ec2, backup, smoke-check, rollback)
+│   └── scripts/                # Scripts do host gosh (deploy, backup/restore, smoke-check, rollback)
 ├── docker/
 │   └── django/                 # Dockerfile e scripts de entrada
 ├── infra/

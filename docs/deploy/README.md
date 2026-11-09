@@ -7,7 +7,7 @@ Guias de deploy e configuracao de infraestrutura.
 | Arquivo | Descricao |
 |---------|-----------|
 | [MIGRACAO-GOSH-UTFPR.md](MIGRACAO-GOSH-UTFPR.md) | **Plano vigente** — migração para a VM própria da UTFPR (`gosh`) |
-| [MIGRACAO-DOMINIO-FIXO.md](MIGRACAO-DOMINIO-FIXO.md) | (histórico/supersedido) plano de host compartilhado |
+| [BACKUP.md](BACKUP.md) | Backup diário, cópia externa (B2 + rclone) e restauração |
 | [EMAIL_RUNBOOK.md](EMAIL_RUNBOOK.md) | Runbook operacional do e-mail (rotação, revogação, troubleshooting) |
 
 > ℹ️ O deploy original em AWS EC2 foi **descomissionado** (ver
@@ -101,11 +101,11 @@ para configurar (diferente do deploy AWS antigo).
 
 ## Backup e Restauração
 
-- **Backup diario:** `backup-postgres.sh` (dump local do PostgreSQL via crontab)
-- **Disk check:** `check-disk-space.sh` (alerta por e-mail se uso >80%)
-- Os scripts de backup/restore para S3 (`check-backup.sh`, `restore-test.sh`,
-  `restore-postgres.sh`) pertencem ao deploy AWS antigo e exigem adaptação
-  antes de uso no host atual.
+Ver [BACKUP.md](BACKUP.md). Resumo: `backup-postgres.sh` (dump + configuração,
+14 diários + 4 semanais, cópia criptografada fora do host via rclone),
+`restore-test.sh` (restaura num Postgres temporário), `restore-postgres.sh`, e
+`check-disk-space.sh` (alerta com disco ≥ 85%), agendados por
+`install-backup-cron.sh` no cron do usuário.
 
 ## Monitoramento e Alertas
 
@@ -121,19 +121,26 @@ O repositório mantém CI no GitHub Actions (`.github/workflows/ci.yml`): lint
 Trivy) em cada PR e push.
 
 **Deploy é manual**: como o SSH do host é filtrado de fora da UTFPR, o GitHub
-Actions não alcança a porta 22. Opções registradas em
-[MIGRACAO-GOSH-UTFPR.md](MIGRACAO-GOSH-UTFPR.md): self-hosted runner na rede
-institucional, deploy manual no campus ou VPN. O workflow antigo de deploy
-para AWS (via SSM) foi removido junto com a EC2.
+Actions não alcança a porta 22. No campus (ou VPN), com a CI verde:
+
+```bash
+ssh a2587246@200.134.22.219
+cd ~/iterbot && bash deployment/scripts/deploy.sh
+```
+
+O `deploy.sh` faz backup do banco, `git merge --ff-only origin/master`, rebuild de
+backend/worker/beat (o `start.sh` roda `migrate`), confere migrações, roda o
+smoke-check e limpa build cache/imagens órfãs.
 
 ### Rollback
 
 No host:
 ```bash
-bash deployment/scripts/rollback.sh [--commit HASH]
+bash deployment/scripts/rollback.sh [commit]   # padrão: o commit anterior
 ```
 
-O rollback faz checkout do commit, rebuild dos containers, e executa smoke-check.
+Reaproveita o `deploy.sh`. **Migrações não são desfeitas** — se o deploy revertido
+trouxe migração, restaure também o backup feito antes dele (`restore-postgres.sh`).
 
 ## Solução de Problemas
 
@@ -141,6 +148,6 @@ O rollback faz checkout do commit, rebuild dos containers, e executa smoke-check
 |----------|---------|
 | WAHA sem resposta | Verificar container: `docker compose ps waha` |
 | SSL cert expirado | Verificar logs Traefik: `make logs-traefik` |
-| Backup falhou | Verificar log: `tail /var/log/iterbot-backup.log` |
+| Backup falhou | Verificar log: `tail ~/iterbot/backups/backup.log` |
 | Disco cheio | Verificar uso: `df -h` e `docker system df` |
 | Rollback necessario | `bash deployment/scripts/rollback.sh` |

@@ -49,7 +49,7 @@ Esta decisao foi revisada e substituida durante o hardening de seguranca da Phas
 
 - Em **desenvolvimento local**, WAHA continua exposto em `http://localhost:3000/dashboard` para facilitar pareamento por QR Code (ver `docker-compose.yml`).
 - Em **producao**, WAHA **nao expoe** a porta 3000 publicamente — o acesso externo ocorre exclusivamente via Traefik em `https://waha.${DOMAIN}` com middlewares `security-headers@file` e `waha-auth@file` (BasicAuth + TLS Let's Encrypt). Ver `docker-compose.prod.yml` e `infra/traefik/dynamic/middlewares.yml`.
-- O Security Group da EC2 deixou de aceitar a porta 3000 (ver `deployment/scripts/harden-security-group.sh`); apenas 22/80/443 permanecem abertas.
+- O Security Group da EC2 deixou de aceitar a porta 3000 (script `harden-security-group.sh`, removido em nov/2026 junto com a EC2; no host gosh a rede é filtrada pela COGETI); apenas 22/80/443 permanecem abertas.
 
 ### Motivo da reversao
 

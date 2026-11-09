@@ -1,6 +1,6 @@
 # Migração para o host próprio da UTFPR — `gosh.sh.utfpr.edu.br`
 
-> Plano **vigente** de migração. Substitui [`MIGRACAO-DOMINIO-FIXO.md`](MIGRACAO-DOMINIO-FIXO.md)
+> Plano de migração (concluída em 2026-07-01). Substituiu o plano de host compartilhado `MIGRACAO-DOMINIO-FIXO.md` (removido em nov/2026; histórico no git)
 > (host compartilhado, nunca executado). Decisão registrada em
 > [ADR-005](../architecture/adr/adr-005-migracao-host-gosh-utfpr.md).
 
@@ -87,7 +87,7 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 
 SSH filtrado de fora ⇒ GitHub Actions não alcança a porta 22. Opções:
 - **Self-hosted runner** dentro da rede da UTFPR;
-- **Deploy manual** via SSH no campus (`git pull` + `ec2_deploy.sh`);
+- **Deploy manual** via SSH no campus (`deployment/scripts/deploy.sh`) — **em uso**;
 - **VPN institucional** (confirmar com a COGETI) — habilita SSH de qualquer lugar.
 
 O workflow de deploy AWS (`.github/workflows/deploy.yml`, via SSM) foi **removido** do repositório junto com o descomissionamento da EC2 — até a definição de runner/VPN, o deploy é manual via SSH.
