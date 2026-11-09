@@ -1,92 +1,25 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # ============================================================================
-# IterBot - Rollback Script
+# IterBot - Rollback no host gosh (rodar NO HOST, dentro de ~/iterbot)
 # ============================================================================
-# Rolls back to a previous commit and rebuilds containers.
-# Runs smoke check after rollback to verify health.
+# Uso: deployment/scripts/rollback.sh [commit]   (padrao: o commit anterior, HEAD@{1})
 #
-# Usage: ./deployment/scripts/rollback.sh [--commit HASH]
-#   --commit  Specify commit hash to rollback to (default: HEAD^)
+# Volta o CODIGO para o commit indicado reaproveitando o deploy.sh (backup,
+# rebuild, smoke-check). ATENCAO: migracoes NAO sao desfeitas. Se o deploy que
+# esta sendo revertido trouxe migracao, restaure tambem o banco com o backup
+# feito antes dele (o deploy.sh sempre faz um):
+#   deployment/scripts/restore-postgres.sh backups/daily/iterbot_db_<antes-do-deploy>.sql.gz
 # ============================================================================
-set -euo pipefail
+set -Eeuo pipefail
 
-PROJECT_DIR="${PROJECT_DIR:-/home/ubuntu/iterbot}"
-DOMAIN="${DOMAIN:-localhost}"
-ROLLBACK_COMMIT=""
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "${SCRIPT_DIR}/../.."
 
-# Parse options
-while [[ $# -gt 0 ]]; do
-    case $1 in
-        --commit)
-            ROLLBACK_COMMIT="$2"
-            shift 2
-            ;;
-        *)
-            echo "Usage: $0 [--commit HASH]"
-            exit 1
-            ;;
-    esac
-done
+TARGET="${1:-$(git rev-parse --short 'HEAD@{1}')}"
+echo "Rollback: $(git rev-parse --short HEAD) -> ${TARGET}"
+echo "Migracoes entre os dois commits (nao serao desfeitas):"
+git diff --name-only "${TARGET}" HEAD -- 'apps/*/migrations/*.py' || true
+read -r -p "Continuar? [s/N] " answer
+[[ "${answer}" =~ ^[sS]$ ]] || { echo "Cancelado."; exit 0; }
 
-# Default to HEAD^ if no commit specified
-if [ -z "$ROLLBACK_COMMIT" ]; then
-    ROLLBACK_COMMIT="HEAD^"
-fi
-
-echo "============================================"
-echo "  IterBot - Rollback"
-echo "============================================"
-echo ""
-
-cd "$PROJECT_DIR"
-
-CURRENT_COMMIT=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
-TARGET_COMMIT=$(git rev-parse --short "$ROLLBACK_COMMIT" 2>/dev/null || echo "$ROLLBACK_COMMIT")
-
-echo "Current commit:  ${CURRENT_COMMIT}"
-echo "Rollback target: ${TARGET_COMMIT}"
-echo ""
-
-# Fetch latest from origin
-echo "Fetching from origin..."
-git fetch origin
-
-# Show recent commits for context
-echo ""
-echo "Recent commits:"
-git log --oneline -5
-echo ""
-
-# Checkout rollback commit (create temp branch to avoid detached HEAD)
-ROLLBACK_BRANCH="rollback-$(date +%Y%m%d-%H%M%S)"
-echo "Checking out ${TARGET_COMMIT} as branch ${ROLLBACK_BRANCH}..."
-git checkout -b "$ROLLBACK_BRANCH" "$ROLLBACK_COMMIT"
-
-# Rebuild containers
-echo ""
-echo "Rebuilding containers..."
-docker compose -f docker-compose.yml -f docker-compose.prod.yml up --build -d
-
-# Run smoke check
-echo ""
-echo "Running smoke check..."
-DOMAIN_TO_CHECK="${DOMAIN}"
-if [ "$DOMAIN_TO_CHECK" = "localhost" ]; then
-    DOMAIN_TO_CHECK=$(git -C "$PROJECT_DIR" config --get deploy.domain 2>/dev/null || echo "localhost")
-fi
-
-if bash ./deployment/scripts/smoke-check.sh "$DOMAIN_TO_CHECK"; then
-    echo ""
-    echo "============================================"
-    echo "  Rollback successful!"
-    echo "  Now on commit: ${TARGET_COMMIT}"
-    echo "============================================"
-    exit 0
-else
-    echo ""
-    echo "============================================"
-    echo "  Rollback completed but smoke check FAILED!"
-    echo "  Manual verification required."
-    echo "============================================"
-    exit 1
-fi
+exec bash "${SCRIPT_DIR}/deploy.sh" "${TARGET}"
