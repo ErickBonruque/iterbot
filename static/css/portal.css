@@ -770,6 +770,16 @@ a:focus-visible {
   text-align: center;
 }
 
+.resultado-mascote {
+  background: var(--amarelo);
+  border-radius: 20px;
+  display: block;
+  height: auto;
+  margin: 0 auto 1rem;
+  padding: 8px;
+  width: 96px;
+}
+
 .resultado-icone {
   display: block;
   margin: 0 auto 1rem;

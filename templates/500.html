@@ -1,0 +1,19 @@
+{% extends "layouts/simples.html" %}
+{% load static %}
+{% comment %}
+O Django renderiza esta página sem request, sem usuário e sem mensagens: não usar
+nada disso aqui (nem {% url %}, que dependeria da configuração de rotas que pode ser
+a causa do erro).
+{% endcomment %}
+
+{% block title %}Algo deu errado · IterBot UTFPR{% endblock %}
+
+{% block simples_conteudo %}
+<div class="resultado">
+    <img class="resultado-mascote" src="{% static 'img/mascote.png' %}" alt="">
+    <p class="meta mb-1">Erro 500</p>
+    <h1 class="resultado-titulo">Algo deu errado</h1>
+    <p class="mb-4">O problema foi registrado e a equipe já pode ver. Tente de novo em alguns minutos.</p>
+    <a class="btn btn-primary" href="/empresas/painel/">Ir para o portal da empresa</a>
+</div>
+{% endblock %}
