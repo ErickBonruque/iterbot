@@ -53,6 +53,12 @@ class LocalJobsHandlerTests(TestCase):
             job.areas.set(areas)
         return job
 
+    def _bloquear_empresa(self):
+        from apps.jobs.models import CompanyStatus
+
+        self.company.status = CompanyStatus.BLOCKED
+        self.company.save(update_fields=["status"])
+
     def _last_text(self) -> str:
         return self.waha_client.send_message.call_args[0][1]
 
@@ -110,6 +116,39 @@ class LocalJobsHandlerTests(TestCase):
 
         self.service.process_message(chat_id, "3", from_me=False)
         self.assertIn("não há vagas locais", self._last_text().lower())
+
+    def test_vaga_de_empresa_bloqueada_nao_aparece(self):
+        chat_id = "5577000000012@c.us"
+        self._authenticate_user(chat_id)
+        self._make_job("Vaga Bloqueada", areas=[self.area])
+        self._bloquear_empresa()
+
+        self.service.process_message(chat_id, "3", from_me=False)
+        self.assertIn("não há vagas locais", self._last_text().lower())
+
+    def test_empresa_bloqueada_entre_lista_e_escolha(self):
+        chat_id = "5577000000013@c.us"
+        self._authenticate_user(chat_id)
+        self._make_job("Vaga Que Some", areas=[self.area])
+
+        self.service.process_message(chat_id, "3", from_me=False)
+        self._bloquear_empresa()
+        self.service.process_message(chat_id, "1", from_me=False)
+
+        self.assertNotIn("Descrição de Vaga Que Some", self._last_text())
+
+    def test_empresa_bloqueada_antes_de_candidatar(self):
+        chat_id = "5577000000014@c.us"
+        user = self._authenticate_user(chat_id)
+        self._make_job("Vaga Bloqueada Depois", areas=[self.area])
+
+        self.service.process_message(chat_id, "3", from_me=False)
+        self.service.process_message(chat_id, "1", from_me=False)
+        self._bloquear_empresa()
+        self.service.process_message(chat_id, "candidatar", from_me=False)
+
+        user.refresh_from_db()
+        self.assertNotEqual(user.conversation_state.current_action, "profile_periodo")
 
     # --- Detalhe --------------------------------------------------------------
 

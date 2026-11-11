@@ -1,7 +1,7 @@
 import pytest
 
 from apps.courses.models import Area
-from apps.jobs.models import Job
+from apps.jobs.models import CompanyStatus, Job, JobStatus
 from apps.jobs.tests.factories import CompanyFactory, JobFactory
 
 
@@ -60,3 +60,23 @@ class TestJobForArea:
         eng_job.areas.add(area_eng)
         result = set(Job.objects.for_area(area_ti))
         assert result == {universal, ti_job}
+
+
+@pytest.mark.django_db
+class TestJobPublicadas:
+    """`publicadas()`: o que o aluno pode ver (vaga aprovada de empresa não bloqueada)."""
+
+    def test_vaga_aprovada_de_empresa_aprovada(self, company):
+        job = JobFactory(company=company, status=JobStatus.APPROVED)
+        assert list(Job.objects.publicadas()) == [job]
+
+    def test_vaga_nao_aprovada_fica_de_fora(self, company):
+        for status in (JobStatus.PENDING, JobStatus.REJECTED, JobStatus.REMOVED):
+            JobFactory(company=company, status=status)
+        assert list(Job.objects.publicadas()) == []
+
+    def test_empresa_bloqueada_esconde_as_vagas_aprovadas(self, company):
+        JobFactory(company=company, status=JobStatus.APPROVED)
+        company.status = CompanyStatus.BLOCKED
+        company.save(update_fields=["status"])
+        assert list(Job.objects.publicadas()) == []

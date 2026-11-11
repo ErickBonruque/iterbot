@@ -14,7 +14,7 @@ from django.utils import timezone
 
 from apps.bot.messages import BOT_MESSAGES
 from apps.core.portal_links import build_portal_url
-from apps.jobs.models import Job, JobSearchLog, JobStatus
+from apps.jobs.models import Job, JobSearchLog
 from apps.jobs.relevance import classify, dedupe, parse_terms
 from apps.users.models import UserProfile
 from infra.waha.protocols import JobSearcher, MessageSender
@@ -54,12 +54,7 @@ def get_local_jobs_queryset_for_area(area):
     Retorna o queryset (sem corte) para que cada chamador defina seu próprio
     `limit` e escolha entre dicts serializados ou objetos `Job` completos.
     """
-    return (
-        Job.objects.for_area(area)
-        .filter(status=JobStatus.APPROVED)
-        .select_related("company")
-        .order_by("-created_at")
-    )
+    return Job.objects.for_area(area).publicadas().select_related("company").order_by("-created_at")
 
 
 def get_local_jobs_for_area(area, limit: int = 5) -> list[dict[str, Any]]:

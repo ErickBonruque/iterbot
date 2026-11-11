@@ -17,7 +17,7 @@ from apps.bot.state_machine import (
     apply_state_transition,
     normalize_current_action,
 )
-from apps.jobs.models import Job, JobStatus
+from apps.jobs.models import Job
 from apps.jobs.services import get_local_jobs_queryset_for_area
 from apps.users.models import UserProfile
 from infra.waha.protocols import MessageSender
@@ -141,11 +141,7 @@ class LocalJobsHandler(BaseHandler):
             return
 
         job_id = job_ids[idx]
-        job = (
-            Job.objects.select_related("company")
-            .filter(pk=job_id, status=JobStatus.APPROVED)
-            .first()
-        )
+        job = Job.objects.select_related("company").publicadas().filter(pk=job_id).first()
         if job is None:
             # A vaga pode ter sido removida/expirada entre a listagem e a escolha.
             self.send_msg(
@@ -188,9 +184,7 @@ class LocalJobsHandler(BaseHandler):
         conversation_state = self._get_conversation_state(user)
         job_id = conversation_state.flow_data.get("selected_local_job_id")
         job = (
-            Job.objects.select_related("company")
-            .filter(pk=job_id, status=JobStatus.APPROVED)
-            .first()
+            Job.objects.select_related("company").publicadas().filter(pk=job_id).first()
             if job_id
             else None
         )

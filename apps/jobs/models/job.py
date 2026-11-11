@@ -2,7 +2,7 @@ from django.db import models
 from django.db.models import Q
 
 from apps.core.models import TimeStampedModel
-from apps.jobs.models.company import Company
+from apps.jobs.models.company import Company, CompanyStatus
 
 
 class JobStatus(models.TextChoices):
@@ -32,6 +32,15 @@ class JobQuerySet(models.QuerySet):
         if area is None:
             return self.filter(areas__isnull=True)
         return self.filter(Q(areas=area) | Q(areas__isnull=True)).distinct()
+
+    def publicadas(self):
+        """Vagas que o aluno pode ver: aprovadas e de empresa não bloqueada.
+
+        Fonte única para o bot (lista, detalhe e candidatura), o resumo semanal e
+        a página pública ``/vagas/<id>/``. Bloquear a empresa no admin tira as
+        vagas dela de circulação sem mexer no status de cada vaga.
+        """
+        return self.filter(status=JobStatus.APPROVED).exclude(company__status=CompanyStatus.BLOCKED)
 
 
 class Job(TimeStampedModel):

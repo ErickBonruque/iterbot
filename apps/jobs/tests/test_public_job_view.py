@@ -6,7 +6,7 @@ from urllib.parse import urlsplit
 from django.test import Client, TestCase
 
 from apps.courses.models import Area
-from apps.jobs.models import JobStatus
+from apps.jobs.models import CompanyStatus, JobStatus
 from apps.jobs.services import _serialize_local_job
 from apps.jobs.tests.factories import CompanyFactory, JobFactory
 
@@ -68,6 +68,12 @@ class TestJobPublicDetailView(TestCase):
 
                 self.assertEqual(response.status_code, 404)
                 self.assertNotContains(response, f"Segredo {status}", status_code=404)
+
+    def test_empresa_bloqueada_404(self):
+        self.company.status = CompanyStatus.BLOCKED
+        self.company.save(update_fields=["status"])
+
+        self.assertEqual(self._abrir().status_code, 404)
 
     def test_vaga_inexistente_404(self):
         self.assertEqual(self._abrir(999999).status_code, 404)

@@ -19,7 +19,8 @@
 - **Acesso:** exclusivamente via portal web `/empresas/` — NÃO pelo bot WhatsApp
 - **E-mail:** aceita qualquer domínio de e-mail (não exige `@alunos.utfpr.edu.br`); `UTFPRAccountAdapter.clean_email()` verifica se a rota começa com `/empresas/` e libera a validação de domínio — `apps/users/adapters.py:L43`
 - **Cadastro:** empresa cria conta → confirma e-mail via allauth → cria perfil de empresa (`Company`) — empresa fica com `CompanyStatus.PENDING`
-- **Vagas:** criadas com `JobStatus.DRAFT` por padrão; ativas apenas após aprovação pelo administrador
+- **Vagas:** o portal cria a vaga com `JobStatus.PENDING`; ela só chega aos alunos depois da aprovação pelo administrador
+- **Bloqueio de empresa:** `CompanyStatus.BLOCKED` tira todas as vagas dela de circulação (bot, resumo semanal e `/vagas/<id>/`) sem mudar o status de cada vaga — regra única em `Job.objects.publicadas()` (`apps/jobs/models/job.py`)
 - **Aprovação de empresa:** administrador aprova via Django Admin, alterando `company.status` para `CompanyStatus.APPROVED` — `apps/jobs/models/company.py:L40`
 
 ### Administradores
@@ -133,16 +134,16 @@ Todas as rotas são montadas com o prefixo `/empresas/` em `waha_bot/urls.py` e 
 
 1. Empresa acessa `/empresas/vagas/nova/` — `JobCreateView` — `apps/companies/views.py:L105`
 2. `ApprovedCompanyRequiredMixin` bloqueia empresas com status diferente de `APPROVED` — `apps/companies/mixins.py`
-3. Vaga criada com `status=JobStatus.DRAFT` por padrão — `apps/jobs/models/job.py:L37`
-4. `CompaniesService.prepare_job_for_creation()` associa a vaga à empresa do usuário autenticado — `apps/companies/views.py:L115`
+3. `CompaniesService.prepare_job_for_creation()` associa a vaga à empresa do usuário autenticado e a cria com `status=JobStatus.PENDING` — `apps/companies/services.py`
+4. Editar uma vaga `APPROVED` ou `REJECTED` a devolve para `PENDING` (e limpa o motivo da recusa) — `CompaniesService.prepare_job_for_update()`
 5. Administrador aprova a vaga no Django Admin, alterando `status` para `JobStatus.APPROVED`
-6. Vagas `APPROVED` chegam aos alunos da área escolhida pela empresa (vazio = todas as áreas) via `get_local_jobs_for_area()` — no review sob demanda, em "Vagas do meu curso" e no resumo semanal — `apps/jobs/services.py`
+6. Vagas `APPROVED` de empresa não bloqueada (`Job.objects.publicadas()`) chegam aos alunos da área escolhida pela empresa (vazio = todas as áreas) via `get_local_jobs_for_area()` — no review sob demanda, em "Vagas do meu curso" e no resumo semanal — `apps/jobs/services.py`; a página pública `/vagas/<id>/` usa a mesma regra
 
 ### Statuses de Vaga
 
 | Status | Valor | Descrição |
 |--------|-------|-----------|
-| `DRAFT` | `"draft"` | Rascunho — criado pela empresa, não visível no review |
+| `DRAFT` | `"draft"` | Rascunho — não usado pelo portal (só pelo admin), não visível no review |
 | `PENDING` | `"pending"` | Aguardando revisão do admin |
 | `APPROVED` | `"approved"` | Aprovada — aparece no review de vagas dos estudantes |
 | `REJECTED` | `"rejected"` | Rejeitada pelo admin (com motivo registrado) |

@@ -94,7 +94,7 @@ class CompanyAdmin(ModelAdmin):
         else:
             self.message_user(
                 request,
-                f"{updated} empresa(s) bloqueada(s).",
+                f"{updated} empresa(s) bloqueada(s). As vagas delas saíram do bot e do resumo.",
                 level=messages.WARNING,
             )
 

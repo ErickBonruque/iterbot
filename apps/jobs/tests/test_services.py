@@ -116,6 +116,19 @@ class TestLocalAreaReview:
 
         assert get_local_jobs_for_area(area) == []
 
+    def test_get_local_jobs_for_area_excludes_blocked_company(self, area, settings):
+        """Resumo semanal e menu do bot não oferecem vaga de empresa bloqueada."""
+        from apps.jobs.models import CompanyStatus, JobStatus
+        from apps.jobs.services import get_local_jobs_for_area
+        from apps.jobs.tests.factories import CompanyFactory, JobFactory
+
+        settings.PORTAL_BASE_URL = "https://portal.example.com"
+        company = CompanyFactory(status=CompanyStatus.BLOCKED)
+        job = JobFactory(company=company, status=JobStatus.APPROVED)
+        job.areas.add(area)
+
+        assert get_local_jobs_for_area(area) == []
+
     def test_build_weekly_local_review_uses_course_area(self, course, area, settings):
         from apps.jobs.models import JobStatus
         from apps.jobs.services import build_weekly_local_review

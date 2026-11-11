@@ -24,7 +24,7 @@ from apps.bot.state_machine import (
     normalize_current_action,
 )
 from apps.bot.tasks import send_job_application_email
-from apps.jobs.models import Job, JobApplication, JobStatus
+from apps.jobs.models import Job, JobApplication
 from apps.users.models import StudentProfile, UserProfile
 from infra.waha.protocols import MessageSender
 
@@ -282,11 +282,7 @@ class ApplicationHandler(BaseHandler):
         job_id = conversation_state.flow_data.get("application_job_id")
         if not job_id:
             return None
-        return (
-            Job.objects.select_related("company")
-            .filter(pk=job_id, status=JobStatus.APPROVED)
-            .first()
-        )
+        return Job.objects.select_related("company").publicadas().filter(pk=job_id).first()
 
     def _send_confirmation(self, user: UserProfile, chat_id: str, job: Job) -> None:
         flow = self._get_conversation_state(user).flow_data
