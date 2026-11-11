@@ -67,7 +67,7 @@ class ApprovedCompanyRequiredMixinTests(TestCase):
             company=company,
             titulo="Vaga",
             descricao="Desc",
-            tipo="estagio",
+            tipo="Estágio",
             status=JobStatus.PENDING,
         )
         self.client.force_login(user)
@@ -81,7 +81,7 @@ class ApprovedCompanyRequiredMixinTests(TestCase):
             company=company,
             titulo="Vaga",
             descricao="Desc",
-            tipo="estagio",
+            tipo="Estágio",
             status=JobStatus.PENDING,
         )
         self.client.force_login(user)

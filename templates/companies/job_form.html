@@ -101,10 +101,10 @@
                                 id="id_tipo"
                                 required>
                             <option value="">Selecione o tipo</option>
-                            <option value="estagio" {% if form.tipo.value == 'estagio' %}selected{% endif %}>Estágio</option>
-                            <option value="clt" {% if form.tipo.value == 'clt' %}selected{% endif %}>CLT</option>
-                            <option value="pj" {% if form.tipo.value == 'pj' %}selected{% endif %}>PJ</option>
-                            <option value="temporario" {% if form.tipo.value == 'temporario' %}selected{% endif %}>Temporário</option>
+                            <option value="Estágio" {% if form.tipo.value == 'Estágio' %}selected{% endif %}>Estágio</option>
+                            <option value="CLT" {% if form.tipo.value == 'CLT' %}selected{% endif %}>CLT</option>
+                            <option value="PJ" {% if form.tipo.value == 'PJ' %}selected{% endif %}>PJ</option>
+                            <option value="Temporário" {% if form.tipo.value == 'Temporário' %}selected{% endif %}>Temporário</option>
                         </select>
                         {% if form.tipo.errors %}
                         <div class="invalid-feedback">

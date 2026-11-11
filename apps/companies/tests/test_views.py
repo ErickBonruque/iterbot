@@ -189,7 +189,7 @@ class TestCompanyProfileView(TestCase):
             company=self.company,
             titulo="Vaga removida",
             descricao="...",
-            tipo="estagio",
+            tipo="Estágio",
             status=JobStatus.REMOVED,
         )
 
@@ -206,7 +206,7 @@ class TestCompanyProfileView(TestCase):
             company=self.company,
             titulo="Vaga ativa",
             descricao="...",
-            tipo="estagio",
+            tipo="Estágio",
             status=JobStatus.APPROVED,
         )
 
@@ -279,7 +279,7 @@ class TestJobCreateView(TestCase):
                 "descricao": "Desenvolvimento web",
                 "requisitos": "Cursando CC",
                 "salario": "R$ 1.200,00",
-                "tipo": "estagio",
+                "tipo": "Estágio",
             },
         )
         self.assertIn(response.status_code, [200, 302])
@@ -296,7 +296,7 @@ class TestJobCreateView(TestCase):
                 "descricao": "Django e Python",
                 "requisitos": "",
                 "salario": "",
-                "tipo": "estagio",
+                "tipo": "Estágio",
             },
         )
         job = Job.objects.filter(titulo="Estagiario Backend").first()
@@ -315,7 +315,7 @@ class TestJobCreateView(TestCase):
                 "descricao": "Desenvolvimento web",
                 "requisitos": "Cursando CC",
                 "salario": "R$ 1.200,00",
-                "tipo": "estagio",
+                "tipo": "Estágio",
                 "areas": [area.pk],
             },
         )
@@ -350,7 +350,7 @@ class TestJobUpdateView(TestCase):
             descricao="Descricao original",
             requisitos="Requisitos",
             salario="R$ 1.000,00",
-            tipo="estagio",
+            tipo="Estágio",
             status=JobStatus.PENDING,
         )
         # Outra empresa
@@ -381,7 +381,7 @@ class TestJobUpdateView(TestCase):
                 "descricao": "Descricao atualizada",
                 "requisitos": "Novos requisitos",
                 "salario": "R$ 1.500,00",
-                "tipo": "estagio",
+                "tipo": "Estágio",
             },
         )
         self.assertIn(response.status_code, [200, 302])
@@ -422,7 +422,7 @@ class TestJobDeleteView(TestCase):
             company=self.company,
             titulo="Vaga Teste",
             descricao="Descricao",
-            tipo="estagio",
+            tipo="Estágio",
             status=JobStatus.PENDING,
         )
         self.other_user = User.objects.create_user(
@@ -442,7 +442,7 @@ class TestJobDeleteView(TestCase):
             company=self.other_company,
             titulo="Outra Vaga",
             descricao="Descricao",
-            tipo="estagio",
+            tipo="Estágio",
             status=JobStatus.PENDING,
         )
 

@@ -97,10 +97,40 @@ class TestJobForm(TestCase):
             "descricao": "Desenvolvimento web com Django",
             "requisitos": "Cursando Ciencia da Computacao",
             "salario": "R$ 1.200,00",
-            "tipo": "estagio",
+            "tipo": "Estágio",
         }
         form = JobForm(data=data)
         self.assertTrue(form.is_valid(), form.errors)
+
+    def _dados(self, **extra):
+        data = {
+            "titulo": "Estagiario de TI",
+            "descricao": "Desenvolvimento web com Django",
+            "requisitos": "Cursando Ciencia da Computacao",
+            "salario": "R$ 1.200,00",
+            "tipo": "Estágio",
+        }
+        data.update(extra)
+        return data
+
+    def test_jobform_aceita_rotulo_estagio(self):
+        form = JobForm(data=self._dados(tipo="Estágio"))
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertEqual(form.cleaned_data["tipo"], "Estágio")
+
+    def test_jobform_rejeita_slug_antigo(self):
+        form = JobForm(data=self._dados(tipo="estagio"))
+        self.assertFalse(form.is_valid())
+        self.assertIn("tipo", form.errors)
+
+    def test_tipos_gravados_sao_os_rotulos(self):
+        """O valor gravado é o texto que painel, bot e admin mostram."""
+        valores = [valor for valor, _rotulo in JobForm.TIPO_CHOICES]
+        self.assertEqual(valores, ["Estágio", "CLT", "PJ", "Temporário"])
+
+    def test_tipo_usa_select_do_bootstrap(self):
+        widget = JobForm().fields["tipo"].widget
+        self.assertEqual(widget.attrs["class"], "form-select")
 
     def test_excludes_company_status(self):
         form = JobForm()
@@ -114,7 +144,7 @@ class TestJobForm(TestCase):
             "descricao": "Desenvolvimento web com Django",
             "requisitos": "Cursando Ciencia da Computacao",
             "salario": "R$ 1.200,00",
-            "tipo": "estagio",
+            "tipo": "Estágio",
         }
         form = JobForm(data=data)
         self.assertTrue(form.is_valid(), form.errors)
@@ -129,7 +159,7 @@ class TestJobForm(TestCase):
             "descricao": "Desenvolvimento web com Django",
             "requisitos": "Cursando Ciencia da Computacao",
             "salario": "R$ 1.200,00",
-            "tipo": "estagio",
+            "tipo": "Estágio",
             "areas": [area.pk],
         }
         form = JobForm(data=data)

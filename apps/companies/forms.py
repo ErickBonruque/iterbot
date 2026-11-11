@@ -180,17 +180,18 @@ class JobForm(forms.ModelForm):
     Exclui campos company e status (atribuidos via view).
     """
 
+    # O valor gravado é o próprio rótulo: painel, bot e admin mostram o mesmo texto.
     TIPO_CHOICES = [
-        ("estagio", "Estagio"),
-        ("clt", "CLT"),
-        ("pj", "PJ"),
-        ("temporario", "Temporario"),
+        ("Estágio", "Estágio"),
+        ("CLT", "CLT"),
+        ("PJ", "PJ"),
+        ("Temporário", "Temporário"),
     ]
 
     tipo = forms.ChoiceField(
         choices=TIPO_CHOICES,
-        label="Tipo da Vaga",
-        widget=forms.Select(attrs={"class": "form-control"}),
+        label="Tipo da vaga",
+        widget=forms.Select(attrs={"class": "form-select"}),
     )
 
     areas = forms.ModelMultipleChoiceField(
