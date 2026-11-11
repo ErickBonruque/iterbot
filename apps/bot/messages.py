@@ -154,7 +154,7 @@ class MenuMessages:
     )
     company_portal_link: MessageTemplate = MessageTemplate(
         "menu.company_portal_link",
-        "🌐 *Portal da Empresa*\n\nAcesse seu perfil: {profile_url}",
+        "🌐 *Portal da Empresa*\n\nAcesse o painel: {profile_url}",
     )
     company_new_job_link: MessageTemplate = MessageTemplate(
         "menu.company_new_job_link",

@@ -57,5 +57,5 @@ class ApprovedCompanyRequiredMixin(CompanyRequiredMixin):
                     request,
                     "Sua empresa ainda não foi aprovada. Aguarde a análise para publicar vagas.",
                 )
-            return redirect("/empresas/perfil/")
+            return redirect("companies:dashboard")
         return response

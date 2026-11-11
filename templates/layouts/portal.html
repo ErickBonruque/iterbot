@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load static %}
+{% load static portal %}
 {% comment %}
 Casca das páginas logadas da empresa: menu lateral preto no desktop, barra
 superior + menu deslizante (offcanvas) no celular.
@@ -33,9 +33,10 @@ O item ativo do menu vem de request.resolver_match.url_name.
                     </span>
                     <button type="button" class="btn-close btn-close-white d-lg-none" data-bs-dismiss="offcanvas" data-bs-target="#menu-portal" aria-label="Fechar menu"></button>
                 </div>
+                {% candidaturas_novas as novas %}
                 <nav class="lateral-nav" aria-label="Principal">
-                    <a href="/empresas/painel/"{% if ativa == 'dashboard' %} class="ativo" aria-current="page"{% endif %}>Painel</a>
-                    <a href="{% url 'companies:applications' %}"{% if ativa == 'applications' %} class="ativo" aria-current="page"{% endif %}>Candidaturas</a>
+                    <a href="{% url 'companies:dashboard' %}"{% if ativa == 'dashboard' %} class="ativo" aria-current="page"{% endif %}>Painel</a>
+                    <a href="{% url 'companies:applications' %}"{% if ativa == 'applications' %} class="ativo" aria-current="page"{% endif %}>Candidaturas{% if novas %} <span class="contador">{{ novas }}</span>{% endif %}</a>
                     <a href="{% url 'companies:profile' %}"{% if ativa == 'profile' %} class="ativo" aria-current="page"{% endif %}>Dados da empresa</a>
                     <a href="{% url 'companies:logout' %}">Sair</a>
                 </nav>

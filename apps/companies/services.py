@@ -1,5 +1,9 @@
+from collections import Counter
+from dataclasses import dataclass
+
 from django.core.exceptions import PermissionDenied
 from django.db import transaction
+from django.db.models import Count, QuerySet
 from django.http import Http404
 from django.shortcuts import get_object_or_404
 
@@ -11,6 +15,18 @@ from apps.jobs.models import (
     JobApplication,
     JobStatus,
 )
+
+
+@dataclass
+class DashboardSummary:
+    """Dados do painel da empresa (ver ``CompaniesService.dashboard_summary``)."""
+
+    new_applications: int
+    jobs_pending: int
+    jobs_rejected: int
+    jobs_approved: int
+    jobs: QuerySet[Job]
+    recent_applications: list[JobApplication]
 
 
 class CompaniesService:
@@ -109,6 +125,36 @@ class CompaniesService:
             Job.objects.filter(company=company)
             .exclude(status=JobStatus.REMOVED)
             .order_by("-created_at")
+        )
+
+    @staticmethod
+    def dashboard_summary(company):
+        """Números, vagas e candidaturas recentes do painel, em 3 consultas fixas.
+
+        ``jobs`` são as vagas não removidas (mais recente primeiro) com
+        ``num_applications`` anotado; ``new_applications`` conta as candidaturas
+        ``pending`` das vagas da empresa; ``recent_applications`` são as 5 últimas.
+        Empresa sem vagas/candidaturas devolve zeros e listas vazias.
+        """
+        jobs = CompaniesService.list_company_jobs(company).annotate(
+            num_applications=Count("applications")
+        )
+        # Iterar aqui avalia (e guarda em cache) a consulta das vagas: o template
+        # reaproveita o resultado sem ir ao banco de novo.
+        por_status = Counter(job.status for job in jobs)
+
+        applications = JobApplication.objects.filter(job__company=company)
+        return DashboardSummary(
+            new_applications=applications.filter(status=ApplicationStatus.PENDING).count(),
+            jobs_pending=por_status[JobStatus.PENDING.value],
+            jobs_rejected=por_status[JobStatus.REJECTED.value],
+            jobs_approved=por_status[JobStatus.APPROVED.value],
+            jobs=jobs,
+            recent_applications=list(
+                applications.select_related("user", "user__course", "job").order_by("-created_at")[
+                    :5
+                ]
+            ),
         )
 
     @staticmethod

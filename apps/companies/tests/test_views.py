@@ -180,44 +180,6 @@ class TestCompanyProfileView(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "22.333.444/0001-90")
 
-    def test_profile_hides_removed_jobs(self):
-        """Vaga removida sumia da lista mas ainda contava para o card existir,
-        deixando a empresa com um "Minhas Vagas" vazio e sem o botao de criar."""
-        from apps.jobs.models import Job, JobStatus
-
-        Job.objects.create(
-            company=self.company,
-            titulo="Vaga removida",
-            descricao="...",
-            tipo="Estágio",
-            status=JobStatus.REMOVED,
-        )
-
-        self.client.force_login(self.user)
-        response = self.client.get("/empresas/perfil/")
-
-        self.assertNotContains(response, "Vaga removida")
-        self.assertContains(response, "Nenhuma vaga cadastrada ainda")
-
-    def test_profile_lists_active_job_once(self):
-        from apps.jobs.models import Job, JobStatus
-
-        Job.objects.create(
-            company=self.company,
-            titulo="Vaga ativa",
-            descricao="...",
-            tipo="Estágio",
-            status=JobStatus.APPROVED,
-        )
-
-        self.client.force_login(self.user)
-        response = self.client.get("/empresas/perfil/")
-        content = response.content.decode()
-
-        self.assertContains(response, "Vaga ativa")
-        # Regressao: o botao Editar aparecia duplicado em cada linha da lista.
-        self.assertEqual(content.count("Editar</a>"), 1)
-
     def test_profile_update(self):
         self.client.force_login(self.user)
         response = self.client.post(
@@ -592,7 +554,7 @@ class TestJobDeleteView(TestCase):
         response = self.client.post(reverse("companies:job_delete", kwargs={"pk": self.job.pk}))
         self.job.refresh_from_db()
         self.assertEqual(self.job.status, JobStatus.REMOVED)
-        self.assertRedirects(response, reverse("companies:profile"))
+        self.assertRedirects(response, reverse("companies:dashboard"))
         messages_list = list(get_messages(response.wsgi_request))
         self.assertEqual(str(messages_list[0]), "Vaga removida com sucesso.")
 
@@ -623,12 +585,12 @@ class TestJobDeleteView(TestCase):
         response = self.client.post(reverse("companies:job_delete", kwargs={"pk": self.job.pk}))
         self.assertEqual(response.status_code, 404)
 
-    def test_removed_job_not_in_profile(self):
-        """Vaga removida nao aparece na listagem do profile."""
+    def test_removed_job_not_in_dashboard(self):
+        """Vaga removida nao aparece na listagem do painel."""
         self.job.status = JobStatus.REMOVED
         self.job.save()
         self.client.login(username="empresa1", password="senha123")
-        response = self.client.get(reverse("companies:profile"))
+        response = self.client.get(reverse("companies:dashboard"))
         self.assertNotContains(response, "Vaga Teste")
 
 
@@ -667,8 +629,8 @@ class TestCompanySignupEmailContext(TestCase):
                 "contato@empresa.com",
             )
 
-    def test_company_email_confirmation_redirects_to_profile(self):
-        """Company user confirms email → redirect to /empresas/perfil/."""
+    def test_company_email_confirmation_redirects_to_dashboard(self):
+        """Company user confirms email → redirect to /empresas/painel/."""
         from django.utils import timezone
 
         from apps.users.models import UserProfile
@@ -712,7 +674,7 @@ class TestCompanySignupEmailContext(TestCase):
         )
 
         self.assertEqual(response.status_code, 302)
-        self.assertEqual(response.url, "/empresas/perfil/")
+        self.assertEqual(response.url, "/empresas/painel/")
 
     def test_student_email_confirmation_redirects_to_success(self):
         """Student user (no company) confirms email → redirect to /accounts/success/."""

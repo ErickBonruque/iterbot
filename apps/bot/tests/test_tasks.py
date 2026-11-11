@@ -344,6 +344,9 @@ class TestProactiveNotifierCompanyApproved:
         mock_client.send_message.assert_called_once()
         assert result["status"] == "sent"
         assert result["notified"] == 1
+        # O aviso de aprovação leva a empresa ao painel (não aos dados cadastrais).
+        sent_text = mock_client.send_message.call_args[0][1]
+        assert "https://portal.example/empresas/painel/" in sent_text
 
     @patch("apps.users.models.UserProfile")
     @patch("apps.jobs.models.company.Company")

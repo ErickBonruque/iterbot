@@ -108,13 +108,16 @@ Todas as rotas são montadas com o prefixo `/empresas/` em `waha_bot/urls.py` e 
 | Rota | View | Descrição |
 |------|------|-----------|
 | `/empresas/signup/` | `CompanySignupView` | Cadastro de nova conta de empresa via allauth |
-| `/empresas/login/` | `CompanyLoginView` | Login de empresa (redireciona para `/empresas/perfil/` após sucesso) |
+| `/empresas/login/` | `CompanyLoginView` | Login de empresa (redireciona para `/empresas/painel/` após sucesso) |
 | `/empresas/logout/` | `CompanyLogoutView` | Logout (redireciona para `/empresas/login/`) |
 | `/empresas/criar/` | `CompanyCreateView` | Criação de perfil de empresa para usuário já autenticado |
-| `/empresas/perfil/` | `CompanyProfileView` | Edição do perfil da empresa (exige login + empresa existente) |
+| `/empresas/painel/` | `CompanyDashboardView` | Página inicial da empresa: resumo (candidaturas novas e vagas por status), vagas e candidaturas recentes. Aberto a empresa pendente/bloqueada (com aviso) |
+| `/empresas/perfil/` | `CompanyProfileView` | Edição dos dados da empresa (exige login + empresa existente) |
 | `/empresas/vagas/nova/` | `JobCreateView` | Criação de nova vaga (exige empresa aprovada) |
 | `/empresas/vagas/<pk>/editar/` | `JobUpdateView` | Edição de vaga existente |
 | `/empresas/vagas/<pk>/deletar/` | `JobDeleteView` | Remoção de vaga (soft delete) |
+| `/empresas/candidaturas/` | `JobApplicationsListView` | Candidaturas recebidas pelas vagas da empresa (exige empresa aprovada) |
+| `/empresas/candidaturas/<pk>/status/` | `JobApplicationStatusUpdateView` | Atualiza o status de uma candidatura (POST) |
 
 ### Fluxo de Cadastro
 

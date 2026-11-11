@@ -48,8 +48,8 @@ class TestSuccessPage(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, reverse("account_login"))
 
-    def test_success_page_company_user_shows_profile_link(self):
-        """Company user sees link to company profile."""
+    def test_success_page_company_user_shows_dashboard_link(self):
+        """Company user sees link to the company dashboard."""
         user = User.objects.create_user(
             username="company@test.com",
             email="company@test.com",
@@ -67,7 +67,7 @@ class TestSuccessPage(TestCase):
         self.client.force_login(user)
         response = self.client.get(reverse("account_success"))
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "/empresas/perfil/")
+        self.assertContains(response, "/empresas/painel/")
 
 
 class TestSuccessPageWhatsAppLink(TestCase):
@@ -147,8 +147,8 @@ class TestConfirmEmailView(TestCase):
         user = User.objects.get(email="student@alunos.utfpr.edu.br")
         self.assertEqual(str(self.client.session.get("_auth_user_id")), str(user.pk))
 
-    def test_confirm_email_auto_login_company_redirects_to_profile(self):
-        """Company user confirms email → auto-logged in → redirect to /empresas/perfil/."""
+    def test_confirm_email_auto_login_company_redirects_to_dashboard(self):
+        """Company user confirms email → auto-logged in → redirect to /empresas/painel/."""
         # Create User + Company
         user = User.objects.create_user(
             username="empresa@test.com",
@@ -186,7 +186,7 @@ class TestConfirmEmailView(TestCase):
         response = self.client.get(reverse("confirm_email", kwargs={"token": "company-token-xyz"}))
 
         self.assertEqual(response.status_code, 302)
-        self.assertEqual(response.url, "/empresas/perfil/")
+        self.assertEqual(response.url, "/empresas/painel/")
 
     def test_confirm_email_invalid_token_shows_error(self):
         """Confirming with invalid token → no login, shows error page."""

@@ -1,0 +1,118 @@
+{% extends "layouts/portal.html" %}
+{% load portal %}
+
+{% block title %}Painel · IterBot UTFPR{% endblock %}
+
+{% block portal_titulo %}Olá, {{ company.contato_nome }}{% endblock %}
+
+{% block portal_subtitulo %}<p class="meta mb-0">{{ company.nome }}</p>{% endblock %}
+
+{% block portal_acoes %}
+{% if company.status == 'approved' %}
+<a class="btn btn-primary" href="{% url 'companies:job_create' %}">Publicar nova vaga</a>
+{% else %}
+<button type="button" class="btn btn-primary" disabled aria-describedby="aviso-empresa">Publicar nova vaga</button>
+{% endif %}
+{% endblock %}
+
+{% block portal_conteudo %}
+{% if company.status == 'pending' %}
+<div class="alert alert-warning" id="aviso-empresa" role="status">
+    <strong>Cadastro aguardando aprovação.</strong>
+    A UTFPR está analisando os dados da empresa. Depois da aprovação você poderá publicar vagas, e elas aparecerão para os alunos no WhatsApp.
+</div>
+{% elif company.status == 'blocked' %}
+<div class="alert alert-danger" id="aviso-empresa" role="status">
+    <strong>Sua empresa está bloqueada.</strong>
+    Entre em contato com a administração da UTFPR para saber o motivo e voltar a publicar vagas.
+</div>
+{% endif %}
+
+<div class="numeros mb-4">
+    <div class="numero{% if summary.new_applications %} destaque{% endif %}">
+        <strong>{{ summary.new_applications }}</strong>
+        <span>candidatura{{ summary.new_applications|pluralize }} nova{{ summary.new_applications|pluralize }}</span>
+    </div>
+    <div class="numero">
+        <strong>{{ summary.jobs_pending }}</strong>
+        <span>vaga{{ summary.jobs_pending|pluralize }} em análise</span>
+    </div>
+    <div class="numero">
+        <strong>{{ summary.jobs_rejected }}</strong>
+        <span>vaga{{ summary.jobs_rejected|pluralize }} recusada{{ summary.jobs_rejected|pluralize }}</span>
+    </div>
+    <div class="numero">
+        <strong>{{ summary.jobs_approved }}</strong>
+        <span>vaga{{ summary.jobs_approved|pluralize }} publicada{{ summary.jobs_approved|pluralize }}</span>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-xl-7">
+        <section class="bloco" aria-labelledby="titulo-vagas">
+            <h2 class="bloco-titulo" id="titulo-vagas">Minhas vagas</h2>
+            {% for job in summary.jobs %}
+            {% selo_vaga job.status as selo %}
+            <div class="linha">
+                <div>
+                    <h3>{{ job.titulo }}</h3>
+                    <div class="meta">
+                        {{ job.tipo }}{% if job.num_applications %} · {{ job.num_applications }} candidatura{{ job.num_applications|pluralize }}{% endif %}{% if job.status == 'pending' %} · enviada há {{ job.created_at|timesince }}{% endif %}
+                    </div>
+                    {% if job.status == 'rejected' %}
+                    <div class="motivo">Recusada{% if job.rejection_reason %}: {{ job.rejection_reason }}{% endif %}</div>
+                    {% endif %}
+                </div>
+                <div class="d-flex flex-wrap gap-2 align-items-center">
+                    <span class="st {{ selo.classe }}">{{ selo.rotulo }}</span>
+                    {% if company.status == 'approved' %}
+                    <a class="btn-leve" href="{% url 'companies:job_update' job.pk %}">{% if job.status == 'rejected' %}Editar e reenviar{% else %}Editar{% endif %}</a>
+                    <a class="btn-leve" href="{% url 'companies:job_delete' job.pk %}">Remover</a>
+                    {% endif %}
+                </div>
+            </div>
+            {% empty %}
+            <div class="vazio">
+                {% if company.status == 'approved' %}
+                <p class="mb-3">Você ainda não publicou vagas.</p>
+                <a class="btn btn-primary" href="{% url 'companies:job_create' %}">Publique a primeira vaga</a>
+                {% else %}
+                <p class="mb-0">Quando a empresa for aprovada, as vagas que você publicar aparecem aqui.</p>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </section>
+    </div>
+
+    <div class="col-xl-5">
+        <section class="bloco" aria-labelledby="titulo-candidaturas">
+            <h2 class="bloco-titulo" id="titulo-candidaturas">Candidaturas recentes</h2>
+            {% for application in summary.recent_applications %}
+            {% selo_candidatura application.status as selo %}
+            {% with link=application.user.phone_number|whatsapp_link curso=application.user.course.name periodo=application.profile_snapshot.periodo %}
+            <div class="linha">
+                <div>
+                    <h3>{% if application.user.ra %}RA {{ application.user.ra }}{% elif application.user.email %}{{ application.user.email }}{% else %}Aluno{% endif %}</h3>
+                    <div class="meta">{{ application.job.titulo }}</div>
+                    {% if curso or periodo %}
+                    <div class="meta">{{ curso }}{% if curso and periodo %}, {% endif %}{{ periodo }}</div>
+                    {% endif %}
+                    {% if link %}
+                    <a class="wa" href="{{ link }}" target="_blank" rel="noopener">WhatsApp {{ application.user.phone_number|whatsapp_display }}</a>
+                    {% endif %}
+                </div>
+                <span class="st {{ selo.classe }}">{{ selo.rotulo }}</span>
+            </div>
+            {% endwith %}
+            {% empty %}
+            <p class="vazio mb-0">Nenhuma candidatura ainda. Quando um aluno se candidatar a uma vaga sua, ela aparece aqui.</p>
+            {% endfor %}
+            {% if summary.recent_applications %}
+            <div class="linha">
+                <a class="lk" href="{% url 'companies:applications' %}">Ver todas as candidaturas</a>
+            </div>
+            {% endif %}
+        </section>
+    </div>
+</div>
+{% endblock %}

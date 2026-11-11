@@ -188,6 +188,7 @@ a:focus-visible {
   align-items: flex-start;
   border-bottom: 1px solid var(--cinza-linha);
   display: flex;
+  flex-wrap: wrap;
   gap: 1rem;
   justify-content: space-between;
   padding: 0.9rem 1.25rem;
@@ -491,6 +492,20 @@ a:focus-visible {
   background: var(--amarelo);
   color: var(--preto);
   font-weight: 700;
+}
+
+.lateral-nav .contador {
+  background: var(--amarelo);
+  border-radius: 10px;
+  color: var(--preto);
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 0 0.45rem;
+}
+
+.lateral-nav a.ativo .contador {
+  background: var(--preto);
+  color: var(--amarelo);
 }
 
 .logo-lateral {

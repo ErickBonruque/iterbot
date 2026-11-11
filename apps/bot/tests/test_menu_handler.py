@@ -2,6 +2,7 @@ from unittest.mock import MagicMock
 
 from django.test import TestCase
 
+from apps.bot.handlers.menu import MenuHandler
 from apps.bot.services import BotService
 from apps.users.models import UserProfile
 
@@ -66,3 +67,20 @@ class MenuHandlerContentTests(TestCase):
         self._authenticate_user(chat_id)
         self.service.process_message(chat_id, "comando_desconhecido_xpto", from_me=False)
         self.assertTrue(self.waha_client.send_message.called)
+
+
+class CompanyPortalLinkTests(TestCase):
+    """O link que o bot manda para a empresa abre o painel, não os dados cadastrais."""
+
+    def test_link_do_portal_leva_ao_painel(self):
+        waha_client = MagicMock()
+        waha_client.settings = MagicMock(session_name="test-session")
+        chat_id = "5533999999999@c.us"
+        user = UserProfile.objects.create(phone_number=chat_id, is_company_authenticated=True)
+
+        MenuHandler(waha_client).send_company_portal_link(user, chat_id, "https://portal.example")
+
+        sent_text = waha_client.send_message.call_args[0][1]
+        self.assertIn("https://portal.example/empresas/painel/", sent_text)
+        self.assertNotIn("/empresas/perfil/", sent_text)
+        self.assertIn("Acesse o painel", sent_text)

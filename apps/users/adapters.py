@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import structlog
 from allauth.account.adapter import DefaultAccountAdapter
+from django.urls import reverse
 
 from apps.bot.email_service import send_transactional_email
 from apps.users.validators import validate_utfpr_email
@@ -46,13 +47,13 @@ class UTFPRAccountAdapter(DefaultAccountAdapter):
         return email
 
     def get_email_confirmation_redirect_url(self, request):
-        """Redireciona empresas para o perfil após confirmação de e-mail."""
+        """Redireciona empresas para o painel após confirmação de e-mail."""
         if request.user.is_authenticated:
             from apps.companies.services import CompaniesService
 
             company = CompaniesService.get_user_company_or_none(request.user)
             if company is not None:
-                return "/empresas/perfil/"
+                return reverse("companies:dashboard")
         return super().get_email_confirmation_redirect_url(request)
 
     def send_mail(self, template_prefix, email, context):

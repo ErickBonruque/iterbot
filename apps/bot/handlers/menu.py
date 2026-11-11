@@ -128,7 +128,7 @@ class MenuHandler(BaseHandler):
     def send_company_portal_link(
         self, user: UserProfile, chat_id: str, portal_base_url: str
     ) -> None:
-        profile_url = build_portal_url(portal_base_url, "/empresas/perfil/")
+        profile_url = build_portal_url(portal_base_url, "/empresas/painel/")
         if profile_url is None:
             self.send_msg(user, chat_id, "❌ Portal indisponível no momento.")
             return

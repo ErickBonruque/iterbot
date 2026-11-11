@@ -54,7 +54,7 @@ class ConfirmEmailView(View):
     """Handle email confirmation via token link.
 
     After successful confirmation, auto-logs in the user and redirects
-    to the success page (students) or company profile (companies).
+    to the success page (students) or company dashboard (companies).
     """
 
     def get(self, request, token):
@@ -120,7 +120,7 @@ class ConfirmEmailView(View):
             # Redirect based on user type
             company = CompaniesService.get_user_company_or_none(user)
             if company:
-                return redirect("/empresas/perfil/")
+                return redirect("companies:dashboard")
             return redirect("/accounts/success/")
         else:
             logger.warning("email_confirmation_failed", token=token[:8])

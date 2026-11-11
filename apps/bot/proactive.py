@@ -91,7 +91,7 @@ class ProactiveNotifier:
             logger.info("company_approved_no_whatsapp", company_id=company_id)
             return {"status": "skipped", "reason": "no_whatsapp_linked"}
 
-        portal_url = build_portal_url(portal_base_url, "/empresas/perfil/") or ""
+        portal_url = build_portal_url(portal_base_url, "/empresas/painel/") or ""
         portal_line = (
             f"\n📝 *Acesse o portal para gerenciar vagas:*\n{portal_url}\n" if portal_url else ""
         )

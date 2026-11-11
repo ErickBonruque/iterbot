@@ -4,8 +4,8 @@ from django.contrib import messages
 from django.contrib.auth import logout as auth_logout
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.shortcuts import redirect, render
-from django.urls import reverse_lazy
-from django.views.generic import CreateView, ListView, UpdateView, View
+from django.urls import reverse, reverse_lazy
+from django.views.generic import CreateView, ListView, TemplateView, UpdateView, View
 
 from apps.companies.forms import CompanyOnlyForm, CompanyProfileForm, CompanySignupForm, JobForm
 from apps.companies.mixins import ApprovedCompanyRequiredMixin
@@ -22,7 +22,7 @@ class CompanySignupView(SignupView):
     Após signup, allauth envia e-mail de verificação e redireciona para a
     página de 'verificação enviada'. Após confirmação pelo link do allauth,
     UTFPRAccountAdapter.get_email_confirmation_redirect_url() redireciona
-    para /empresas/perfil/ quando o usuário possui Company vinculada.
+    para /empresas/painel/ quando o usuário possui Company vinculada.
 
     /empresas/criar/ é fallback para usuários que chegaram sem Company
     vinculada (ex: falha silenciosa em CompanySignupForm.save() durante signup).
@@ -46,7 +46,7 @@ class CompanyLoginView(LoginView):
     template_name = "companies/login.html"
 
     def get_success_url(self):
-        return "/empresas/perfil/"
+        return reverse("companies:dashboard")
 
     def dispatch(self, request, *args, **kwargs):
         # Mesma razão: deslogar sessão de aluno para não redirecionar erroneamente.
@@ -59,6 +59,29 @@ class CompanyLogoutView(LogoutView):
     """View de logout de empresa."""
 
     next_page = "/empresas/login/"
+
+
+class CompanyDashboardView(LoginRequiredMixin, TemplateView):
+    """Painel: página inicial da empresa logada (resumo, vagas e candidaturas recentes).
+
+    Não exige empresa aprovada: pendente/bloqueada vê o aviso no topo e números
+    zerados (``ApprovedCompanyRequiredMixin`` manda para cá quem não pode publicar).
+    """
+
+    template_name = "companies/dashboard.html"
+    login_url = "/empresas/login/"
+
+    def get(self, request, *args, **kwargs):
+        self.company = CompaniesService.get_user_company_or_none(request.user)
+        if self.company is None:
+            return redirect("companies:company_create")
+        return super().get(request, *args, **kwargs)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["company"] = self.company
+        context["summary"] = CompaniesService.dashboard_summary(self.company)
+        return context
 
 
 class CompanyProfileView(LoginRequiredMixin, UpdateView):
@@ -88,10 +111,6 @@ class CompanyProfileView(LoginRequiredMixin, UpdateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["company"] = self.object
-        # Vagas removidas nao aparecem para a empresa; filtrar aqui (e nao no
-        # template) mantem o "nenhuma vaga cadastrada" correto quando todas
-        # foram removidas.
-        context["jobs"] = CompaniesService.list_company_jobs(self.object)
         return context
 
     def form_valid(self, form):
@@ -109,7 +128,7 @@ class CompanyCreateView(LoginRequiredMixin, View):
             request.user.is_authenticated
             and CompaniesService.get_user_company_or_none(request.user) is not None
         ):
-            return redirect("/empresas/perfil/")
+            return redirect("companies:dashboard")
         return super().dispatch(request, *args, **kwargs)
 
     def get(self, request):
@@ -121,7 +140,7 @@ class CompanyCreateView(LoginRequiredMixin, View):
         if form.is_valid():
             CompaniesService.create_company_for_user(request.user, form.cleaned_data)
             messages.success(request, "Empresa cadastrada com sucesso. Aguardando aprovação.")
-            return redirect("/empresas/perfil/")
+            return redirect("companies:dashboard")
         return render(request, "companies/company_create.html", {"form": form})
 
 
@@ -131,7 +150,7 @@ class JobCreateView(ApprovedCompanyRequiredMixin, CreateView):
     model = Job
     form_class = JobForm
     template_name = "companies/job_form.html"
-    success_url = reverse_lazy("companies:profile")
+    success_url = reverse_lazy("companies:dashboard")
     login_url = "/empresas/login/"
 
     def form_valid(self, form):
@@ -146,7 +165,7 @@ class JobUpdateView(ApprovedCompanyRequiredMixin, UpdateView):
     model = Job
     form_class = JobForm
     template_name = "companies/job_form.html"
-    success_url = reverse_lazy("companies:profile")
+    success_url = reverse_lazy("companies:dashboard")
     login_url = "/empresas/login/"
 
     def get_object(self, queryset=None):
@@ -171,7 +190,7 @@ class JobDeleteView(ApprovedCompanyRequiredMixin, View):
     """View de remocao de vaga (soft delete)."""
 
     template_name = "companies/job_confirm_delete.html"
-    success_url = reverse_lazy("companies:profile")
+    success_url = reverse_lazy("companies:dashboard")
     login_url = "/empresas/login/"
 
     def get_object(self, queryset=None):

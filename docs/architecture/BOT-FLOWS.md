@@ -345,7 +345,7 @@ sequenceDiagram
 | Opção | Ação |
 |-------|------|
 | 1 | Ver vagas cadastradas (leitura — `Job.objects.filter(company=...)`) |
-| 2 | Link portal da empresa (`/empresas/perfil/`) |
+| 2 | Link portal da empresa (`/empresas/painel/`) |
 | 3 | Link para cadastrar nova vaga (`/empresas/vagas/nova/`) |
 | 0 | Sair da conta empresa (`is_company_authenticated=False`) |
 
