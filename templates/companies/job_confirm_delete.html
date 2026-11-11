@@ -1,27 +1,24 @@
-{% extends "companies/base_company.html" %}
+{% extends "layouts/portal.html" %}
+{% load portal %}
 
-{% block title %}Confirmar Remoção - IterBot UTFPR{% endblock %}
+{% block title %}Remover vaga · IterBot UTFPR{% endblock %}
 
-{% block company_content %}
-<div class="row justify-content-center">
-    <div class="col-md-8 col-lg-6">
-        <div class="card">
-            <div class="card-header text-center">
-                <h4 class="mb-0">Confirmar Remoção</h4>
-            </div>
-            <div class="card-body">
-                <p><strong>Vaga:</strong> {{ job.titulo }}</p>
-                <p><strong>Status:</strong> {{ job.get_status_display }}</p>
-                <div class="alert alert-warning">
-                    <strong>Atenção:</strong> Esta ação não pode ser desfeita. Não há restauração de vaga removida nesta fase.
-                </div>
-                <form method="post">
-                    {% csrf_token %}
-                    <button type="submit" class="btn btn-danger">Confirmar remoção</button>
-                    <a href="{% url 'companies:profile' %}" class="btn btn-secondary">Cancelar</a>
-                </form>
-            </div>
+{% block portal_titulo %}Remover vaga{% endblock %}
+
+{% block portal_conteudo %}
+{% selo_vaga job.status as selo %}
+<section class="bloco formulario">
+    <div class="formulario-corpo">
+        <h2 class="h5 mb-1">{{ job.titulo }}</h2>
+        <p class="mb-3"><span class="st {{ selo.classe }}">{{ selo.rotulo }}</span></p>
+        <div class="alert alert-warning mb-0">
+            <strong>Atenção:</strong> esta ação não pode ser desfeita. A vaga some do painel e dos alunos, e não há como restaurá-la.
         </div>
     </div>
-</div>
+    <form method="post" class="formulario-rodape">
+        {% csrf_token %}
+        <a class="btn-leve" href="{% url 'companies:dashboard' %}">Cancelar</a>
+        <button type="submit" class="btn btn-danger">Confirmar remoção</button>
+    </form>
+</section>
 {% endblock %}

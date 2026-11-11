@@ -1,91 +1,100 @@
-{% extends "companies/base_company.html" %}
+{% extends "layouts/portal.html" %}
+{% load portal %}
 
-{% block title %}Candidaturas - IterBot UTFPR{% endblock %}
+{% block title %}Candidaturas · IterBot UTFPR{% endblock %}
 
-{% block company_content %}
-<div class="row justify-content-center">
-    <div class="col-lg-9">
-        <h3 class="mb-4">Candidaturas recebidas</h3>
+{% block portal_titulo %}Candidaturas recebidas{% endblock %}
 
-        {% if applications %}
-        {% for application in applications %}
-        <div class="card mb-3">
-            <div class="card-header d-flex justify-content-between align-items-center gap-2">
-                <div>
-                    <strong>{{ application.job.titulo }}</strong>
-                    <small class="text-muted ms-2">{{ application.created_at|date:"d/m/Y H:i" }}</small>
-                </div>
-                <span class="badge
-                    {% if application.status == 'contatado' %}bg-success
-                    {% elif application.status == 'rejeitada' %}bg-danger
-                    {% elif application.status == 'pending' %}bg-warning text-dark
-                    {% else %}bg-secondary{% endif %}">{{ application.get_status_display }}</span>
+{% block portal_conteudo %}
+{% for application in applications %}
+{% selo_candidatura application.status as selo %}
+{% with email=application.user.email whatsapp=application.user.phone_number snapshot=application.profile_snapshot %}
+{% with link=whatsapp|whatsapp_link linkedin=snapshot.linkedin_url|link_http curriculo=snapshot.cv_url|link_http %}
+<article class="bloco candidatura mb-3">
+    <header class="candidatura-cabecalho">
+        <div>
+            <h2 class="candidatura-vaga">{{ application.job.titulo }}</h2>
+            <span class="meta">{{ application.created_at|date:"d/m/Y \à\s H:i" }}</span>
+        </div>
+        <span class="st {{ selo.classe }}">{{ selo.rotulo }}</span>
+    </header>
+    <div class="candidatura-corpo">
+        <div class="row g-4">
+            <div class="col-md-6">
+                <h3 class="candidatura-secao">Candidato</h3>
+                <p class="candidato-id">{% if application.user.ra %}RA {{ application.user.ra }}{% else %}Aluno{% endif %}</p>
+                <dl class="dados">
+                    <dt>Curso</dt>
+                    <dd>{{ application.user.course.name|default:"Não informado" }}</dd>
+                    <dt>Período</dt>
+                    <dd>{{ snapshot.periodo|default:"Não informado" }}</dd>
+                    <dt>E-mail</dt>
+                    <dd>{% if email %}<a href="mailto:{{ email }}">{{ email }}</a>{% else %}Não informado{% endif %}</dd>
+                </dl>
+                {% if link %}
+                <a class="wa" href="{{ link }}" target="_blank" rel="noopener">WhatsApp {{ whatsapp|whatsapp_display }}</a>
+                {% else %}
+                <span class="meta">WhatsApp indisponível</span>
+                {% endif %}
             </div>
-            <div class="card-body">
-                <p class="mb-1"><strong>Candidato</strong></p>
-                <ul class="mb-3">
-                    <li>RA: {{ application.user.ra|default:"Não informado" }}</li>
-                    <li>E-mail: {{ application.user.email|default:"Não informado" }}</li>
-                    <li>WhatsApp: {{ application.user.phone_number }}</li>
-                </ul>
-
-                <p class="mb-1"><strong>Mini-perfil</strong></p>
-                <ul class="mb-3">
-                    <li>Período: {{ application.profile_snapshot.periodo|default:"Não informado" }}</li>
-                    <li>Habilidades: {{ application.profile_snapshot.skills|default:"Não informado" }}</li>
-                    {% if application.profile_snapshot.linkedin_url %}
-                    <li>LinkedIn: <a href="{{ application.profile_snapshot.linkedin_url }}" target="_blank" rel="noopener">{{ application.profile_snapshot.linkedin_url }}</a></li>
+            <div class="col-md-6">
+                <h3 class="candidatura-secao">Mini-perfil</h3>
+                <dl class="dados">
+                    <dt>Habilidades</dt>
+                    <dd>{{ snapshot.skills|default:"Não informado" }}</dd>
+                    {% if snapshot.bio %}
+                    <dt>Apresentação</dt>
+                    <dd>{{ snapshot.bio }}</dd>
                     {% endif %}
-                    {% if application.profile_snapshot.cv_url %}
-                    <li>Currículo: <a href="{{ application.profile_snapshot.cv_url }}" target="_blank" rel="noopener">{{ application.profile_snapshot.cv_url }}</a></li>
+                    {% if snapshot.linkedin_url %}
+                    <dt>LinkedIn</dt>
+                    <dd>{% if linkedin %}<a href="{{ linkedin }}" target="_blank" rel="noopener noreferrer">{{ linkedin }}</a>{% else %}{{ snapshot.linkedin_url }}{% endif %}</dd>
                     {% endif %}
-                </ul>
-
+                    {% if snapshot.cv_url %}
+                    <dt>Currículo</dt>
+                    <dd>{% if curriculo %}<a href="{{ curriculo }}" target="_blank" rel="noopener noreferrer">{{ curriculo }}</a>{% else %}{{ snapshot.cv_url }}{% endif %}</dd>
+                    {% endif %}
+                </dl>
                 {% if application.message %}
-                <p class="mb-3"><strong>Recado:</strong> {{ application.message }}</p>
+                <h3 class="candidatura-secao">Recado</h3>
+                <p class="mb-0">{{ application.message }}</p>
                 {% endif %}
-
-                <form method="post" action="{% url 'companies:application_status' application.pk %}" class="d-flex gap-2 align-items-center">
-                    {% csrf_token %}
-                    <label for="status_{{ application.pk }}" class="form-label mb-0">Status:</label>
-                    <select name="status" id="status_{{ application.pk }}" class="form-select form-select-sm" style="width:auto;">
-                        {% for value, label in status_choices %}
-                        <option value="{{ value }}" {% if value == application.status %}selected{% endif %}>{{ label }}</option>
-                        {% endfor %}
-                    </select>
-                    <button type="submit" class="btn btn-sm btn-primary">Atualizar</button>
-                </form>
             </div>
         </div>
-        {% endfor %}
-
-        {% if is_paginated %}
-        <nav aria-label="Paginação das candidaturas">
-            <ul class="pagination justify-content-center">
-                {% if page_obj.has_previous %}
-                <li class="page-item">
-                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}">Anterior</a>
-                </li>
-                {% endif %}
-                <li class="page-item disabled">
-                    <span class="page-link">Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span>
-                </li>
-                {% if page_obj.has_next %}
-                <li class="page-item">
-                    <a class="page-link" href="?page={{ page_obj.next_page_number }}">Próxima</a>
-                </li>
-                {% endif %}
-            </ul>
-        </nav>
-        {% endif %}
-        {% else %}
-        <div class="card">
-            <div class="card-body text-center text-muted">
-                <p class="mb-2">Nenhuma candidatura recebida ainda.</p>
-                <small>As candidaturas dos alunos chegam por aqui assim que suas vagas forem aprovadas e divulgadas no WhatsApp.</small>
-            </div>
-        </div>
-        {% endif %}
+    </div>
+    <form method="post" action="{% url 'companies:application_status' application.pk %}" class="candidatura-rodape">
+        {% csrf_token %}
+        <label for="status_{{ application.pk }}" class="form-label mb-0">Status</label>
+        <select name="status" id="status_{{ application.pk }}" class="form-select form-select-sm w-auto">
+            {% for value, label in status_choices %}
+            <option value="{{ value }}"{% if value == application.status %} selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+        <button type="submit" class="btn btn-primary btn-sm">Atualizar</button>
+    </form>
+</article>
+{% endwith %}
+{% endwith %}
+{% empty %}
+<div class="bloco">
+    <div class="vazio">
+        <p class="mb-1">Nenhuma candidatura recebida ainda.</p>
+        <p class="mb-0">As candidaturas dos alunos chegam aqui assim que suas vagas forem aprovadas e divulgadas no WhatsApp.</p>
     </div>
 </div>
+{% endfor %}
+
+{% if is_paginated %}
+<nav aria-label="Paginação das candidaturas">
+    <ul class="pagination justify-content-center">
+        {% if page_obj.has_previous %}
+        <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">Anterior</a></li>
+        {% endif %}
+        <li class="page-item disabled"><span class="page-link">Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span></li>
+        {% if page_obj.has_next %}
+        <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">Próxima</a></li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
 {% endblock %}

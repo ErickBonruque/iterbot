@@ -27,11 +27,11 @@ class CompanySignupForm(SignupForm):
     )
     nome = forms.CharField(
         max_length=255,
-        label="Nome da Empresa",
+        label="Nome da empresa",
         widget=forms.TextInput(
             attrs={
                 "class": "form-control",
-                "placeholder": "Razao social ou nome fantasia",
+                "placeholder": "Razão social ou nome fantasia",
             }
         ),
     )
@@ -47,17 +47,17 @@ class CompanySignupForm(SignupForm):
     )
     contato_nome = forms.CharField(
         max_length=255,
-        label="Nome do Responsavel",
+        label="Nome do responsável",
         widget=forms.TextInput(
             attrs={
                 "class": "form-control",
-                "placeholder": "Nome completo do responsavel",
+                "placeholder": "Nome completo do responsável",
             }
         ),
     )
     contato_cargo = forms.CharField(
         max_length=100,
-        label="Cargo do Responsavel",
+        label="Cargo do responsável",
         widget=forms.TextInput(
             attrs={
                 "class": "form-control",
@@ -71,7 +71,7 @@ class CompanySignupForm(SignupForm):
         value = self.cleaned_data.get("cnpj")
         if Company.objects.filter(cnpj=value).exists():
             raise ValidationError(
-                "Ja existe uma empresa cadastrada com este CNPJ.",
+                "Já existe uma empresa cadastrada com este CNPJ.",
                 code="duplicate_cnpj",
             )
         return value
@@ -80,7 +80,7 @@ class CompanySignupForm(SignupForm):
         """Cria User (via allauth) e Company vinculada via service único."""
         user = super().save(request)
         CompaniesService.create_company_for_user(user, self.cleaned_data)
-        # Armazena o e-mail em sessao para exibir na tela de verificacao
+        # Armazena o e-mail em sessão para exibir na tela de verificação
         # (allauth.EmailVerificationSentView nao adiciona o email no contexto
         # por padrao, entao guardamos aqui para o template ler).
         request.session["pending_verification_email"] = user.email
@@ -106,11 +106,11 @@ class CompanyOnlyForm(forms.Form):
     )
     nome = forms.CharField(
         max_length=255,
-        label="Nome da Empresa",
+        label="Nome da empresa",
         widget=forms.TextInput(
             attrs={
                 "class": "form-control",
-                "placeholder": "Razao social ou nome fantasia",
+                "placeholder": "Razão social ou nome fantasia",
             }
         ),
     )
@@ -126,17 +126,17 @@ class CompanyOnlyForm(forms.Form):
     )
     contato_nome = forms.CharField(
         max_length=255,
-        label="Nome do Responsavel",
+        label="Nome do responsável",
         widget=forms.TextInput(
             attrs={
                 "class": "form-control",
-                "placeholder": "Nome completo do responsavel",
+                "placeholder": "Nome completo do responsável",
             }
         ),
     )
     contato_cargo = forms.CharField(
         max_length=100,
-        label="Cargo do Responsavel",
+        label="Cargo do responsável",
         widget=forms.TextInput(
             attrs={
                 "class": "form-control",
@@ -149,7 +149,7 @@ class CompanyOnlyForm(forms.Form):
         value = self.cleaned_data.get("cnpj")
         if Company.objects.filter(cnpj=value).exists():
             raise ValidationError(
-                "Ja existe uma empresa cadastrada com este CNPJ.",
+                "Já existe uma empresa cadastrada com este CNPJ.",
                 code="duplicate_cnpj",
             )
         return value
@@ -164,6 +164,14 @@ class CompanyProfileForm(forms.ModelForm):
     class Meta:
         model = Company
         fields = ["nome", "telefone", "endereco", "descricao", "contato_nome", "contato_cargo"]
+        labels = {
+            "nome": "Nome da empresa",
+            "telefone": "Telefone",
+            "endereco": "Endereço",
+            "descricao": "Descrição",
+            "contato_nome": "Nome do responsável",
+            "contato_cargo": "Cargo do responsável",
+        }
         widgets = {
             "nome": forms.TextInput(attrs={"class": "form-control"}),
             "telefone": forms.TextInput(attrs={"class": "form-control"}),
@@ -189,7 +197,7 @@ class JobForm(forms.ModelForm):
     ]
 
     tipo = forms.ChoiceField(
-        choices=TIPO_CHOICES,
+        choices=[("", "Selecione o tipo"), *TIPO_CHOICES],
         label="Tipo da vaga",
         widget=forms.Select(attrs={"class": "form-select"}),
     )
@@ -200,17 +208,23 @@ class JobForm(forms.ModelForm):
         label="Áreas de interesse",
         help_text="Marque as áreas para as quais a vaga é direcionada. "
         "Se não marcar nenhuma, a vaga será ofertada para todas as áreas.",
-        widget=forms.CheckboxSelectMultiple,
+        widget=forms.CheckboxSelectMultiple(attrs={"class": "form-check-input"}),
     )
 
     class Meta:
         model = Job
         fields = ["titulo", "descricao", "requisitos", "salario", "tipo", "areas"]
+        labels = {
+            "titulo": "Título da vaga",
+            "descricao": "Descrição",
+            "requisitos": "Requisitos",
+            "salario": "Salário",
+        }
         widgets = {
             "titulo": forms.TextInput(
                 attrs={
                     "class": "form-control",
-                    "placeholder": "Ex: Estagiario de Desenvolvimento Web",
+                    "placeholder": "Ex: Estagiário de Desenvolvimento Web",
                 }
             ),
             "descricao": forms.Textarea(
@@ -224,7 +238,7 @@ class JobForm(forms.ModelForm):
                 attrs={
                     "class": "form-control",
                     "rows": 3,
-                    "placeholder": "Conhecimentos e habilidades necessarias",
+                    "placeholder": "Conhecimentos e habilidades necessárias",
                 }
             ),
             "salario": forms.TextInput(

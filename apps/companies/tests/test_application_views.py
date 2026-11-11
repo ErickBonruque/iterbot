@@ -90,6 +90,99 @@ class JobApplicationsPortalTests(TestCase):
         self.assertContains(response, "Vaga Portal")
         self.assertNotContains(response, "Vaga Alheia")
 
+    def _abrir(self):
+        self.client.force_login(self.user)
+        return self.client.get("/empresas/candidaturas/")
+
+    def test_candidaturas_whatsapp_formatado_com_link(self):
+        self.student.phone_number = "5545999990000@c.us"
+        self.student.save()
+
+        response = self._abrir()
+
+        self.assertContains(response, "(45) 99999-0000")
+        self.assertContains(response, "https://wa.me/5545999990000")
+        self.assertNotContains(response, "@c.us")
+
+    def test_candidaturas_whatsapp_que_nao_e_telefone_nao_gera_link(self):
+        self.student.phone_number = "123456789012345@lid"
+        self.student.save()
+
+        response = self._abrir()
+
+        self.assertNotContains(response, "wa.me")
+        self.assertNotContains(response, "@lid")
+        self.assertContains(response, "WhatsApp indisponível")
+
+    def test_candidaturas_email_mailto(self):
+        self.student.email = "aluno@alunos.utfpr.edu.br"
+        self.student.save()
+
+        response = self._abrir()
+
+        self.assertContains(response, 'href="mailto:aluno@alunos.utfpr.edu.br"')
+
+    def test_candidaturas_mostra_ra_curso_e_periodo(self):
+        from apps.courses.models import Course
+
+        self.student.course = Course.objects.create(name="Ciência da Computação")
+        self.student.save()
+
+        response = self._abrir()
+
+        self.assertContains(response, "RA a7654321")
+        self.assertContains(response, "Ciência da Computação")
+        self.assertContains(response, "5º")
+
+    def test_candidaturas_data_legivel(self):
+        response = self._abrir()
+
+        self.assertRegex(response.content.decode(), r"\d{2}/\d{2}/\d{4} às \d{2}:\d{2}")
+
+    def test_candidaturas_usa_selo_e_layout_do_portal(self):
+        response = self._abrir()
+
+        self.assertContains(response, "css/portal.css")
+        self.assertContains(response, 'class="st st-nova"')
+        self.assertContains(response, 'class="ativo" aria-current="page">Candidaturas')
+
+    def test_candidaturas_seletor_de_status_lista_todas_as_opcoes(self):
+        response = self._abrir()
+
+        for rotulo in ["Pendente", "Vista", "Contatado", "Rejeitada"]:
+            self.assertContains(response, f">{rotulo}</option>")
+
+    def test_candidaturas_sem_nenhuma_mostra_estado_vazio(self):
+        JobApplication.objects.all().delete()
+
+        response = self._abrir()
+
+        self.assertContains(response, "Nenhuma candidatura")
+
+    def test_candidaturas_numero_de_consultas_nao_cresce_com_a_lista(self):
+        from django.db import connection
+        from django.test.utils import CaptureQueriesContext
+
+        def consultas():
+            with CaptureQueriesContext(connection) as ctx:
+                self._abrir()
+            return len(ctx)
+
+        from apps.courses.models import Course
+
+        curso = Course.objects.create(name="Curso Consultas")
+        self.student.course = curso
+        self.student.save()
+        consultas()  # aquecimento: a primeira requisição cria sessão e popula caches
+        base = consultas()
+        for i in range(5):
+            aluno = UserProfile.objects.create(
+                phone_number=f"55459999{i:05d}@c.us", ra=f"a900000{i}", course=curso
+            )
+            JobApplication.objects.create(user=aluno, job=self.job)
+
+        self.assertEqual(consultas(), base)
+
     def test_status_update(self):
         self.client.force_login(self.user)
         response = self.client.post(

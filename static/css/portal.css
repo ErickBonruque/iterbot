@@ -81,6 +81,32 @@ body {
   color: var(--preto);
 }
 
+.btn-danger {
+  --bs-btn-bg: var(--vermelho);
+  --bs-btn-border-color: var(--vermelho);
+  --bs-btn-hover-bg: #8C1717;
+  --bs-btn-hover-border-color: #8C1717;
+  --bs-btn-active-bg: #7A1414;
+  --bs-btn-active-border-color: #7A1414;
+  --bs-btn-focus-box-shadow: var(--anel-foco);
+  --bs-btn-font-weight: 700;
+  --bs-btn-border-radius: 6px;
+  --bs-btn-padding-y: 0.65rem;
+  --bs-btn-padding-x: 1.2rem;
+}
+
+.pagination {
+  --bs-pagination-color: var(--preto);
+  --bs-pagination-hover-color: var(--preto);
+  --bs-pagination-hover-bg: var(--cinza-fundo);
+  --bs-pagination-border-color: var(--cinza-linha);
+  --bs-pagination-active-color: var(--preto);
+  --bs-pagination-active-bg: var(--amarelo);
+  --bs-pagination-active-border-color: var(--amarelo);
+  --bs-pagination-disabled-color: var(--cinza-texto);
+  --bs-pagination-focus-box-shadow: var(--anel-foco);
+}
+
 .btn:focus-visible,
 .btn-leve:focus-visible,
 .btn-close:focus-visible,
@@ -95,6 +121,7 @@ a:focus-visible {
 
 .form-control,
 .form-select {
+  background-color: var(--branco);
   border: 1px solid #A8A8A3;
   border-radius: 6px;
   padding: 0.65rem 0.85rem;
@@ -106,6 +133,10 @@ a:focus-visible {
   border-color: var(--preto);
   box-shadow: var(--anel-foco);
   outline: 0;
+}
+
+.form-check-input {
+  background-color: var(--branco);
 }
 
 .form-check-input:checked {
@@ -198,6 +229,12 @@ a:focus-visible {
   border-bottom: 0;
 }
 
+/* O texto ocupa o que sobra; as ações ficam à direita quando cabem e quebram para baixo quando não. */
+.linha > :first-child {
+  flex: 1 1 14rem;
+  min-width: 0;
+}
+
 .linha h3 {
   font-size: 1rem;
   font-weight: 700;
@@ -287,6 +324,106 @@ a:focus-visible {
   .numeros {
     grid-template-columns: 1fr 1fr;
   }
+}
+
+/* ---------- Formulários do portal ---------- */
+
+.formulario {
+  max-width: 760px;
+}
+
+.formulario-corpo {
+  padding: 1.25rem;
+}
+
+.formulario-rodape {
+  align-items: center;
+  border-top: 1px solid var(--cinza-linha);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  justify-content: flex-end;
+  padding: 1rem 1.25rem;
+}
+
+.areas-grade {
+  border: 1px solid var(--cinza-linha);
+  border-radius: 6px;
+  display: grid;
+  gap: 0.5rem 1rem;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  padding: 0.85rem 1rem;
+}
+
+.areas-grade .form-check-input {
+  height: 1.15em;
+  width: 1.15em;
+}
+
+/* ---------- Candidaturas ---------- */
+
+.candidatura-cabecalho {
+  align-items: flex-start;
+  border-bottom: 1px solid var(--cinza-linha);
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+  padding: 1rem 1.25rem;
+}
+
+.candidatura-vaga {
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.candidatura-corpo {
+  padding: 1.25rem;
+}
+
+.candidatura-secao {
+  color: var(--cinza-texto);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  margin: 0 0 0.5rem;
+  text-transform: uppercase;
+}
+
+.candidato-id {
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+
+.dados {
+  margin-bottom: 0.75rem;
+}
+
+.dados dt {
+  color: var(--cinza-texto);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.dados dd {
+  margin: 0 0 0.5rem;
+  overflow-wrap: anywhere;
+}
+
+.candidatura-rodape .form-select {
+  min-width: 9.5rem;
+}
+
+.candidatura-rodape {
+  align-items: center;
+  background: var(--cinza-fundo);
+  border-radius: 0 0 var(--raio) var(--raio);
+  border-top: 1px solid var(--cinza-linha);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  padding: 0.85rem 1.25rem;
 }
 
 /* ---------- Layout "entrada": login, cadastro, senha, confirmações ---------- */
@@ -532,7 +669,7 @@ a:focus-visible {
   font-size: 1.75rem;
   font-weight: 800;
   letter-spacing: -0.01em;
-  margin: 0;
+  margin: 0 0 0.25rem;
 }
 
 @media (min-width: 992px) {
@@ -549,6 +686,8 @@ a:focus-visible {
 
   .lateral.offcanvas-lg {
     background-color: var(--preto) !important;
+    display: flex;
+    flex-direction: column;
     height: 100vh !important;
     overflow-y: auto;
     position: sticky;

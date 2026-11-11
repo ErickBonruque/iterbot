@@ -4,6 +4,8 @@ Carregar com ``{% load portal %}``: WhatsApp legível e com link, selos de statu
 (vaga e candidatura) e o contador de candidaturas novas do menu.
 """
 
+from urllib.parse import urlsplit
+
 from django import template
 
 from apps.jobs.models import ApplicationStatus, JobApplication, JobStatus
@@ -96,3 +98,29 @@ def candidaturas_novas(context):
     return JobApplication.objects.filter(
         job__company__user=user, status=ApplicationStatus.PENDING
     ).count()
+
+
+@register.simple_tag
+def campo_widget(campo):
+    """Renderiza o widget de um campo de formulário; com erro, soma ``is-invalid``.
+
+    O Bootstrap só mostra o ``.invalid-feedback`` que vem depois de um campo
+    ``.is-invalid``, e o Django não coloca essa classe sozinho.
+    """
+    if not campo.errors:
+        return campo.as_widget()
+    classes = campo.field.widget.attrs.get("class", "")
+    return campo.as_widget(attrs={"class": f"{classes} is-invalid".strip()})
+
+
+@register.filter
+def link_http(url):
+    """Devolve ``url`` só quando for http(s); outro esquema (``javascript:``) vira ``""``.
+
+    Links digitados por alunos chegam ao portal sem validação; este filtro impede
+    que um ``javascript:`` ou ``data:`` vire ``href`` clicável.
+    """
+    if not isinstance(url, str):
+        return ""
+    url = url.strip()
+    return url if urlsplit(url).scheme.lower() in {"http", "https"} else ""

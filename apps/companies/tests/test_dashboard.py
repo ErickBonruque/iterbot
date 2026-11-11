@@ -5,6 +5,7 @@ from django.test import Client, TestCase, override_settings
 from django.test.utils import CaptureQueriesContext
 
 from apps.companies.services import CompaniesService
+from apps.companies.tests.helpers import usuario_com_empresa
 from apps.courses.models import Course
 from apps.jobs.models import ApplicationStatus, Company, CompanyStatus, JobStatus
 from apps.jobs.tests.factories import CompanyFactory, JobApplicationFactory, JobFactory
@@ -15,19 +16,11 @@ CACHES_LOCMEM = {"default": {"BACKEND": "django.core.cache.backends.locmem.LocMe
 PAINEL = "/empresas/painel/"
 
 
-def _usuario_com_empresa(username="dono", status=CompanyStatus.APPROVED, cnpj="11.222.333/0001-81"):
-    user = User.objects.create_user(
-        username=username, email=f"{username}@empresa.com", password="TestPass123!"
-    )
-    company = CompanyFactory(user=user, status=status, cnpj=cnpj, contato_nome="Mariana")
-    return user, company
-
-
 class TestDashboardSummary(TestCase):
     """CompaniesService.dashboard_summary: números, vagas e candidaturas recentes."""
 
     def setUp(self):
-        _, self.company = _usuario_com_empresa()
+        _, self.company = usuario_com_empresa()
 
     def test_resumo_conta_por_status(self):
         aprovada = JobFactory(company=self.company, status=JobStatus.APPROVED)
@@ -66,7 +59,7 @@ class TestDashboardSummary(TestCase):
         )
 
     def test_nao_mistura_dados_de_outra_empresa(self):
-        _, outra = _usuario_com_empresa("outro", cnpj="22.333.444/0001-81")
+        _, outra = usuario_com_empresa("outro", cnpj="22.333.444/0001-81")
         vaga_alheia = JobFactory(company=outra, titulo="Alheia", status=JobStatus.PENDING)
         JobApplicationFactory(job=vaga_alheia, user=UserProfileFactory())
 
@@ -133,7 +126,7 @@ class TestDashboardView(TestCase):
 
     def setUp(self):
         self.client = Client()
-        self.user, self.company = _usuario_com_empresa()
+        self.user, self.company = usuario_com_empresa()
 
     def _abrir(self):
         self.client.force_login(self.user)
@@ -229,7 +222,7 @@ class TestDashboardView(TestCase):
 
     def test_painel_nao_mostra_vaga_removida_nem_de_outra_empresa(self):
         JobFactory(company=self.company, status=JobStatus.REMOVED, titulo="Vaga removida")
-        _, outra = _usuario_com_empresa("outro", cnpj="22.333.444/0001-81")
+        _, outra = usuario_com_empresa("outro", cnpj="22.333.444/0001-81")
         JobFactory(company=outra, titulo="Vaga da concorrente")
 
         response = self._abrir()
@@ -330,7 +323,7 @@ class TestDestinosDaEmpresa(TestCase):
 
     def setUp(self):
         self.client = Client()
-        self.user, self.company = _usuario_com_empresa()
+        self.user, self.company = usuario_com_empresa()
         self.client.force_login(self.user)
 
     def _dados_vaga(self, **extra):

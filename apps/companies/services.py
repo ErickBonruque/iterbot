@@ -165,7 +165,7 @@ class CompaniesService:
             return JobApplication.objects.none()
         return (
             JobApplication.objects.filter(job__company=company)
-            .select_related("user", "job")
+            .select_related("user", "user__course", "job")
             .order_by("-created_at")
         )
 

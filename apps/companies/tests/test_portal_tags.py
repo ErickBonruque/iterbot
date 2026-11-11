@@ -1,10 +1,13 @@
 import pytest
+from django import forms
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AnonymousUser
 from django.template import Context, Template
+from django.template.loader import render_to_string
 from django.test import RequestFactory
 
 from apps.companies.templatetags.portal import (
+    link_http,
     selo_candidatura,
     selo_vaga,
     whatsapp_display,
@@ -89,3 +92,68 @@ def test_candidaturas_novas_e_zero_sem_empresa_ou_sem_login():
 
     assert _contar(sem_empresa) == 0
     assert _contar(AnonymousUser()) == 0
+
+
+class _FormExemplo(forms.Form):
+    titulo = forms.CharField(
+        label="Título", widget=forms.TextInput(attrs={"class": "form-control"})
+    )
+
+
+def _widget(form):
+    template = Template("{% load portal %}{% campo_widget form.titulo %}")
+    return template.render(Context({"form": form}))
+
+
+def test_campo_widget_sem_erro_nao_marca_is_invalid():
+    form = _FormExemplo(data={"titulo": "ok"})
+    form.is_valid()
+
+    html = _widget(form)
+
+    assert 'class="form-control"' in html
+    assert "is-invalid" not in html
+
+
+def test_campo_widget_com_erro_marca_is_invalid_e_mantem_a_classe():
+    form = _FormExemplo(data={"titulo": ""})
+    form.is_valid()
+
+    html = _widget(form)
+
+    assert 'class="form-control is-invalid"' in html
+
+
+def test_campo_widget_em_formulario_nao_enviado_nao_marca_erro():
+    assert "is-invalid" not in _widget(_FormExemplo())
+
+
+def test_include_campo_mostra_rotulo_obrigatorio_e_mensagem_de_erro():
+    form = _FormExemplo(data={"titulo": ""})
+    form.is_valid()
+
+    html = render_to_string("includes/campo.html", {"campo": form["titulo"]})
+
+    assert "Título *" in html
+    assert "invalid-feedback" in html
+    assert "is-invalid" in html
+
+
+@pytest.mark.parametrize(
+    "url, esperado",
+    [
+        ("https://linkedin.com/in/fulano", "https://linkedin.com/in/fulano"),
+        ("http://exemplo.com/cv.pdf", "http://exemplo.com/cv.pdf"),
+        ("  https://exemplo.com  ", "https://exemplo.com"),
+        ("javascript:alert(1)", ""),
+        ("JavaScript:alert(1)", ""),
+        ("java\tscript:alert(1)", ""),
+        (" javascript:alert(1)", ""),
+        ("data:text/html,<script>alert(1)</script>", ""),
+        ("//exemplo.com/sem-esquema", ""),
+        ("", ""),
+        (None, ""),
+    ],
+)
+def test_link_http_so_deixa_passar_http_e_https(url, esperado):
+    assert link_http(url) == esperado

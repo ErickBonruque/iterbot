@@ -523,7 +523,7 @@ class TestJobDeleteView(TestCase):
         response = self.client.get(reverse("companies:job_delete", kwargs={"pk": self.job.pk}))
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Vaga Teste")
-        self.assertContains(response, "Confirmar Remo")
+        self.assertContains(response, "Confirmar remo")
 
     def test_get_confirmation_page_no_company(self):
         """Usuario sem company recebe 403."""

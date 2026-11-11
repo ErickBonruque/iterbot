@@ -1,0 +1,8 @@
+{% load portal %}{# Campo de formulário: rótulo, widget (com is-invalid se houver erro) e mensagens. Recebe `campo` (BoundField). #}
+<div class="mb-3">
+    <label for="{{ campo.id_for_label }}" class="form-label">{{ campo.label }}{% if campo.field.required %} *{% endif %}</label>
+    {% campo_widget campo %}
+    {% for erro in campo.errors %}
+    <div class="invalid-feedback">{{ erro }}</div>
+    {% endfor %}
+</div>

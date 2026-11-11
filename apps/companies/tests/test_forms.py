@@ -175,3 +175,30 @@ class TestJobForm(TestCase):
         qs = form.fields["areas"].queryset
         self.assertIn(active, qs)
         self.assertNotIn(inactive, qs)
+
+
+class TestJobFormTipoEAreas(TestCase):
+    def test_jobform_exige_escolher_o_tipo(self):
+        data = {
+            "titulo": "Estagiario de TI",
+            "descricao": "Desenvolvimento web",
+            "requisitos": "",
+            "salario": "",
+            "tipo": "",
+        }
+
+        form = JobForm(data=data)
+
+        self.assertFalse(form.is_valid())
+        self.assertIn("tipo", form.errors)
+
+    def test_tipo_comeca_sem_selecao(self):
+        valores = [valor for valor, _rotulo in JobForm().fields["tipo"].choices]
+
+        self.assertEqual(valores[0], "")
+        self.assertEqual(valores[1:], ["Estágio", "CLT", "PJ", "Temporário"])
+
+    def test_areas_usam_checkbox_do_bootstrap(self):
+        widget = JobForm().fields["areas"].widget
+
+        self.assertEqual(widget.attrs["class"], "form-check-input")

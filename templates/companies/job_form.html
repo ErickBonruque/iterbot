@@ -1,153 +1,68 @@
-{% extends "companies/base_company.html" %}
+{% extends "layouts/portal.html" %}
+{% load portal %}
 
-{% block title %}{% if form.instance.pk %}Editar Vaga{% else %}Nova Vaga de Estágio{% endif %} - IterBot UTFPR{% endblock %}
+{% block title %}{% if form.instance.pk %}Editar vaga{% else %}Nova vaga{% endif %} · IterBot UTFPR{% endblock %}
 
-{% block company_content %}
-<div class="row justify-content-center">
-    <div class="col-md-8 col-lg-7">
-        <div class="card">
-            <div class="card-header text-center">
-                <h4 class="mb-0">
-                    {% if form.instance.pk %}
-                        Editar Vaga
-                        {% if job %}
-                        <span class="badge
-                            {% if job.status == 'pending' %}bg-warning text-dark
-                            {% elif job.status == 'approved' %}bg-success
-                            {% elif job.status == 'expired' %}bg-secondary
-                            {% elif job.status == 'draft' %}bg-info
-                            {% endif %}
-                            ms-2">{{ job.get_status_display }}</span>
-                        {% endif %}
-                    {% else %}
-                        Nova Vaga de Estágio
-                    {% endif %}
-                </h4>
-            </div>
-            <div class="card-body">
-                <form method="post" action="">
-                    {% csrf_token %}
+{% block portal_titulo %}{% if form.instance.pk %}Editar vaga{% else %}Publicar nova vaga{% endif %}{% endblock %}
 
-                    {% if form.non_field_errors %}
-                    <div class="alert alert-danger">
-                        {{ form.non_field_errors }}
-                    </div>
-                    {% endif %}
+{% block portal_subtitulo %}
+{% if job %}
+{% selo_vaga job.status as selo %}
+<p class="mb-0"><span class="st {{ selo.classe }}">{{ selo.rotulo }}</span></p>
+{% endif %}
+{% endblock %}
 
-                    <div class="mb-3">
-                        <label for="id_titulo" class="form-label">Título da Vaga *</label>
-                        <input type="text"
-                               name="titulo"
-                               class="form-control {% if form.titulo.errors %}is-invalid{% endif %}"
-                               id="id_titulo"
-                               placeholder="Ex: Estagiário de Desenvolvimento Web"
-                               value="{{ form.titulo.value|default:'' }}"
-                               required>
-                        {% if form.titulo.errors %}
-                        <div class="invalid-feedback">
-                            {{ form.titulo.errors.0 }}
-                        </div>
-                        {% endif %}
-                    </div>
+{% block portal_conteudo %}
+<form method="post" class="bloco formulario">
+    {% csrf_token %}
+    <div class="formulario-corpo">
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+        {% endif %}
 
-                    <div class="mb-3">
-                        <label for="id_descricao" class="form-label">Descrição *</label>
-                        <textarea name="descricao"
-                                  class="form-control {% if form.descricao.errors %}is-invalid{% endif %}"
-                                  id="id_descricao"
-                                  rows="5"
-                                  placeholder="Descreva as atividades e responsabilidades da vaga"
-                                  required>{{ form.descricao.value|default:'' }}</textarea>
-                        {% if form.descricao.errors %}
-                        <div class="invalid-feedback">
-                            {{ form.descricao.errors.0 }}
-                        </div>
-                        {% endif %}
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="id_requisitos" class="form-label">Requisitos</label>
-                        <textarea name="requisitos"
-                                  class="form-control {% if form.requisitos.errors %}is-invalid{% endif %}"
-                                  id="id_requisitos"
-                                  rows="3"
-                                  placeholder="Conhecimentos e habilidades necessárias">{{ form.requisitos.value|default:'' }}</textarea>
-                        {% if form.requisitos.errors %}
-                        <div class="invalid-feedback">
-                            {{ form.requisitos.errors.0 }}
-                        </div>
-                        {% endif %}
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="id_salario" class="form-label">Salário</label>
-                        <input type="text"
-                               name="salario"
-                               class="form-control {% if form.salario.errors %}is-invalid{% endif %}"
-                               id="id_salario"
-                               placeholder="Ex: R$ 1.200,00 ou A combinar"
-                               value="{{ form.salario.value|default:'' }}">
-                        {% if form.salario.errors %}
-                        <div class="invalid-feedback">
-                            {{ form.salario.errors.0 }}
-                        </div>
-                        {% endif %}
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="id_tipo" class="form-label">Tipo da Vaga *</label>
-                        <select name="tipo"
-                                class="form-control {% if form.tipo.errors %}is-invalid{% endif %}"
-                                id="id_tipo"
-                                required>
-                            <option value="">Selecione o tipo</option>
-                            <option value="Estágio" {% if form.tipo.value == 'Estágio' %}selected{% endif %}>Estágio</option>
-                            <option value="CLT" {% if form.tipo.value == 'CLT' %}selected{% endif %}>CLT</option>
-                            <option value="PJ" {% if form.tipo.value == 'PJ' %}selected{% endif %}>PJ</option>
-                            <option value="Temporário" {% if form.tipo.value == 'Temporário' %}selected{% endif %}>Temporário</option>
-                        </select>
-                        {% if form.tipo.errors %}
-                        <div class="invalid-feedback">
-                            {{ form.tipo.errors.0 }}
-                        </div>
-                        {% endif %}
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label">{{ form.areas.label }}</label>
-                        <div class="border rounded p-3">
-                            {% for checkbox in form.areas %}
-                            <div class="form-check">
-                                {{ checkbox.tag }}
-                                <label class="form-check-label" for="{{ checkbox.id_for_label }}">
-                                    {{ checkbox.choice_label }}
-                                </label>
-                            </div>
-                            {% endfor %}
-                        </div>
-                        <small class="form-text text-muted">{{ form.areas.help_text }}</small>
-                        {% if form.areas.errors %}
-                        <div class="text-danger">
-                            <small>{{ form.areas.errors.0 }}</small>
-                        </div>
-                        {% endif %}
-                    </div>
-
-                    <div class="alert alert-info">
-                        <small>Sua vaga será analisada antes de ser publicada.</small>
-                    </div>
-
-                    <div class="d-flex gap-2">
-                        <a href="{% url 'companies:profile' %}" class="btn btn-secondary btn-lg flex-fill">Cancelar</a>
-                        {% if form.instance.pk %}
-                        <button type="submit" class="btn btn-primary btn-lg flex-fill">Salvar Alterações</button>
-                        {% else %}
-                        <button type="submit" class="btn btn-primary btn-lg flex-fill">Publicar Vaga</button>
-                        {% endif %}
-                    </div>
-                </form>
-            </div>
+        {% if job.status == 'rejected' and job.rejection_reason %}
+        <div class="alert alert-danger">
+            <strong>Motivo da recusa:</strong> {{ job.rejection_reason }}
         </div>
+        {% endif %}
+
+        {% include "includes/campo.html" with campo=form.titulo %}
+        {% include "includes/campo.html" with campo=form.descricao %}
+        {% include "includes/campo.html" with campo=form.requisitos %}
+        {% include "includes/campo.html" with campo=form.salario %}
+        {% include "includes/campo.html" with campo=form.tipo %}
+
+        <fieldset class="mb-3">
+            <legend class="form-label fs-6">{{ form.areas.label }}</legend>
+            <div class="areas-grade">
+                {% for checkbox in form.areas %}
+                <div class="form-check">
+                    {{ checkbox.tag }}
+                    <label class="form-check-label" for="{{ checkbox.id_for_label }}">{{ checkbox.choice_label }}</label>
+                </div>
+                {% endfor %}
+            </div>
+            <div class="form-text">{{ form.areas.help_text }}</div>
+            {% for erro in form.areas.errors %}
+            <div class="text-danger small">{{ erro }}</div>
+            {% endfor %}
+        </fieldset>
+
+        {% if job.status == 'approved' or job.status == 'rejected' %}
+        <div class="alert alert-warning mb-0">
+            Ao salvar alterações, a vaga volta para análise da UTFPR e só reaparece para os alunos depois de aprovada de novo.
+        </div>
+        {% else %}
+        <div class="alert alert-info mb-0">
+            Sua vaga será analisada pela UTFPR antes de ser publicada.
+        </div>
+        {% endif %}
     </div>
-</div>
+    <div class="formulario-rodape">
+        <a class="btn-leve" href="{% url 'companies:dashboard' %}">Cancelar</a>
+        <button type="submit" class="btn btn-primary">
+            {% if not form.instance.pk %}Enviar para análise{% elif job.status == 'approved' or job.status == 'rejected' %}Salvar e reenviar{% else %}Salvar alterações{% endif %}
+        </button>
+    </div>
+</form>
 {% endblock %}
