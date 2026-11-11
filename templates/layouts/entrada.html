@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% load static %}
+{% comment %}
+Tela dividida de entrada (login, cadastro, senha, confirmações).
+Blocos: entrada_titulo, entrada_texto (apoio + lista, some no celular), entrada_conteudo.
+{% endcomment %}
+
+{% block body_class %}pagina-entrada{% endblock %}
+
+{% block body %}
+<div class="entrada">
+    <section class="entrada-lado">
+        <div class="entrada-marca">
+            <img class="entrada-mascote" src="{% static 'img/mascote.png' %}" alt="Mascote do IterBot">
+            <div>
+                <h1 class="entrada-titulo">{% block entrada_titulo %}IterBot UTFPR{% endblock %}</h1>
+                <div class="entrada-texto">{% block entrada_texto %}{% endblock %}</div>
+            </div>
+        </div>
+        <small class="entrada-rodape">IterBot, UTFPR Campus Santa Helena</small>
+    </section>
+    <main class="entrada-form">
+        <div class="entrada-form-interno">
+            {% include "includes/logo_utfpr.html" with variante="claro" classe="logo-entrada" %}
+            {% include "includes/mensagens.html" %}
+            {% block entrada_conteudo %}{% endblock %}
+        </div>
+    </main>
+</div>
+{% endblock %}

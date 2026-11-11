@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% load static %}
+{% comment %}
+Casca das páginas logadas da empresa: menu lateral preto no desktop, barra
+superior + menu deslizante (offcanvas) no celular.
+Blocos: portal_titulo (texto do h1), portal_subtitulo (opcional, livre),
+portal_acoes (botões do cabeçalho), portal_conteudo.
+O item ativo do menu vem de request.resolver_match.url_name.
+{% endcomment %}
+
+{% block body_class %}pagina-portal{% endblock %}
+
+{% block body %}
+{% with ativa=request.resolver_match.url_name %}
+<div class="app">
+    <header class="app-topo d-lg-none">
+        <span class="marca">
+            <img class="marca-mascote" src="{% static 'img/mascote.png' %}" alt="">
+            <span>iterbot</span>
+        </span>
+        <button class="app-topo-botao" type="button" data-bs-toggle="offcanvas" data-bs-target="#menu-portal" aria-controls="menu-portal" aria-label="Abrir menu">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </button>
+    </header>
+
+    <div class="app-lado">
+        <aside class="lateral offcanvas-lg offcanvas-start" id="menu-portal" tabindex="-1" aria-label="Menu do portal">
+            <div class="lateral-corpo">
+                <div class="lateral-topo">
+                    <span class="marca">
+                        <img class="marca-mascote" src="{% static 'img/mascote.png' %}" alt="">
+                        <span>iterbot</span>
+                    </span>
+                    <button type="button" class="btn-close btn-close-white d-lg-none" data-bs-dismiss="offcanvas" data-bs-target="#menu-portal" aria-label="Fechar menu"></button>
+                </div>
+                <nav class="lateral-nav" aria-label="Principal">
+                    <a href="/empresas/painel/"{% if ativa == 'dashboard' %} class="ativo" aria-current="page"{% endif %}>Painel</a>
+                    <a href="{% url 'companies:applications' %}"{% if ativa == 'applications' %} class="ativo" aria-current="page"{% endif %}>Candidaturas</a>
+                    <a href="{% url 'companies:profile' %}"{% if ativa == 'profile' %} class="ativo" aria-current="page"{% endif %}>Dados da empresa</a>
+                    <a href="{% url 'companies:logout' %}">Sair</a>
+                </nav>
+                {% include "includes/logo_utfpr.html" with variante="escuro" classe="logo-lateral" %}
+            </div>
+        </aside>
+    </div>
+
+    <main class="conteudo">
+        <div class="conteudo-cabecalho">
+            <div>
+                <h1 class="portal-titulo">{% block portal_titulo %}{% endblock %}</h1>
+                {% block portal_subtitulo %}{% endblock %}
+            </div>
+            <div class="conteudo-acoes">{% block portal_acoes %}{% endblock %}</div>
+        </div>
+        {% include "includes/mensagens.html" %}
+        {% block portal_conteudo %}{% endblock %}
+    </main>
+</div>
+{% endwith %}
+{% endblock %}

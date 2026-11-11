@@ -1,0 +1,594 @@
+/*
+ * Portal IterBot — visual "Painel" (direção B, aprovada em 11/11/2026).
+ * Único arquivo de estilo das páginas web fora do admin: nenhum <style> nem
+ * style="..." nos templates. Bootstrap 5.3.2 (CDN) fica por baixo; aqui só o
+ * re-tema (tokens, botão principal, campos) e os componentes do portal.
+ */
+
+/* Public Sans (SIL OFL, ver static/fonts/OFL.txt) auto-hospedada: sem
+   requisição a terceiros (LGPD). Fonte variável, eixo de peso 100–900. */
+@font-face {
+  font-family: "Public Sans";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("../fonts/public-sans-latin-wght-normal.woff2") format("woff2");
+}
+
+:root {
+  --amarelo: #FFD100;
+  --amarelo-claro: #FFF4BF;
+  --preto: #000;
+  --branco: #FFF;
+  --cinza-fundo: #F1F1EF;
+  --cinza-linha: #E0E0DC;
+  --cinza-texto: #555;
+  --verde: #17703A;
+  --vermelho: #A61B1B;
+  --raio: 10px;
+  /* Anel de foco legível em qualquer fundo: contorno preto + halo amarelo. */
+  --anel-foco: 0 0 0 2px var(--preto), 0 0 0 5px var(--amarelo);
+
+  --bs-body-font-family: "Public Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --bs-body-color: var(--preto);
+  --bs-body-bg: var(--cinza-fundo);
+  --bs-link-color-rgb: 0, 0, 0;
+  --bs-link-hover-color-rgb: 85, 85, 85;
+  --bs-form-invalid-color: var(--vermelho);
+  --bs-form-invalid-border-color: var(--vermelho);
+}
+
+body {
+  min-height: 100vh;
+}
+
+/* ---------- Botões e campos ---------- */
+
+.btn-primary {
+  --bs-btn-color: var(--preto);
+  --bs-btn-bg: var(--amarelo);
+  --bs-btn-border-color: var(--amarelo);
+  --bs-btn-hover-color: var(--preto);
+  --bs-btn-hover-bg: #F0C400;
+  --bs-btn-hover-border-color: #F0C400;
+  --bs-btn-active-color: var(--preto);
+  --bs-btn-active-bg: #E0B800;
+  --bs-btn-active-border-color: #E0B800;
+  --bs-btn-disabled-color: var(--preto);
+  --bs-btn-disabled-bg: var(--amarelo);
+  --bs-btn-disabled-border-color: var(--amarelo);
+  --bs-btn-focus-box-shadow: var(--anel-foco);
+  --bs-btn-font-weight: 700;
+  --bs-btn-border-radius: 6px;
+  --bs-btn-padding-y: 0.65rem;
+  --bs-btn-padding-x: 1.2rem;
+}
+
+.btn-leve {
+  background: var(--branco);
+  border: 1px solid var(--cinza-linha);
+  border-radius: 6px;
+  color: var(--preto);
+  font-size: 0.9rem;
+  font-weight: 600;
+  padding: 0.35rem 0.8rem;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.btn-leve:hover {
+  background: var(--cinza-fundo);
+  color: var(--preto);
+}
+
+.btn:focus-visible,
+.btn-leve:focus-visible,
+.btn-close:focus-visible,
+a:focus-visible {
+  box-shadow: var(--anel-foco);
+  outline: 0;
+}
+
+.form-label {
+  font-weight: 600;
+}
+
+.form-control,
+.form-select {
+  border: 1px solid #A8A8A3;
+  border-radius: 6px;
+  padding: 0.65rem 0.85rem;
+}
+
+.form-control:focus,
+.form-select:focus,
+.form-check-input:focus {
+  border-color: var(--preto);
+  box-shadow: var(--anel-foco);
+  outline: 0;
+}
+
+.form-check-input:checked {
+  background-color: var(--preto);
+  border-color: var(--preto);
+}
+
+.invalid-feedback {
+  font-weight: 600;
+}
+
+.lk {
+  font-weight: 600;
+}
+
+/* ---------- Alertas (mensagens do Django) ---------- */
+
+.alert {
+  --bs-alert-bg: var(--branco);
+  --bs-alert-color: var(--preto);
+  --bs-alert-border-color: var(--cinza-linha);
+  border-left-width: 5px;
+  border-radius: 8px;
+}
+
+.alert-success { border-left-color: var(--verde); }
+.alert-danger { border-left-color: var(--vermelho); }
+.alert-warning { --bs-alert-bg: var(--amarelo-claro); border-left-color: var(--amarelo); }
+.alert-info { border-left-color: var(--cinza-texto); }
+.alert-secondary { border-left-color: var(--cinza-linha); }
+
+/* ---------- Logo da UTFPR (sempre proporcional, nunca distorcido) ---------- */
+
+.img-utfpr {
+  height: auto;
+  max-width: 100%;
+}
+
+/* ---------- Marca (mascote + "iterbot") ---------- */
+
+.marca {
+  align-items: center;
+  color: var(--branco);
+  display: inline-flex;
+  font-size: 1.25rem;
+  font-weight: 800;
+  gap: 0.7rem;
+  text-decoration: none;
+}
+
+.marca:hover {
+  color: var(--branco);
+}
+
+.marca-mascote {
+  background: var(--amarelo);
+  border-radius: 10px;
+  height: auto;
+  padding: 4px;
+  width: 46px;
+}
+
+/* ---------- Componentes do portal ---------- */
+
+.bloco {
+  background: var(--branco);
+  border: 1px solid var(--cinza-linha);
+  border-radius: var(--raio);
+}
+
+.bloco-titulo {
+  border-bottom: 1px solid var(--cinza-linha);
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin: 0;
+  padding: 1rem 1.25rem;
+}
+
+.linha {
+  align-items: flex-start;
+  border-bottom: 1px solid var(--cinza-linha);
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+  padding: 0.9rem 1.25rem;
+}
+
+.linha:last-child {
+  border-bottom: 0;
+}
+
+.linha h3 {
+  font-size: 1rem;
+  font-weight: 700;
+  margin: 0 0 0.15rem;
+}
+
+.meta {
+  color: var(--cinza-texto);
+  font-size: 0.9rem;
+}
+
+.vazio {
+  color: var(--cinza-texto);
+  padding: 2rem 1.25rem;
+  text-align: center;
+}
+
+.st {
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 0.15rem 0.6rem;
+  white-space: nowrap;
+}
+
+.st-ok { background: #DDF3E5; color: var(--verde); }
+.st-analise { background: var(--amarelo-claro); color: #5C4A00; }
+.st-recusada { background: #FBE2E2; color: var(--vermelho); }
+.st-nova { background: var(--preto); color: var(--amarelo); }
+.st-neutro { background: #ECECEA; color: #333; }
+
+.motivo {
+  color: var(--vermelho);
+  font-size: 0.9rem;
+  margin-top: 0.35rem;
+}
+
+.wa {
+  align-items: center;
+  color: var(--verde);
+  display: inline-flex;
+  font-size: 0.92rem;
+  font-weight: 600;
+  gap: 0.35rem;
+  text-decoration: none;
+}
+
+.wa:hover {
+  color: var(--verde);
+  text-decoration: underline;
+}
+
+.numeros {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(4, 1fr);
+}
+
+.numero {
+  background: var(--branco);
+  border: 1px solid var(--cinza-linha);
+  border-radius: var(--raio);
+  padding: 1.1rem 1.25rem;
+}
+
+.numero strong {
+  display: block;
+  font-size: 2.4rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.numero span {
+  color: var(--cinza-texto);
+}
+
+.numero.destaque {
+  background: var(--amarelo);
+  border-color: var(--amarelo);
+}
+
+.numero.destaque span {
+  color: var(--preto);
+}
+
+@media (max-width: 900px) {
+  .numeros {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* ---------- Layout "entrada": login, cadastro, senha, confirmações ---------- */
+
+.entrada {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  min-height: 100vh;
+}
+
+.entrada-lado {
+  background: var(--preto);
+  color: var(--branco);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 3.5rem;
+}
+
+.entrada-mascote {
+  background: var(--amarelo);
+  border-radius: 28px;
+  height: auto;
+  padding: 18px;
+  width: 190px;
+}
+
+.entrada-titulo {
+  font-size: clamp(2rem, 3.2vw, 2.8rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  margin: 2rem 0 1rem;
+  max-width: 15ch;
+}
+
+.entrada-texto {
+  color: #D6D6D6;
+  font-size: 1.1rem;
+  max-width: 40ch;
+}
+
+.entrada-texto ul {
+  color: var(--branco);
+  list-style: none;
+  margin: 1.5rem 0 0;
+  padding: 0;
+}
+
+.entrada-texto li {
+  padding: 0.35rem 0 0.35rem 1.4rem;
+  position: relative;
+}
+
+.entrada-texto li::before {
+  background: var(--amarelo);
+  content: "";
+  height: 0.7rem;
+  left: 0;
+  position: absolute;
+  top: 0.85rem;
+  width: 0.7rem;
+}
+
+.entrada-rodape {
+  color: #9A9A9A;
+}
+
+.entrada-form {
+  align-items: center;
+  background: var(--branco);
+  display: flex;
+  justify-content: center;
+  padding: 3rem;
+}
+
+.entrada-form-interno {
+  max-width: 380px;
+  width: 100%;
+}
+
+.logo-entrada {
+  display: block;
+  margin-bottom: 2.25rem;
+  width: 200px;
+}
+
+@media (max-width: 900px) {
+  /* Faixa preta curta no topo; o formulário fica logo abaixo, acima da dobra. */
+  .entrada {
+    grid-template-columns: 1fr;
+    min-height: 0;
+  }
+
+  .entrada-lado {
+    flex-direction: row;
+    padding: 1rem 1.25rem;
+  }
+
+  .entrada-marca {
+    align-items: center;
+    display: flex;
+    gap: 1rem;
+  }
+
+  .entrada-mascote {
+    border-radius: 14px;
+    padding: 8px;
+    width: 56px;
+  }
+
+  .entrada-titulo {
+    font-size: 1.1rem;
+    letter-spacing: 0;
+    margin: 0;
+    max-width: none;
+  }
+
+  .entrada-texto,
+  .entrada-rodape {
+    display: none;
+  }
+
+  .entrada-form {
+    align-items: flex-start;
+    padding: 1.5rem 1.25rem 2.5rem;
+  }
+
+  .logo-entrada {
+    margin-bottom: 1.25rem;
+    width: 150px;
+  }
+}
+
+/* ---------- Layout "portal": páginas logadas da empresa ---------- */
+
+.app-topo {
+  align-items: center;
+  background: var(--preto);
+  display: flex;
+  justify-content: space-between;
+  padding: 0.6rem 1rem;
+  position: sticky;
+  top: 0;
+  z-index: 1020;
+}
+
+.app-topo .marca-mascote {
+  width: 38px;
+}
+
+.app-topo-botao {
+  background: transparent;
+  border: 1px solid #555;
+  border-radius: 6px;
+  color: var(--branco);
+  line-height: 1;
+  padding: 0.4rem 0.5rem;
+}
+
+.lateral {
+  --bs-offcanvas-bg: var(--preto);
+  --bs-offcanvas-color: var(--branco);
+  --bs-offcanvas-width: 280px;
+}
+
+.lateral-corpo {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 1.25rem 1rem;
+}
+
+.lateral-topo {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+}
+
+.lateral-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.lateral-nav a {
+  border-radius: 6px;
+  color: #E8E8E8;
+  display: flex;
+  font-weight: 500;
+  justify-content: space-between;
+  padding: 0.55rem 0.75rem;
+  text-decoration: none;
+}
+
+.lateral-nav a:hover {
+  background: #1F1F1F;
+  color: var(--branco);
+}
+
+.lateral-nav a.ativo {
+  background: var(--amarelo);
+  color: var(--preto);
+  font-weight: 700;
+}
+
+.logo-lateral {
+  margin-top: auto;
+  opacity: 0.9;
+  width: 150px;
+}
+
+.conteudo {
+  min-width: 0;
+  padding: 1.25rem;
+}
+
+.conteudo-cabecalho {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+}
+
+.portal-titulo {
+  font-size: 1.75rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+
+@media (min-width: 992px) {
+  .app {
+    display: grid;
+    grid-template-columns: 248px minmax(0, 1fr);
+    min-height: 100vh;
+  }
+
+  /* A coluna do menu é preta de ponta a ponta; o menu em si acompanha a rolagem. */
+  .app-lado {
+    background: var(--preto);
+  }
+
+  .lateral.offcanvas-lg {
+    background-color: var(--preto) !important;
+    height: 100vh !important;
+    overflow-y: auto;
+    position: sticky;
+    top: 0;
+  }
+
+  .conteudo {
+    padding: 2rem 2.5rem;
+  }
+}
+
+@media (max-width: 991.98px) {
+  /* No celular o menu é o offcanvas do Bootstrap; a coluna não ocupa espaço. */
+  .app-lado {
+    display: contents;
+  }
+}
+
+/* ---------- Layout "simples": resultado, página pública de vaga, erros ---------- */
+
+.simples {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.simples-topo {
+  background: var(--preto);
+  padding: 0.6rem 1.25rem;
+}
+
+.simples-topo .marca-mascote {
+  width: 38px;
+}
+
+.simples-miolo {
+  display: flex;
+  flex: 1;
+  justify-content: center;
+  padding: 2rem 1rem;
+}
+
+.simples-bloco {
+  align-self: flex-start;
+  max-width: 640px;
+  padding: 2rem;
+  width: 100%;
+}
+
+.simples-rodape {
+  background: var(--preto);
+  padding: 1.25rem;
+  text-align: center;
+}
+
+.logo-rodape {
+  width: 150px;
+}

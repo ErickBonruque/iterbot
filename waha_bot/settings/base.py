@@ -249,7 +249,7 @@ UNFOLD = {
         "light": lambda request: static("img/logo-utfpr.png"),
         "dark": lambda request: static("img/logo-utfpr-branco.png"),
     },
-    "SITE_ICON": lambda request: static("img/logo-icon.png"),
+    "SITE_ICON": lambda request: static("img/mascote.png"),
     "SHOW_HISTORY": True,
     "SHOW_VIEW_ON_SITE": True,
     "SEARCH_MODELS": ["auth.User", "jobs.Company", "jobs.Job"],
