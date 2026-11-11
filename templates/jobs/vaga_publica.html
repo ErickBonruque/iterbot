@@ -1,0 +1,42 @@
+{% extends "layouts/simples.html" %}
+
+{% block title %}{{ job.titulo }} · {{ job.company.nome }} · IterBot UTFPR{% endblock %}
+
+{% block simples_conteudo %}
+<article>
+    <p class="meta mb-1">{{ job.company.nome }}</p>
+    <h1 class="vaga-titulo">{{ job.titulo }}</h1>
+
+    <dl class="dados">
+        <dt>Tipo</dt>
+        <dd>{{ job.tipo }}</dd>
+        {% if job.salario %}
+        <dt>Salário</dt>
+        <dd>{{ job.salario }}</dd>
+        {% endif %}
+        {% if job.company.endereco %}
+        <dt>Local</dt>
+        <dd>{{ job.company.endereco }}</dd>
+        {% endif %}
+    </dl>
+
+    <h2 class="secao-titulo">Descrição</h2>
+    {{ job.descricao|linebreaks }}
+
+    {% if job.requisitos %}
+    <h2 class="secao-titulo">Requisitos</h2>
+    {{ job.requisitos|linebreaks }}
+    {% endif %}
+
+    <h2 class="secao-titulo">Áreas</h2>
+    <p>{% for area in job.areas.all %}{{ area.name }}{% if not forloop.last %}, {% endif %}{% empty %}Todas as áreas{% endfor %}</p>
+
+    <section class="vaga-candidatar">
+        <h2 class="secao-titulo">Quer se candidatar?</h2>
+        <p>A candidatura é pelo WhatsApp. No menu do IterBot, escolha <strong>Vagas do meu curso</strong> e selecione esta vaga.</p>
+        {% if whatsapp_url %}
+        <a class="btn btn-success" href="{{ whatsapp_url }}" target="_blank" rel="noopener">Abrir o IterBot no WhatsApp</a>
+        {% endif %}
+    </section>
+</article>
+{% endblock %}

@@ -21,7 +21,7 @@
     <div class="candidatura-corpo">
         <div class="row g-4">
             <div class="col-md-6">
-                <h3 class="candidatura-secao">Candidato</h3>
+                <h3 class="secao-titulo">Candidato</h3>
                 <p class="candidato-id">{% if application.user.ra %}RA {{ application.user.ra }}{% else %}Aluno{% endif %}</p>
                 <dl class="dados">
                     <dt>Curso</dt>
@@ -38,7 +38,7 @@
                 {% endif %}
             </div>
             <div class="col-md-6">
-                <h3 class="candidatura-secao">Mini-perfil</h3>
+                <h3 class="secao-titulo">Mini-perfil</h3>
                 <dl class="dados">
                     <dt>Habilidades</dt>
                     <dd>{{ snapshot.skills|default:"Não informado" }}</dd>
@@ -56,7 +56,7 @@
                     {% endif %}
                 </dl>
                 {% if application.message %}
-                <h3 class="candidatura-secao">Recado</h3>
+                <h3 class="secao-titulo">Recado</h3>
                 <p class="mb-0">{{ application.message }}</p>
                 {% endif %}
             </div>

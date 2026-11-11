@@ -1,8 +1,9 @@
 """Handler do menu "Vagas do meu curso" (opção 3 do menu autenticado).
 
 Lista as vagas locais aprovadas da **área do curso do aluno** e abre o detalhe
-de cada vaga. A candidatura em si é a Fase 4 — aqui o comando *candidatar*
-responde com um aviso "em breve" (stub).
+de cada vaga. O comando *candidatar* entrega a vaga ao `ApplicationHandler`, que
+conduz a candidatura; o aviso "em breve" só aparece se esse handler não tiver sido
+injetado.
 """
 
 import structlog
@@ -34,7 +35,7 @@ class LocalJobsHandler(BaseHandler):
 
     def __init__(self, waha_client: MessageSender, application_handler=None) -> None:
         super().__init__(waha_client)
-        # Injetado pelo BotService; permite encadear "candidatar" → Fase 4.
+        # Injetado pelo BotService; permite encadear "candidatar" → ApplicationHandler.
         self.application_handler = application_handler
 
     def _get_conversation_state(self, user: UserProfile) -> ConversationState:

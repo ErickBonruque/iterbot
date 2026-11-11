@@ -12,6 +12,7 @@ urlpatterns = [
     path("admin/", iterbot_admin.urls),
     path("webhook/", webhook),
     path("empresas/", include("apps.companies.urls")),
+    path("vagas/", include("apps.jobs.urls")),
     # Aluno não tem login nem cadastro web com senha (usa o WhatsApp); só empresa.
     # Os nomes continuam existindo porque o allauth faz reverse("account_login")
     # por dentro. Ficam antes do include para ganhar do allauth.

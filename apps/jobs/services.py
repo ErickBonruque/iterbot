@@ -9,6 +9,7 @@ from typing import Any
 import structlog
 from django.conf import settings
 from django.db.models import Max, Q
+from django.urls import reverse
 from django.utils import timezone
 
 from apps.bot.messages import BOT_MESSAGES
@@ -23,7 +24,9 @@ logger = structlog.get_logger(__name__)
 
 def _serialize_local_job(job) -> dict[str, Any]:
     """Converte um `Job` no dict canônico usado pelas reviews do bot."""
-    job_url = build_portal_url(settings.PORTAL_BASE_URL, f"/empresas/vagas/{job.pk}/")
+    job_url = build_portal_url(
+        settings.PORTAL_BASE_URL, reverse("jobs:public_detail", kwargs={"pk": job.pk})
+    )
     if job_url is None:
         logger.error(
             "invalid_portal_base_url_for_review",

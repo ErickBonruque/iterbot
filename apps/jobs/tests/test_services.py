@@ -154,3 +154,18 @@ class TestLocalAreaReview:
         )
         assert "Vagas locais — Engenharia" in msg
         assert "*1. Dev* — ACME" in msg
+
+
+@pytest.mark.django_db
+class TestLocalJobLink:
+    def test_link_da_vaga_local_aponta_para_pagina_publica(self, settings):
+        from apps.jobs.services import _serialize_local_job
+        from apps.jobs.tests.factories import JobFactory
+
+        settings.PORTAL_BASE_URL = "https://portal.example"
+        job = JobFactory()
+
+        job_url = _serialize_local_job(job)["job_url"]
+
+        assert job_url == f"https://portal.example/vagas/{job.pk}/"
+        assert "/empresas/" not in job_url
