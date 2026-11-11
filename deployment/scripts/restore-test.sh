@@ -27,7 +27,9 @@ if [ -z "${BACKUP_FILE}" ] || [ ! -f "${BACKUP_FILE}" ]; then
     exit 1
 fi
 
-cleanup() { docker rm -f "${TEST_CONTAINER}" >/dev/null 2>&1 || true; }
+# -v: a imagem do postgres declara um volume de dados; sem ele, cada teste
+# deixava ~80 MB de volume anonimo para tras (o disco do host e o gargalo).
+cleanup() { docker rm -f -v "${TEST_CONTAINER}" >/dev/null 2>&1 || true; }
 trap cleanup EXIT
 
 echo "Backup: ${BACKUP_FILE} ($(stat -c%s "${BACKUP_FILE}") bytes)"
