@@ -120,7 +120,7 @@ class CompanyCreateView(LoginRequiredMixin, View):
         form = CompanyOnlyForm(request.POST)
         if form.is_valid():
             CompaniesService.create_company_for_user(request.user, form.cleaned_data)
-            messages.success(request, "Empresa cadastrada com sucesso. Aguardando aprovacao.")
+            messages.success(request, "Empresa cadastrada com sucesso. Aguardando aprovação.")
             return redirect("/empresas/perfil/")
         return render(request, "companies/company_create.html", {"form": form})
 
@@ -136,7 +136,7 @@ class JobCreateView(ApprovedCompanyRequiredMixin, CreateView):
 
     def form_valid(self, form):
         CompaniesService.prepare_job_for_creation(form.instance, self.request.user)
-        messages.success(self.request, "Vaga cadastrada com sucesso. Aguardando aprovacao.")
+        messages.success(self.request, "Vaga cadastrada com sucesso. Aguardando aprovação.")
         return super().form_valid(form)
 
 
@@ -159,7 +159,11 @@ class JobUpdateView(ApprovedCompanyRequiredMixin, UpdateView):
         return context
 
     def form_valid(self, form):
-        messages.success(self.request, "Vaga atualizada com sucesso.")
+        reenviada = CompaniesService.prepare_job_for_update(form.instance, form.has_changed())
+        if reenviada:
+            messages.success(self.request, "Vaga atualizada. Ela voltou para análise da UTFPR.")
+        else:
+            messages.success(self.request, "Vaga atualizada.")
         return super().form_valid(form)
 
 
@@ -171,7 +175,7 @@ class JobDeleteView(ApprovedCompanyRequiredMixin, View):
     login_url = "/empresas/login/"
 
     def get_object(self, queryset=None):
-        """Obter vaga excluindo ja removidas (retorna 404 natural)."""
+        """Obter vaga excluindo já removidas (retorna 404 natural)."""
         return CompaniesService.get_deletable_job_or_404(self.kwargs["pk"])
 
     def get(self, request, *args, **kwargs):

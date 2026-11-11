@@ -55,18 +55,32 @@ class CompaniesService:
         form_instance.status = JobStatus.PENDING
 
     @staticmethod
+    def prepare_job_for_update(job, changed):
+        """Aplica a regra de reenvio antes de salvar uma edição de vaga.
+
+        Se ``changed`` e a vaga estava aprovada ou recusada, ela volta para
+        ``PENDING`` (e perde o motivo da recusa) para a UTFPR analisar de novo.
+        Devolve ``True`` quando a vaga foi reenviada para análise.
+        """
+        if changed and job.status in {JobStatus.APPROVED, JobStatus.REJECTED}:
+            job.status = JobStatus.PENDING
+            job.rejection_reason = None
+            return True
+        return False
+
+    @staticmethod
     def get_editable_job_or_403(job, user):
         return CompaniesService._validate_job_ownership(
             job=job,
             user=user,
-            error_message="Voce nao tem permissao para editar esta vaga.",
+            error_message="Você não tem permissão para editar esta vaga.",
         )
 
     @staticmethod
     def get_deletable_job_or_404(pk):
         job = get_object_or_404(Job, pk=pk)
         if job.status == JobStatus.REMOVED:
-            raise Http404("Vaga ja removida.")
+            raise Http404("Vaga já removida.")
         return job
 
     @staticmethod
@@ -75,7 +89,7 @@ class CompaniesService:
         return CompaniesService._validate_job_ownership(
             job=job,
             user=user,
-            error_message="Voce nao tem permissao para remover esta vaga.",
+            error_message="Você não tem permissão para remover esta vaga.",
         )
 
     @staticmethod

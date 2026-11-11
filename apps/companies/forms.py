@@ -234,3 +234,19 @@ class JobForm(forms.ModelForm):
                 }
             ),
         }
+
+    def has_changed(self):
+        """Como o padrão, mas ignora diferença só de quebra de linha.
+
+        O navegador envia ``\\r\\n`` nas áreas de texto. Sem isso, salvar sem mexer
+        em nada uma vaga gravada com ``\\n`` contaria como edição e a mandaria de
+        volta para análise.
+        """
+        return any(not self._so_quebra_de_linha(nome) for nome in self.changed_data)
+
+    def _so_quebra_de_linha(self, nome):
+        inicial = self.get_initial_for_field(self.fields[nome], nome)
+        enviado = self.data.get(self.add_prefix(nome))
+        if not (isinstance(inicial, str) and isinstance(enviado, str)):
+            return False
+        return inicial.replace("\r\n", "\n") == enviado.replace("\r\n", "\n")

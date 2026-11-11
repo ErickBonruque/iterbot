@@ -389,6 +389,115 @@ class TestJobUpdateView(TestCase):
             self.job.refresh_from_db()
             self.assertEqual(self.job.titulo, "Vaga Atualizada")
 
+    # --- edição devolve a vaga para análise ---
+
+    def _dados(self, **extra):
+        """POST de edição com os mesmos valores da vaga (nada alterado)."""
+        dados = {
+            "titulo": self.job.titulo,
+            "descricao": self.job.descricao,
+            "requisitos": self.job.requisitos,
+            "salario": self.job.salario,
+            "tipo": self.job.tipo,
+        }
+        dados.update(extra)
+        return dados
+
+    def _editar(self, **extra):
+        self.client.force_login(self.user)
+        return self.client.post(f"/empresas/vagas/{self.job.pk}/editar/", self._dados(**extra))
+
+    def _status_da_vaga(self, status, **campos):
+        Job.objects.filter(pk=self.job.pk).update(status=status, **campos)
+        self.job.refresh_from_db()
+
+    def test_editar_vaga_aprovada_volta_para_analise(self):
+        self._status_da_vaga(JobStatus.APPROVED)
+
+        response = self._editar(titulo="Vaga Atualizada")
+
+        self.assertEqual(response.status_code, 302)
+        self.job.refresh_from_db()
+        self.assertEqual(self.job.titulo, "Vaga Atualizada")
+        self.assertEqual(self.job.status, JobStatus.PENDING)
+
+    def test_editar_vaga_recusada_volta_para_analise_e_limpa_motivo(self):
+        self._status_da_vaga(JobStatus.REJECTED, rejection_reason="Fora do escopo de estágio")
+
+        response = self._editar(salario="R$ 2.000,00")
+
+        self.assertEqual(response.status_code, 302)
+        self.job.refresh_from_db()
+        self.assertEqual(self.job.status, JobStatus.PENDING)
+        self.assertIsNone(self.job.rejection_reason)
+
+    def test_editar_vaga_pendente_continua_pendente(self):
+        self._status_da_vaga(JobStatus.PENDING)
+
+        response = self._editar(titulo="Outro título")
+
+        self.assertEqual(response.status_code, 302)
+        self.job.refresh_from_db()
+        self.assertEqual(self.job.status, JobStatus.PENDING)
+
+    def test_salvar_sem_alterar_nao_muda_status(self):
+        self._status_da_vaga(JobStatus.APPROVED)
+
+        response = self._editar()
+
+        self.assertEqual(response.status_code, 302)
+        self.job.refresh_from_db()
+        self.assertEqual(self.job.status, JobStatus.APPROVED)
+
+    def test_salvar_sem_alterar_vaga_recusada_mantem_o_motivo(self):
+        self._status_da_vaga(JobStatus.REJECTED, rejection_reason="Fora do escopo de estágio")
+
+        response = self._editar()
+
+        self.assertEqual(response.status_code, 302)
+        self.job.refresh_from_db()
+        self.assertEqual(self.job.status, JobStatus.REJECTED)
+        self.assertEqual(self.job.rejection_reason, "Fora do escopo de estágio")
+
+    def test_quebra_de_linha_do_navegador_nao_conta_como_alteracao(self):
+        """O navegador envia CRLF; a vaga gravada com LF não pode voltar para análise por isso."""
+        self._status_da_vaga(JobStatus.APPROVED, descricao="linha 1\nlinha 2")
+
+        response = self._editar(descricao="linha 1\r\nlinha 2")
+
+        self.assertEqual(response.status_code, 302)
+        self.job.refresh_from_db()
+        self.assertEqual(self.job.status, JobStatus.APPROVED)
+
+    def test_mudar_so_as_areas_tambem_devolve_para_analise(self):
+        from apps.courses.models import Area
+
+        area = Area.objects.create(name="Área Reenvio")
+        self._status_da_vaga(JobStatus.APPROVED)
+
+        response = self._editar(areas=[area.pk])
+
+        self.assertEqual(response.status_code, 302)
+        self.job.refresh_from_db()
+        self.assertEqual(self.job.status, JobStatus.PENDING)
+        self.assertEqual(list(self.job.areas.all()), [area])
+
+    def test_mensagem_de_reenvio(self):
+        self._status_da_vaga(JobStatus.APPROVED)
+
+        response = self._editar(titulo="Vaga Atualizada")
+
+        textos = [str(m) for m in get_messages(response.wsgi_request)]
+        self.assertEqual(textos, ["Vaga atualizada. Ela voltou para análise da UTFPR."])
+
+    def test_mensagem_sem_reenvio_nao_fala_em_analise(self):
+        self._status_da_vaga(JobStatus.APPROVED)
+
+        response = self._editar()
+
+        textos = [str(m) for m in get_messages(response.wsgi_request)]
+        self.assertEqual(textos, ["Vaga atualizada."])
+
     def test_update_other_company_job(self):
         self.client.force_login(self.other_user)
         response = self.client.get(f"/empresas/vagas/{self.job.pk}/editar/")

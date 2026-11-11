@@ -21,7 +21,7 @@ class CompanyRequiredMixin(LoginRequiredMixin):
         try:
             _ = request.user.company
         except Exception as err:
-            raise PermissionDenied("Usuario nao possui empresa vinculada.") from err
+            raise PermissionDenied("Usuário não possui empresa vinculada.") from err
         return response
 
 
@@ -45,7 +45,7 @@ class ApprovedCompanyRequiredMixin(CompanyRequiredMixin):
         try:
             company = request.user.company
         except Exception as err:
-            raise PermissionDenied("Usuario nao possui empresa vinculada.") from err
+            raise PermissionDenied("Usuário não possui empresa vinculada.") from err
         if company.status != CompanyStatus.APPROVED:
             if company.status == CompanyStatus.BLOCKED:
                 messages.error(
