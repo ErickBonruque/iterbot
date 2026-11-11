@@ -334,7 +334,7 @@ def send_confirmation_email_to_user(user_id: int) -> dict:
     base_url = (getattr(django_settings, "PORTAL_BASE_URL", "") or "http://localhost:8000").rstrip(
         "/"
     )
-    confirm_url = f"{base_url}/confirmar-email/{user.email_confirmation_token}"
+    confirm_url = f"{base_url}/confirmar-email/{user.email_confirmation_token}/"
 
     body_lines = [
         BOT_MESSAGES.tasks.confirm_email_greeting.text.format(ra=user.ra or "aluno"),

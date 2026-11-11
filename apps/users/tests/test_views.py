@@ -3,6 +3,8 @@
 Verifies FIX-04: email confirmation auto-login and success page access.
 """
 
+from unittest.mock import patch
+
 from django.contrib.auth.models import User
 from django.test import TestCase
 from django.urls import reverse
@@ -66,6 +68,44 @@ class TestSuccessPage(TestCase):
         response = self.client.get(reverse("account_success"))
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "/empresas/perfil/")
+
+
+class TestSuccessPageWhatsAppLink(TestCase):
+    """O botão "Conversar no WhatsApp" leva ao número pareado no WAHA."""
+
+    def setUp(self):
+        from django.core.cache import cache
+
+        from apps.users.views import BOT_NUMBER_CACHE_KEY
+
+        cache.delete(BOT_NUMBER_CACHE_KEY)
+        self.addCleanup(cache.delete, BOT_NUMBER_CACHE_KEY)
+        user = User.objects.create_user(
+            username="aluno@alunos.utfpr.edu.br", email="aluno@alunos.utfpr.edu.br"
+        )
+        self.client.force_login(user)
+
+    def test_button_uses_the_paired_bot_number(self):
+        with patch("apps.users.views.WahaClient") as waha:
+            waha.return_value.get_paired_number.return_value = "554598482007"
+            response = self.client.get(reverse("account_success"))
+        self.assertContains(response, 'href="https://wa.me/554598482007"')
+        self.assertNotContains(response, "5541999999999")
+
+    def test_number_is_cached_between_requests(self):
+        with patch("apps.users.views.WahaClient") as waha:
+            waha.return_value.get_paired_number.return_value = "554598482007"
+            self.client.get(reverse("account_success"))
+            self.client.get(reverse("account_success"))
+        self.assertEqual(waha.return_value.get_paired_number.call_count, 1)
+
+    def test_without_paired_number_there_is_no_wrong_link(self):
+        with patch("apps.users.views.WahaClient") as waha:
+            waha.return_value.get_paired_number.return_value = None
+            response = self.client.get(reverse("account_success"))
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, "wa.me")
+        self.assertContains(response, "WhatsApp")
 
 
 class TestConfirmEmailView(TestCase):

@@ -188,12 +188,8 @@ class WahaClient:
         """
         return self._post_session_action("restart")
 
-    def get_session_status(self) -> str | None:
-        """Consulta o estado atual da sessão (WORKING, FAILED, SCAN_QR_CODE...).
-
-        Returns:
-            O status informado pelo WAHA, ou None se não foi possível consultar.
-        """
+    def _get_session(self) -> dict | None:
+        """GET /api/sessions/{nome}: o JSON da sessão, ou None se falhou."""
         url = f"{self.settings.base_url}/api/sessions/{self.settings.session_name}"
         try:
             response = requests.get(
@@ -208,7 +204,7 @@ class WahaClient:
                     status_code=response.status_code,
                 )
                 return None
-            return response.json().get("status")
+            return response.json()
         except (requests.exceptions.RequestException, ValueError) as error:
             logger.warning(
                 "waha_session_status_failed",
@@ -216,6 +212,26 @@ class WahaClient:
                 error=str(error),
             )
             return None
+
+    def get_session_status(self) -> str | None:
+        """Consulta o estado atual da sessão (WORKING, FAILED, SCAN_QR_CODE...).
+
+        Returns:
+            O status informado pelo WAHA, ou None se não foi possível consultar.
+        """
+        session = self._get_session()
+        return session.get("status") if session else None
+
+    def get_paired_number(self) -> str | None:
+        """Número pareado na sessão, só dígitos (ex.: "554598482007").
+
+        Vem de `me.id` ("554598482007@c.us"). None se não há número pareado ou
+        o WAHA não respondeu.
+        """
+        session = self._get_session() or {}
+        me = session.get("me") or {}
+        digits = "".join(ch for ch in str(me.get("id", "")).split("@")[0] if ch.isdigit())
+        return digits or None
 
     def logout_session(self) -> bool:
         """Desconecta o número pareado e devolve a sessão para SCAN_QR_CODE.

@@ -271,3 +271,27 @@ class TestWahaClientGetSessionStatus:
         with patch("infra.waha.client.requests.get") as mock_get:
             mock_get.side_effect = requests.exceptions.ConnectionError()
             assert client.get_session_status() is None
+
+
+class TestWahaClientGetPairedNumber:
+    def _session(self, payload, status_code=200):
+        response = MagicMock(status_code=status_code)
+        response.json.return_value = payload
+        return response
+
+    def test_returns_digits_of_the_paired_number(self):
+        client = WahaClient(settings=_make_settings())
+        payload = {"status": "WORKING", "me": {"id": "554598482007@c.us", "pushName": "IterBot"}}
+        with patch("infra.waha.client.requests.get", return_value=self._session(payload)):
+            assert client.get_paired_number() == "554598482007"
+
+    def test_returns_none_when_no_number_is_paired(self):
+        client = WahaClient(settings=_make_settings())
+        payload = {"status": "SCAN_QR_CODE", "me": None}
+        with patch("infra.waha.client.requests.get", return_value=self._session(payload)):
+            assert client.get_paired_number() is None
+
+    def test_returns_none_on_http_error(self):
+        client = WahaClient(settings=_make_settings())
+        with patch("infra.waha.client.requests.get", return_value=self._session({}, 500)):
+            assert client.get_paired_number() is None

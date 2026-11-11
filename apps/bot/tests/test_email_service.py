@@ -361,3 +361,25 @@ class TestSendConfirmationEmailFallbackIntegration:
         assert result["status"] == "sent"
         # fallback sends the email successfully
         assert result["provider"] == "smtp"
+
+
+def test_confirmation_link_ends_with_slash(db, mocker, settings):
+    """Sem a barra final o Django responde 404 e redireciona (APPEND_SLASH)."""
+    settings.PORTAL_BASE_URL = "https://gosh.sh.utfpr.edu.br"
+    user = UserProfile.objects.create(
+        phone_number="554199999998@c.us",
+        email="aluno2@alunos.utfpr.edu.br",
+        ra="654321",
+        email_verified=False,
+        email_confirmation_token="token-slash",
+    )
+    provider = RecordingProvider(
+        EmailSendResult(status="sent", provider="smtp", message_id="m", error_code=None)
+    )
+    mocker.patch("apps.bot.email_service.get_email_provider", return_value=provider)
+
+    send_confirmation_email_to_user(user.id)
+
+    assert (
+        "https://gosh.sh.utfpr.edu.br/confirmar-email/token-slash/" in provider.calls[0]["message"]
+    )

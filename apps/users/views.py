@@ -1,13 +1,34 @@
 import structlog
 from django.contrib.auth import login
+from django.core.cache import cache
 from django.shortcuts import redirect, render
 from django.views import View
 
 from apps.companies.company_auth_service import CompanyAuthService
 from apps.companies.services import CompaniesService
 from apps.users.services import UTFPRAuthService
+from infra.waha.client import WahaClient
 
 logger = structlog.get_logger(__name__)
+
+BOT_NUMBER_CACHE_KEY = "users:bot_whatsapp_number"
+# O número só muda se o admin parear outro aparelho; 1 h evita uma consulta ao
+# WAHA por página aberta.
+BOT_NUMBER_CACHE_SECONDS = 3600
+
+
+def bot_whatsapp_url() -> str | None:
+    """Link wa.me do número pareado no WAHA, ou None se não deu para saber.
+
+    Falha não vai para o cache: na próxima página tenta de novo.
+    """
+    number = cache.get(BOT_NUMBER_CACHE_KEY)
+    if not number:
+        number = WahaClient().get_paired_number()
+        if not number:
+            return None
+        cache.set(BOT_NUMBER_CACHE_KEY, number, BOT_NUMBER_CACHE_SECONDS)
+    return f"https://wa.me/{number}"
 
 
 def success_page(request):
@@ -24,6 +45,8 @@ def success_page(request):
         # Check if user has a company to show contextual link
         company = CompaniesService.get_user_company_or_none(request.user)
         context["has_company"] = company is not None
+        if company is None:
+            context["whatsapp_url"] = bot_whatsapp_url()
     return render(request, "account/success.html", context)
 
 

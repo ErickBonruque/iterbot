@@ -30,7 +30,11 @@
                     {% if has_company %}
                     <a href="/empresas/perfil/" class="btn btn-primary btn-lg">Acessar Perfil da Empresa</a>
                     {% else %}
-                    <a href="https://wa.me/5541999999999" class="btn btn-success btn-lg" target="_blank">Conversar no WhatsApp</a>
+                    {% if whatsapp_url %}
+                    <a href="{{ whatsapp_url }}" class="btn btn-success btn-lg" target="_blank" rel="noopener">Conversar no WhatsApp</a>
+                    {% else %}
+                    <p class="mb-0">Pode voltar para a conversa com o IterBot no WhatsApp.</p>
+                    {% endif %}
                     {% endif %}
                     <a href="{% url 'account_logout' %}" class="btn btn-outline-secondary">Sair</a>
                 </div>
