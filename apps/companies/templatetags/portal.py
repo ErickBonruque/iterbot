@@ -101,16 +101,22 @@ def candidaturas_novas(context):
 
 
 @register.simple_tag
-def campo_widget(campo):
-    """Renderiza o widget de um campo de formulário; com erro, soma ``is-invalid``.
+def campo_widget(campo, classe=""):
+    """Renderiza o widget de um campo de formulário.
 
-    O Bootstrap só mostra o ``.invalid-feedback`` que vem depois de um campo
-    ``.is-invalid``, e o Django não coloca essa classe sozinho.
+    ``classe`` soma classes CSS ao widget (sem repetir as que ele já tem): os campos
+    do allauth não trazem ``form-control``. Com erro, soma também ``is-invalid``, que
+    o Bootstrap exige para mostrar o ``.invalid-feedback`` e o Django não coloca sozinho.
     """
-    if not campo.errors:
+    classes = campo.field.widget.attrs.get("class", "").split()
+    for nome in classe.split():
+        if nome not in classes:
+            classes.append(nome)
+    if campo.errors:
+        classes.append("is-invalid")
+    if not classes:
         return campo.as_widget()
-    classes = campo.field.widget.attrs.get("class", "")
-    return campo.as_widget(attrs={"class": f"{classes} is-invalid".strip()})
+    return campo.as_widget(attrs={"class": " ".join(classes)})
 
 
 @register.filter

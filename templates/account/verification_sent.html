@@ -1,40 +1,22 @@
-{% extends "base.html" %}
-{% load i18n %}
+{% extends "layouts/entrada.html" %}
 
-{% block title %}Verifique seu e-mail - IterBot UTFPR{% endblock %}
+{% block title %}Verifique seu e-mail · IterBot UTFPR{% endblock %}
 
-{% block content %}
-<div class="row justify-content-center">
-    <div class="col-md-6 col-lg-5">
-        <div class="card">
-            <div class="card-header text-center">
-                <h4 class="mb-0">✅ Verifique seu e-mail</h4>
-            </div>
-            <div class="card-body">
-                <div class="alert alert-success">
-                    <strong>Cadastro iniciado com sucesso!</strong>
-                </div>
+{% block entrada_conteudo %}
+<h2 class="fw-bold mb-3">Verifique seu e-mail</h2>
 
-                {% with pending_email=request.session.pending_verification_email %}
-                {% if pending_email %}
-                <p>Enviamos um link de confirmação para:</p>
-                <p class="text-center">
-                    <strong>{{ pending_email }}</strong>
-                </p>
-                {% else %}
-                <p>Enviamos um link de confirmação para o e-mail informado no cadastro.</p>
-                {% endif %}
-                {% endwith %}
-
-                <p class="mt-4">
-                    Acesse sua caixa de entrada e clique no link para ativar sua conta.
-                </p>
-
-                <div class="alert alert-warning mt-4">
-                    <strong>Dica:</strong> Se não encontrar o e-mail, verifique a pasta de spam.
-                </div>
-            </div>
-        </div>
-    </div>
+<div class="alert alert-success">
+    <strong>Cadastro iniciado.</strong>
 </div>
+
+{% with pending_email=request.session.pending_verification_email %}
+{% if pending_email %}
+<p class="mb-1">Enviamos um link de confirmação para:</p>
+<p class="fw-bold">{{ pending_email }}</p>
+{% else %}
+<p>Enviamos um link de confirmação para o e-mail informado no cadastro.</p>
+{% endif %}
+{% endwith %}
+
+<p>Abra a mensagem e clique no link para ativar a conta. Se não encontrar, verifique a pasta de spam.</p>
 {% endblock %}

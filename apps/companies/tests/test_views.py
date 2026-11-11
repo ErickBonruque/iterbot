@@ -25,7 +25,7 @@ class TestCompanySignupView(TestCase):
     def test_signup_page_loads(self):
         response = self.client.get("/empresas/signup/")
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Cadastrar Empresa")
+        self.assertContains(response, "Cadastrar empresa")
 
     def test_signup_creates_company(self):
         data = {
@@ -69,6 +69,10 @@ class TestCompanyLoginView(TestCase):
         # O bloqueio de tentativas do allauth fica no cache; sem limpar, um
         # teste herda o bloqueio do anterior.
         cache.clear()
+        # A tela de login consulta o número do bot no WAHA; os testes não saem para a rede.
+        patcher = patch("apps.companies.views.bot_whatsapp_url", return_value=None)
+        patcher.start()
+        self.addCleanup(patcher.stop)
         self.client = Client()
         self.user = User.objects.create_user(
             username="empresa1", email="contato@empresa.com", password="TestPass123!"
@@ -87,7 +91,7 @@ class TestCompanyLoginView(TestCase):
     def test_login_page_loads(self):
         response = self.client.get("/empresas/login/")
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Login - Portal Empresas")
+        self.assertContains(response, "Entrar no portal")
 
     def test_portal_root_redirects_to_login(self):
         """/empresas/ devolvia 404 — hoje leva para a tela de login."""

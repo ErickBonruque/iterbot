@@ -360,6 +360,19 @@ a:focus-visible {
   width: 1.15em;
 }
 
+.grupo {
+  margin-bottom: 1.25rem;
+}
+
+.grupo-titulo {
+  float: none;
+  font-size: 1rem;
+  font-weight: 700;
+  margin-bottom: 0.75rem;
+  padding: 0;
+  width: auto;
+}
+
 /* ---------- Candidaturas ---------- */
 
 .candidatura-cabecalho {
@@ -383,11 +396,9 @@ a:focus-visible {
 
 .candidatura-secao {
   color: var(--cinza-texto);
-  font-size: 0.8rem;
+  font-size: 0.95rem;
   font-weight: 700;
-  letter-spacing: 0.04em;
   margin: 0 0 0.5rem;
-  text-transform: uppercase;
 }
 
 .candidato-id {
@@ -427,6 +438,10 @@ a:focus-visible {
 }
 
 /* ---------- Layout "entrada": login, cadastro, senha, confirmações ---------- */
+
+.pagina-entrada {
+  background: var(--branco);
+}
 
 .entrada {
   display: grid;

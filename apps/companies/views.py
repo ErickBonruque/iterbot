@@ -11,6 +11,7 @@ from apps.companies.forms import CompanyOnlyForm, CompanyProfileForm, CompanySig
 from apps.companies.mixins import ApprovedCompanyRequiredMixin
 from apps.companies.services import CompaniesService
 from apps.jobs.models import ApplicationStatus, Company, Job
+from apps.users.views import bot_whatsapp_url
 
 logger = structlog.get_logger(__name__)
 
@@ -47,6 +48,12 @@ class CompanyLoginView(LoginView):
 
     def get_success_url(self):
         return reverse("companies:dashboard")
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # Linha "É aluno da UTFPR?" da tela de entrada; None quando o WAHA não responde.
+        context["whatsapp_url"] = bot_whatsapp_url()
+        return context
 
     def dispatch(self, request, *args, **kwargs):
         # Mesma razão: deslogar sessão de aluno para não redirecionar erroneamente.

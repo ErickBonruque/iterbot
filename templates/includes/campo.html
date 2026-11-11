@@ -1,8 +1,11 @@
-{% load portal %}{# Campo de formulário: rótulo, widget (com is-invalid se houver erro) e mensagens. Recebe `campo` (BoundField). #}
+{% load portal %}{# Campo de formulário: rótulo, widget (com is-invalid se houver erro), mensagens e ajuda. Recebe `campo` (BoundField); opcionais: `rotulo`, `classe`, `ajuda`, `sem_asterisco`. #}
 <div class="mb-3">
-    <label for="{{ campo.id_for_label }}" class="form-label">{{ campo.label }}{% if campo.field.required %} *{% endif %}</label>
-    {% campo_widget campo %}
+    <label for="{{ campo.id_for_label }}" class="form-label">{{ rotulo|default:campo.label }}{% if campo.field.required and not sem_asterisco %} *{% endif %}</label>
+    {% campo_widget campo classe %}
     {% for erro in campo.errors %}
     <div class="invalid-feedback">{{ erro }}</div>
     {% endfor %}
+    {% if ajuda %}
+    <div class="form-text">{{ ajuda }}</div>
+    {% endif %}
 </div>

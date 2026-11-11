@@ -1,91 +1,42 @@
-{% extends "companies/base_company.html" %}
-{% load static %}
+{% extends "layouts/entrada.html" %}
+{% load portal %}
 
-{% block title %}Login - Portal Empresas - IterBot UTFPR{% endblock %}
+{% block title %}Entrar no portal · IterBot UTFPR{% endblock %}
 
-{% block company_content %}
-<div class="row justify-content-center">
-    <div class="col-md-6 col-lg-5">
-        <div class="card">
-            <div class="card-header text-center">
-                <h4 class="mb-0">Login - Portal Empresas</h4>
-            </div>
-            <div class="card-body">
-                <div class="text-center mb-3">
-                    <img src="{% static 'img/logo-utfpr.png' %}"
-                         alt="UTFPR - Universidade Tecnológica Federal do Paraná"
-                         class="brand-logo">
-                </div>
-                <p class="text-muted text-center mb-4">
-                    Entre com suas credenciais de empresa
-                </p>
+{% block entrada_conteudo %}
+<h2 class="fw-bold mb-1">Entrar no portal</h2>
+<p class="meta mb-4">Use o e-mail cadastrado da empresa.</p>
 
-                <form method="post" action="">
-                    {% csrf_token %}
+<form method="post">
+    {% csrf_token %}
 
-                    {% if form.non_field_errors %}
-                    <div class="alert alert-danger">
-                        {{ form.non_field_errors }}
-                    </div>
-                    {% endif %}
+    {% if form.non_field_errors %}
+    <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+    {% endif %}
 
-                    <div class="mb-3">
-                        <label for="id_login" class="form-label">E-mail</label>
-                        <input type="email"
-                               name="login"
-                               class="form-control {% if form.login.errors %}is-invalid{% endif %}"
-                               id="id_login"
-                               placeholder="contato@empresa.com.br"
-                               value="{{ form.login.value|default:'' }}"
-                               required>
-                        {% if form.login.errors %}
-                        <div class="invalid-feedback">
-                            {{ form.login.errors.0 }}
-                        </div>
-                        {% endif %}
-                    </div>
+    {% include "includes/campo.html" with campo=form.login rotulo="E-mail" classe="form-control" sem_asterisco=True %}
+    {% include "includes/campo.html" with campo=form.password rotulo="Senha" classe="form-control" sem_asterisco=True %}
 
-                    <div class="mb-3">
-                        <label for="id_password" class="form-label">Senha</label>
-                        <input type="password"
-                               name="password"
-                               class="form-control {% if form.password.errors %}is-invalid{% endif %}"
-                               id="id_password"
-                               required>
-                        {% if form.password.errors %}
-                        <div class="invalid-feedback">
-                            {{ form.password.errors.0 }}
-                        </div>
-                        {% endif %}
-                    </div>
-
-                    <div class="mb-3 form-check">
-                        <input type="checkbox" name="remember" class="form-check-input" id="id_remember">
-                        <label class="form-check-label" for="id_remember">
-                            Manter conectado
-                        </label>
-                    </div>
-
-                    {# `{{ form.hidden_fields }}` imprimia a lista do Python ("[]") na tela #}
-                    {% for hidden_field in form.hidden_fields %}{{ hidden_field }}{% endfor %}
-
-                    <div class="d-grid gap-2">
-                        <button type="submit" class="btn btn-primary btn-lg">Entrar</button>
-                    </div>
-                </form>
-
-                <hr class="my-4">
-
-                <div class="text-center">
-                    <p class="mb-2">
-                        <a href="/accounts/password/reset/">Esqueci minha senha</a>
-                    </p>
-                    <p class="mb-0">
-                        Não tem uma conta? <a href="{% url 'companies:signup' %}">Cadastre-se</a>
-                    </p>
-                </div>
-            </div>
-        </div>
+    <div class="text-end mb-3">
+        <a class="lk small" href="{% url 'account_reset_password' %}">Esqueci a senha</a>
     </div>
-</div>
+
+    <div class="form-check mb-4">
+        {% campo_widget form.remember "form-check-input" %}
+        <label class="form-check-label" for="{{ form.remember.id_for_label }}">Manter conectado</label>
+    </div>
+
+    {# `{{ form.hidden_fields }}` imprimia a lista do Python ("[]") na tela #}
+    {% for hidden_field in form.hidden_fields %}{{ hidden_field }}{% endfor %}
+
+    <button type="submit" class="btn btn-primary w-100">Entrar</button>
+</form>
+
+<hr class="my-4">
+
+<p class="mb-2">Ainda não tem cadastro? <a class="lk" href="{% url 'companies:signup' %}">Cadastrar empresa</a></p>
+<p class="meta mb-0">
+    É aluno da UTFPR? O IterBot funciona pelo WhatsApp{% if whatsapp_url %}:
+    <a class="lk" href="{{ whatsapp_url }}" target="_blank" rel="noopener">abrir a conversa</a>{% endif %}.
+</p>
 {% endblock %}

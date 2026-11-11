@@ -157,3 +157,68 @@ def test_include_campo_mostra_rotulo_obrigatorio_e_mensagem_de_erro():
 )
 def test_link_http_so_deixa_passar_http_e_https(url, esperado):
     assert link_http(url) == esperado
+
+
+class _FormAllauth(forms.Form):
+    """Campo sem classe nenhuma, como os do allauth."""
+
+    email = forms.EmailField(label="E-mail")
+    escolha = forms.ChoiceField(
+        choices=[("a", "A")], widget=forms.Select(attrs={"class": "form-select"})
+    )
+
+
+def _widget_com_classe(campo, classe):
+    template = Template("{% load portal %}{% campo_widget campo classe %}")
+    return template.render(Context({"campo": campo, "classe": classe}))
+
+
+def test_campo_widget_soma_a_classe_pedida_ao_campo_sem_classe():
+    form = _FormAllauth(data={"email": "a@b.com", "escolha": "a"})
+    form.is_valid()
+
+    assert 'class="form-control"' in _widget_com_classe(form["email"], "form-control")
+
+
+def test_campo_widget_nao_repete_classe_que_o_widget_ja_tem():
+    form = _FormAllauth(data={"email": "a@b.com", "escolha": "a"})
+    form.is_valid()
+
+    html = _widget_com_classe(form["escolha"], "form-select")
+
+    assert html.count("form-select") == 1
+
+
+def test_campo_widget_classe_pedida_e_is_invalid_convivem():
+    form = _FormAllauth(data={"email": "", "escolha": "a"})
+    form.is_valid()
+
+    assert 'class="form-control is-invalid"' in _widget_com_classe(form["email"], "form-control")
+
+
+def test_include_campo_aceita_rotulo_proprio_e_sem_asterisco():
+    form = _FormAllauth()
+
+    html = render_to_string(
+        "includes/campo.html",
+        {
+            "campo": form["email"],
+            "rotulo": "Seu e-mail",
+            "sem_asterisco": True,
+            "classe": "form-control",
+        },
+    )
+
+    assert ">Seu e-mail</label>" in html
+    assert "*" not in html
+    assert 'class="form-control"' in html
+
+
+def test_include_campo_mostra_ajuda_quando_recebe():
+    form = _FormAllauth(data={})
+
+    html = render_to_string(
+        "includes/campo.html", {"campo": form["email"], "ajuda": "Use o e-mail da empresa."}
+    )
+
+    assert "Use o e-mail da empresa." in html

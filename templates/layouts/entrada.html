@@ -2,7 +2,8 @@
 {% load static %}
 {% comment %}
 Tela dividida de entrada (login, cadastro, senha, confirmações).
-Blocos: entrada_titulo, entrada_texto (apoio + lista, some no celular), entrada_conteudo.
+Blocos: entrada_titulo e entrada_texto (apoio + lista, some no celular) já trazem o
+texto institucional; as telas só precisam definir entrada_conteudo.
 {% endcomment %}
 
 {% block body_class %}pagina-entrada{% endblock %}
@@ -13,8 +14,14 @@ Blocos: entrada_titulo, entrada_texto (apoio + lista, some no celular), entrada_
         <div class="entrada-marca">
             <img class="entrada-mascote" src="{% static 'img/mascote.png' %}" alt="Mascote do IterBot">
             <div>
-                <h1 class="entrada-titulo">{% block entrada_titulo %}IterBot UTFPR{% endblock %}</h1>
-                <div class="entrada-texto">{% block entrada_texto %}{% endblock %}</div>
+                <h1 class="entrada-titulo">{% block entrada_titulo %}Encontre estagiários na UTFPR pelo WhatsApp{% endblock %}</h1>
+                <div class="entrada-texto">{% block entrada_texto %}
+                    <p>Você publica a vaga aqui. A UTFPR revisa e o IterBot avisa os alunos dos cursos que combinam com ela.</p>
+                    <ul>
+                        <li>Cadastro gratuito para empresas da região</li>
+                        <li>Candidaturas chegam com curso, período e contato</li>
+                    </ul>
+                    {% endblock %}</div>
             </div>
         </div>
         <small class="entrada-rodape">IterBot, UTFPR Campus Santa Helena</small>
