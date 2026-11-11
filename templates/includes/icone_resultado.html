@@ -1,0 +1,9 @@
+{# Ícone de resultado em SVG (sem emoji, vira quadradinho em alguns aparelhos). `tipo`: "ok" ou "erro". #}
+<svg class="resultado-icone resultado-icone-{{ tipo|default:'ok' }}" width="64" height="64" viewBox="0 0 64 64" fill="none" aria-hidden="true">
+    <circle cx="32" cy="32" r="30" stroke="currentColor" stroke-width="4"/>
+    {% if tipo == 'erro' %}
+    <path d="M22 22l20 20M42 22L22 42" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>
+    {% else %}
+    <path d="M19 33l9 9 17-19" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+    {% endif %}
+</svg>

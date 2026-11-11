@@ -143,7 +143,7 @@ ACCOUNT_ADAPTER = "apps.users.adapters.UTFPRAccountAdapter"
 ACCOUNT_LOGIN_ATTEMPTS_LIMIT = 5
 ACCOUNT_LOGIN_ATTEMPTS_TIMEOUT = 300
 LOGIN_REDIRECT_URL = "/accounts/success/"
-ACCOUNT_LOGOUT_REDIRECT_URL = "/accounts/login/"
+ACCOUNT_LOGOUT_REDIRECT_URL = "/empresas/login/"
 ACCOUNT_EMAIL_CONFIRMATION_ANONYMOUS_REDIRECT_URL = "/accounts/email-confirmed/"
 
 # Portal de Empresas (usado pelo bot para enviar links)

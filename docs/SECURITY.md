@@ -74,7 +74,7 @@ Em `iterbot_traefik`, apenas `0.0.0.0:80->80/tcp, 0.0.0.0:443->443/tcp`.
 | Middleware          | Average  | Burst | Alvo                                    |
 |---------------------|----------|-------|-----------------------------------------|
 | `rate-limit`        | 100/s    | 50    | Trafego publico geral                   |
-| `login-rate-limit`  | 5/min    | 10    | `/accounts/login`, `/empresas/login`    |
+| `login-rate-limit`  | 5/min    | 10    | `/empresas/login` (`/accounts/login` só redireciona para ele) |
 | `admin-rate-limit`  | 30/min   | 60    | `/admin`, `/portal`                     |
 
 Excedentes recebem HTTP 429. Rate-limit e por IP de origem (`ipStrategy.depth: 1`).

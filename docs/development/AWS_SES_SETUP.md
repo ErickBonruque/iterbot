@@ -133,9 +133,13 @@ send_mail(
 
 ### Via Cadastro Real
 
-1. Acesse `/accounts/signup/`
-2. Cadastre-se com um e-mail válido @alunos.utfpr.edu.br
-3. Verifique se o e-mail de confirmação chegou
+O aluno não tem mais cadastro web com senha: ele se cadastra pelo bot do WhatsApp.
+
+1. No WhatsApp, converse com o IterBot e informe o RA e um e-mail válido @alunos.utfpr.edu.br
+2. Verifique se o e-mail com o link de confirmação chegou
+
+Para testar o envio sem WhatsApp, cadastre uma empresa em `/empresas/signup/` (aceita qualquer e-mail)
+e verifique se o e-mail de confirmação chegou.
 
 ## Monitoramento
 

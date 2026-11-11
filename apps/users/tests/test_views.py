@@ -42,11 +42,11 @@ class TestSuccessPage(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, user.email)
 
-    def test_success_page_anonymous_shows_login_link(self):
-        """Anonymous user sees login link on success page."""
+    def test_success_page_anonymous_shows_company_login_link(self):
+        """Anonymous user (company that confirmed elsewhere) is sent to the company login."""
         response = self.client.get(reverse("account_success"))
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, reverse("account_login"))
+        self.assertContains(response, 'href="/empresas/login/"')
 
     def test_success_page_company_user_shows_dashboard_link(self):
         """Company user sees link to the company dashboard."""
@@ -71,7 +71,7 @@ class TestSuccessPage(TestCase):
 
 
 class TestSuccessPageWhatsAppLink(TestCase):
-    """O botão "Conversar no WhatsApp" leva ao número pareado no WAHA."""
+    """O botão "Voltar para o WhatsApp" leva ao número pareado no WAHA."""
 
     def setUp(self):
         from django.core.cache import cache

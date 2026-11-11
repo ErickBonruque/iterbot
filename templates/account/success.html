@@ -1,60 +1,25 @@
-{% extends "base.html" %}
-{% load i18n %}
+{% extends "layouts/simples.html" %}
 
-{% block title %}Bem-vindo - IterBot UTFPR{% endblock %}
+{% block title %}E-mail confirmado · IterBot UTFPR{% endblock %}
 
-{% block content %}
-<div class="row justify-content-center">
-    <div class="col-md-6 col-lg-5">
-        <div class="card">
-            <div class="card-header text-center">
-                <h4 class="mb-0">🐧 Bem-vindo ao IterBot!</h4>
-            </div>
-            <div class="card-body text-center">
-                {% if is_authenticated %}
-                <div class="alert alert-success">
-                    <strong>Login realizado com sucesso!</strong>
-                </div>
+{% block simples_conteudo %}
+<div class="resultado">
+    {% include "includes/icone_resultado.html" with tipo="ok" %}
+    <h1 class="resultado-titulo">Tudo certo</h1>
 
-                <p class="mb-4">
-                    Olá, <strong>{{ user_email }}</strong>
-                </p>
-
-                <p>
-                    Você está autenticado no sistema IterBot UTFPR.
-                </p>
-
-                <hr class="my-4">
-
-                <div class="d-grid gap-2">
-                    {% if has_company %}
-                    <a href="/empresas/painel/" class="btn btn-primary btn-lg">Acessar o painel da empresa</a>
-                    {% else %}
-                    {% if whatsapp_url %}
-                    <a href="{{ whatsapp_url }}" class="btn btn-success btn-lg" target="_blank" rel="noopener">Conversar no WhatsApp</a>
-                    {% else %}
-                    <p class="mb-0">Pode voltar para a conversa com o IterBot no WhatsApp.</p>
-                    {% endif %}
-                    {% endif %}
-                    <a href="{% url 'account_logout' %}" class="btn btn-outline-secondary">Sair</a>
-                </div>
-                {% else %}
-                <div class="alert alert-success">
-                    <strong>Conta confirmada com sucesso!</strong>
-                </div>
-
-                <p class="mb-4">
-                    Seu e-mail foi verificado. Faça login para continuar.
-                </p>
-
-                <hr class="my-4">
-
-                <div class="d-grid gap-2">
-                    <a href="{% url 'account_login' %}" class="btn btn-primary btn-lg">Fazer Login</a>
-                </div>
-                {% endif %}
-            </div>
-        </div>
-    </div>
+    {% if is_authenticated and has_company %}
+    <p class="mb-4"><strong>{{ user_email }}</strong> confirmado. Sua empresa já pode usar o portal.</p>
+    <a class="btn btn-primary" href="/empresas/painel/">Acessar o painel da empresa</a>
+    {% elif is_authenticated %}
+    <p class="mb-4"><strong>{{ user_email }}</strong> confirmado. O IterBot já te avisou no WhatsApp, é só continuar a conversa por lá.</p>
+    {% if whatsapp_url %}
+    <a class="btn btn-success" href="{{ whatsapp_url }}" target="_blank" rel="noopener">Voltar para o WhatsApp</a>
+    {% else %}
+    <p class="mb-0">Volte para a conversa com o IterBot no WhatsApp.</p>
+    {% endif %}
+    {% else %}
+    <p class="mb-4">E-mail confirmado. Entre no portal da empresa para continuar.</p>
+    <a class="btn btn-primary" href="/empresas/login/">Entrar no portal</a>
+    {% endif %}
 </div>
 {% endblock %}

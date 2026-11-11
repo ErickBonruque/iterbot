@@ -81,6 +81,20 @@ body {
   color: var(--preto);
 }
 
+.btn-success {
+  --bs-btn-bg: var(--verde);
+  --bs-btn-border-color: var(--verde);
+  --bs-btn-hover-bg: #125C30;
+  --bs-btn-hover-border-color: #125C30;
+  --bs-btn-active-bg: #0F4D28;
+  --bs-btn-active-border-color: #0F4D28;
+  --bs-btn-focus-box-shadow: var(--anel-foco);
+  --bs-btn-font-weight: 700;
+  --bs-btn-border-radius: 6px;
+  --bs-btn-padding-y: 0.65rem;
+  --bs-btn-padding-x: 1.2rem;
+}
+
 .btn-danger {
   --bs-btn-bg: var(--vermelho);
   --bs-btn-border-color: var(--vermelho);
@@ -750,6 +764,29 @@ a:focus-visible {
   max-width: 640px;
   padding: 2rem;
   width: 100%;
+}
+
+.resultado {
+  text-align: center;
+}
+
+.resultado-icone {
+  display: block;
+  margin: 0 auto 1rem;
+}
+
+.resultado-icone-ok {
+  color: var(--verde);
+}
+
+.resultado-icone-erro {
+  color: var(--vermelho);
+}
+
+.resultado-titulo {
+  font-size: 1.5rem;
+  font-weight: 800;
+  margin-bottom: 0.75rem;
 }
 
 .simples-rodape {

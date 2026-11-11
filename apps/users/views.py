@@ -130,6 +130,7 @@ class ConfirmEmailView(View):
                 {
                     "success": False,
                     "error": "Link expirado ou inválido. Solicite um novo código no bot.",
+                    "whatsapp_url": bot_whatsapp_url(),
                 },
             )
 
@@ -159,6 +160,7 @@ class ConfirmCompanyEmailView(View):
                         "Conta empresa vinculada com sucesso! "
                         "Você receberá uma mensagem no WhatsApp em instantes."
                     ),
+                    "whatsapp_url": bot_whatsapp_url(),
                 },
             )
 
@@ -169,5 +171,6 @@ class ConfirmCompanyEmailView(View):
             {
                 "success": False,
                 "error": "Link expirado ou inválido. Solicite um novo link pelo WhatsApp.",
+                "whatsapp_url": bot_whatsapp_url(),
             },
         )

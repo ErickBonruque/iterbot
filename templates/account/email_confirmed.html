@@ -1,39 +1,24 @@
-{% extends "base.html" %}
-{% load i18n %}
+{% extends "layouts/simples.html" %}
 
-{% block title %}Confirmação de E-mail - IterBot UTFPR{% endblock %}
+{% block title %}{% if success %}Conta vinculada{% else %}Link inválido{% endif %} · IterBot UTFPR{% endblock %}
 
-{% block content %}
-<div class="row justify-content-center">
-    <div class="col-md-6 col-lg-5">
-        <div class="card">
-            <div class="card-header text-center">
-                <h4 class="mb-0">Erro na Confirmação</h4>
-            </div>
-            <div class="card-body text-center">
-                <div class="alert alert-danger">
-                    <strong>Não foi possível confirmar seu e-mail.</strong>
-                </div>
-
-                {% if error %}
-                <p class="mb-4">{{ error }}</p>
-                {% else %}
-                <p class="mb-4">
-                    O link de confirmação expirou ou é inválido.
-                </p>
-                {% endif %}
-
-                <p>
-                    Solicite um novo link de confirmação pelo bot do WhatsApp ou tente fazer login novamente.
-                </p>
-
-                <hr class="my-4">
-
-                <div class="d-grid gap-2">
-                    <a href="{% url 'account_login' %}" class="btn btn-primary btn-lg">Ir para Login</a>
-                </div>
-            </div>
-        </div>
-    </div>
+{% block simples_conteudo %}
+<div class="resultado">
+    {% if success %}
+    {% include "includes/icone_resultado.html" with tipo="ok" %}
+    <h1 class="resultado-titulo">Tudo certo</h1>
+    <p class="mb-4">{{ message }}</p>
+    {% if whatsapp_url %}
+    <a class="btn btn-success" href="{{ whatsapp_url }}" target="_blank" rel="noopener">Voltar para o WhatsApp</a>
+    {% endif %}
+    {% else %}
+    {% include "includes/icone_resultado.html" with tipo="erro" %}
+    <h1 class="resultado-titulo">Não foi possível confirmar</h1>
+    <p>{% if error %}{{ error }}{% else %}O link de confirmação expirou ou é inválido.{% endif %}</p>
+    <p class="mb-4">Peça um novo link pelo WhatsApp: mande uma mensagem para o IterBot e siga as instruções.</p>
+    {% if whatsapp_url %}
+    <a class="btn btn-success" href="{{ whatsapp_url }}" target="_blank" rel="noopener">Abrir o WhatsApp</a>
+    {% endif %}
+    {% endif %}
 </div>
 {% endblock %}
