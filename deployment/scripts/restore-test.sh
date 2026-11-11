@@ -37,15 +37,18 @@ echo "Subindo Postgres temporario (${POSTGRES_IMAGE})..."
 docker run -d --name "${TEST_CONTAINER}" --memory 256m \
     -e POSTGRES_USER=restore -e POSTGRES_PASSWORD=restore -e POSTGRES_DB=restore \
     "${POSTGRES_IMAGE}" >/dev/null
-for _ in $(seq 1 30); do
-    docker exec "${TEST_CONTAINER}" pg_isready -U restore -d restore >/dev/null 2>&1 && break
+# Espera por TCP, nao pelo socket: na 1a subida o entrypoint roda um servidor
+# temporario (so socket) para o initdb e o derruba logo depois — o pg_isready
+# pelo socket responderia "pronto" para ele e o psql cairia no meio da troca.
+for _ in $(seq 1 60); do
+    docker exec "${TEST_CONTAINER}" pg_isready -h 127.0.0.1 -U restore -d restore >/dev/null 2>&1 && break
     sleep 1
 done
-docker exec "${TEST_CONTAINER}" pg_isready -U restore -d restore >/dev/null
+docker exec "${TEST_CONTAINER}" pg_isready -h 127.0.0.1 -U restore -d restore >/dev/null
 
 start=$(date +%s)
 gunzip -c "${BACKUP_FILE}" \
-    | docker exec -i "${TEST_CONTAINER}" psql -q -v ON_ERROR_STOP=1 -U restore -d restore >/dev/null
+    | docker exec -i "${TEST_CONTAINER}" psql -h 127.0.0.1 -q -v ON_ERROR_STOP=1 -U restore -d restore >/dev/null
 echo "Restaurado em $(( $(date +%s) - start ))s"
 
 count() { # container user db table
