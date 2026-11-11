@@ -39,6 +39,13 @@ def response(status=200, results=None, text=None):
     return resp
 
 
+@pytest.fixture(autouse=True)
+def no_sleep():
+    """A nova tentativa espera alguns segundos — nos testes, não."""
+    with patch("infra.adzuna.client.time.sleep") as sleep:
+        yield sleep
+
+
 def client_with(*responses):
     session = MagicMock()
     session.get.side_effect = list(responses)
@@ -176,6 +183,42 @@ class TestAdzunaClient:
         with pytest.raises(AdzunaError) as exc_info:
             client.search("estágio")
         assert APP_KEY not in str(exc_info.value)
+
+    def test_5xx_is_retried_once_and_recovers(self, no_sleep):
+        client, session = client_with(
+            response(status=503, text="<html>Uh oh</html>"),
+            response(results=[adzuna_result(1)]),
+        )
+        assert len(client.search("estágio")) == 1
+        assert session.get.call_count == 2
+        no_sleep.assert_called_once()
+
+    def test_persistent_5xx_raises_after_the_retry(self, no_sleep):
+        client, session = client_with(response(status=503), response(status=502))
+        with pytest.raises(AdzunaError, match="HTTP 502"):
+            client.search("estágio")
+        assert session.get.call_count == 2
+
+    def test_4xx_is_not_retried(self, no_sleep):
+        client, session = client_with(response(status=401, text="Unauthorised"))
+        with pytest.raises(AdzunaError, match="HTTP 401"):
+            client.search("estágio")
+        assert session.get.call_count == 1
+        no_sleep.assert_not_called()
+
+    def test_network_error_is_retried_once(self, no_sleep):
+        session = MagicMock()
+        session.get.side_effect = [requests.Timeout("lento"), response(results=[adzuna_result(1)])]
+        client = AdzunaClient("app-id", APP_KEY, session=session)
+        assert len(client.search("estágio")) == 1
+        assert session.get.call_count == 2
+
+    def test_error_message_has_no_html_noise(self, no_sleep):
+        html = "<!DOCTYPE html>\n<html><head><title>Uh oh</title></head></html>"
+        client, _ = client_with(response(status=503, text=html), response(status=503, text=html))
+        with pytest.raises(AdzunaError) as exc_info:
+            client.search("estágio")
+        assert "<" not in str(exc_info.value)
 
     def test_unexpected_payload_raises(self):
         bad = response()

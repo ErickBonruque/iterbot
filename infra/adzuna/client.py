@@ -18,11 +18,15 @@ Particularidades da API medidas em nov/2026 (país `br`):
 - Algumas vagas vêm com o local geocodificado errado (Jacareí/SP aparece como
   Mato Grosso do Sul, dentro do raio de Santa Helena) — o filtro regional, que
   exige um município do Oeste do Paraná, descarta.
-- Plano gratuito: 2.500 chamadas/mês. Cada página (até 50 vagas) é uma chamada.
+- Plano Trial: 1.500 chamadas/mês. Cada página (até 50 vagas) é uma chamada;
+  os 12 termos do catálogo gastam no máximo 18 por coleta (~540/mês).
+- A API às vezes devolve 503 (página HTML "Uh oh") por alguns segundos: erro
+  5xx e de rede ganham UMA nova tentativa; 4xx (chave, cota) não.
 """
 
 import math
 import re
+import time
 from typing import Any
 
 import requests
@@ -33,6 +37,8 @@ MAX_RESULTS_PER_PAGE = 50
 # `results_wanted` alto no admin.
 MAX_PAGES = 2
 MILES_TO_KM = 1.609344
+# Uma nova tentativa para 5xx/erro de rede — barato na cota (≤ 1 chamada extra).
+RETRY_DELAY_SECONDS = 3
 
 _COUNTRY_SUFFIX = re.compile(r",?\s*\b(brazil|brasil)\s*$", re.IGNORECASE)
 _OR_SPLIT = re.compile(r"\s+OR\s+")
@@ -153,20 +159,42 @@ class AdzunaClient:
         return records[:wanted]
 
     def _fetch_page(self, page: int, query: dict[str, Any]) -> list[dict[str, Any]]:
+        try:
+            return self._fetch_page_once(page, query)
+        except _TransientError:
+            time.sleep(RETRY_DELAY_SECONDS)
+        try:
+            return self._fetch_page_once(page, query)
+        except _TransientError as exc:
+            raise AdzunaError(str(exc)) from None
+
+    def _fetch_page_once(self, page: int, query: dict[str, Any]) -> list[dict[str, Any]]:
         url = BASE_URL.format(country=self.country, page=page)
         params = {**query, "app_id": self.app_id, "app_key": self.app_key}
         try:
             response = self.session.get(url, params=params, timeout=self.timeout_seconds)
         except requests.RequestException as exc:
             # Mensagem sem a URL: ela carrega a app_key na query string.
-            raise AdzunaError(f"erro de rede: {type(exc).__name__}") from None
+            raise _TransientError(f"erro de rede: {type(exc).__name__}") from None
 
         if response.status_code != 200:
-            raise AdzunaError(f"HTTP {response.status_code}: {response.text[:200]}")
+            message = f"HTTP {response.status_code}: {_short_text(response.text)}"
+            if response.status_code >= 500:
+                raise _TransientError(message)
+            raise AdzunaError(message)
         try:
             results = response.json()["results"]
         except (ValueError, KeyError, TypeError):
-            raise AdzunaError(f"resposta inesperada: {response.text[:200]}") from None
+            raise AdzunaError(f"resposta inesperada: {_short_text(response.text)}") from None
         if not isinstance(results, list):
             raise AdzunaError("resposta inesperada: 'results' não é lista")
         return results
+
+
+class _TransientError(AdzunaError):
+    """5xx ou falha de rede: vale tentar de novo."""
+
+
+def _short_text(text: str) -> str:
+    """Resumo do corpo para o log — sem tags (a página de erro da Adzuna é HTML)."""
+    return " ".join(_HTML_TAG.sub(" ", text or "").split())[:120]

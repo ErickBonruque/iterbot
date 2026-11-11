@@ -95,7 +95,7 @@ Medição com a API (país `br`):
 - Somou 3 estágios regionais (CC 2 — cooperativa em Palotina e Cascavel; BIO 1
   — Medianeira) e 3 remotos de CC que o Indeed não tinha. Agronomia segue sem
   vaga na região.
-- Cota grátis de 2.500 chamadas/mês; o catálogo gasta ~9/dia (máx. 2 páginas
+- Cota do plano Trial: 1.500 chamadas/mês; o catálogo gasta ~9/dia (máx. 2 páginas
   por termo, teto no cliente).
 
 A Adzuna devolve um trecho da descrição, o que expôs um falso positivo no

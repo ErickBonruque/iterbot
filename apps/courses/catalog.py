@@ -19,7 +19,7 @@ Os termos foram escolhidos medindo, em buscas reais (nov/2026), quantas vagas
 - **Adzuna** (API oficial, `infra/adzuna`) entra em todos os termos: respeita
   cidade + raio e traz vagas que o Indeed não tem (cooperativas do Oeste, por
   exemplo). Na medição de nov/2026 somou 3 estágios regionais (CC 2, BIO 1) e
-  3 remotos de CC. Custa ~9 chamadas/dia de uma cota de 2.500/mês.
+  3 remotos de CC. Custa ~9 chamadas/dia de uma cota de 1.500/mês (Trial).
 
 Termos iguais em cursos diferentes (a busca regional e a remota amplas) rodam
 uma vez só por dia — `fetch_and_save_daily_jobs` reaproveita o resultado.

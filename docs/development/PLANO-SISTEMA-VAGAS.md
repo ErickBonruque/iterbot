@@ -534,7 +534,7 @@ persistido — com poucas vagas boas, filtrar rende mais do que ordenar ruído. 
 ora (entra junto com a Adzuna).
 
 ### 5b — Adzuna (concluída)
-- [x] Conta em developer.adzuna.com (app_id/app_key) — plano Trial, 2.500 chamadas/mês
+- [x] Conta em developer.adzuna.com (app_id/app_key) — plano Trial, 1.500 chamadas/mês
 - [x] Spike: cobertura do Oeste do PR medida (ver adendo do ADR-007)
 - [x] `infra/adzuna/client.py` devolvendo o formato do jobspy; `site_name="adzuna"` no
       `JobSearchService`; credenciais por `ADZUNA_APP_ID`/`ADZUNA_APP_KEY` (env ou Docker

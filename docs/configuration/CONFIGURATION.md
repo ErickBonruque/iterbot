@@ -124,7 +124,7 @@ A configuração é centralizada no módulo `config/env.py`, que define dataclas
 | `ADZUNA_APP_KEY` | Não | Application key. Sem ID + key, o site `adzuna` dos termos de busca é pulado (log `adzuna_search_failed`). | `adzuna_app_key` |
 | `ADZUNA_COUNTRY` | Não | País da API. Padrão: `br`. | — |
 
-Plano gratuito: 2.500 chamadas/mês; cada página de até 50 vagas é uma chamada (máx. 2 por termo). O catálogo atual gasta ~9/dia.
+Plano Trial: 1.500 chamadas/mês; cada página de até 50 vagas é uma chamada (máx. 2 por termo). O catálogo atual gasta ~9/dia.
 
 > **Nota:** A partir da migração Brevo (abr/2026), `EMAIL_BACKEND` **não muda mais automaticamente** com base em credenciais AWS. Toda entrega transacional passa por `EMAIL_PROVIDER` (Brevo por padrão) via `infra/email/factory.py`, incluindo e-mails do allauth (interceptados por `UTFPRAccountAdapter`). Para usar SES como Django backend, configure `EMAIL_BACKEND=django_ses.SESBackend` explicitamente.
 
