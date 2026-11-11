@@ -15,20 +15,24 @@ BOT_NUMBER_CACHE_KEY = "users:bot_whatsapp_number"
 # O número só muda se o admin parear outro aparelho; 1 h evita uma consulta ao
 # WAHA por página aberta.
 BOT_NUMBER_CACHE_SECONDS = 3600
+# Com o WAHA fora, a falha fica guardada por pouco tempo: no máximo uma tentativa
+# por minuto, em vez de uma espera de até 5 s em cada página aberta (login, vaga
+# pública no pico do resumo semanal).
+BOT_NUMBER_FAILURE_CACHE_SECONDS = 60
+_SEM_NUMERO = ""
 
 
 def bot_whatsapp_url() -> str | None:
     """Link wa.me do número pareado no WAHA, ou None se não deu para saber.
 
-    Falha não vai para o cache: na próxima página tenta de novo.
+    O número fica 1 h no cache; a falha, só ``BOT_NUMBER_FAILURE_CACHE_SECONDS``.
     """
     number = cache.get(BOT_NUMBER_CACHE_KEY)
-    if not number:
-        number = WahaClient().get_paired_number()
-        if not number:
-            return None
-        cache.set(BOT_NUMBER_CACHE_KEY, number, BOT_NUMBER_CACHE_SECONDS)
-    return f"https://wa.me/{number}"
+    if number is None:
+        number = WahaClient().get_paired_number() or _SEM_NUMERO
+        timeout = BOT_NUMBER_CACHE_SECONDS if number else BOT_NUMBER_FAILURE_CACHE_SECONDS
+        cache.set(BOT_NUMBER_CACHE_KEY, number, timeout)
+    return f"https://wa.me/{number}" if number else None
 
 
 def success_page(request):

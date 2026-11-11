@@ -99,6 +99,17 @@ class TestSuccessPageWhatsAppLink(TestCase):
             self.client.get(reverse("account_success"))
         self.assertEqual(waha.return_value.get_paired_number.call_count, 1)
 
+    def test_falha_do_waha_fica_no_cache_por_pouco_tempo(self):
+        """WAHA fora: no máximo uma tentativa por minuto, não uma por página aberta."""
+        from apps.users.views import BOT_NUMBER_FAILURE_CACHE_SECONDS
+
+        with patch("apps.users.views.WahaClient") as waha:
+            waha.return_value.get_paired_number.return_value = None
+            self.client.get(reverse("account_success"))
+            self.client.get(reverse("account_success"))
+        self.assertEqual(waha.return_value.get_paired_number.call_count, 1)
+        self.assertLessEqual(BOT_NUMBER_FAILURE_CACHE_SECONDS, 60)
+
     def test_without_paired_number_there_is_no_wrong_link(self):
         with patch("apps.users.views.WahaClient") as waha:
             waha.return_value.get_paired_number.return_value = None
