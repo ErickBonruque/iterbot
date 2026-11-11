@@ -1,3 +1,5 @@
+from unittest.mock import patch
+
 from django.contrib.auth.models import User
 from django.test import Client, TestCase, override_settings
 
@@ -169,7 +171,12 @@ class JobApplicationsPortalTests(TestCase):
         self.client.force_login(self.user)
 
         def consultas():
-            with CaptureQueriesContext(connection) as ctx:
+            # O middleware de logging grava uma métrica de latência em 10% das requisições
+            # (random.random() < 0.1): um INSERT extra aleatório. Fixa o sorteio em "não grava".
+            with (
+                patch("infra.middleware.structured_logging.random.random", return_value=1.0),
+                CaptureQueriesContext(connection) as ctx,
+            ):
                 self.client.get("/empresas/candidaturas/")
             return [q["sql"] for q in ctx.captured_queries]
 
@@ -185,10 +192,13 @@ class JobApplicationsPortalTests(TestCase):
             JobApplication.objects.create(user=aluno, job=self.job)
         depois = consultas()
 
+        def resumo(sqls):
+            return "\n".join(f"  {sql[:110]}" for sql in sqls)
+
         self.assertEqual(
             len(depois),
             len(antes),
-            "consultas a mais:\n" + "\n".join(sorted(set(depois) - set(antes))),
+            f"ANTES ({len(antes)}):\n{resumo(antes)}\nDEPOIS ({len(depois)}):\n{resumo(depois)}",
         )
 
     def test_status_update(self):
