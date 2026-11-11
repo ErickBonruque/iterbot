@@ -145,13 +145,23 @@ class TestRemote:
 class TestLocation:
     @pytest.mark.parametrize(
         "location",
-        ["Cascavel, PR, Brazil", "Greater São Paulo Area", "Remoto, Brazil", "Paraná, Brazil", ""],
+        [
+            "Cascavel, PR, Brazil",
+            "Greater São Paulo Area",
+            "Remoto, Brazil",
+            "Paraná, Brazil",
+            "",
+            # Formato da Adzuna: estado por extenso, sem país.
+            "Castanhal, Pará",
+            "Toledo, Paraná",
+        ],
     )
     def test_brazilian_or_unknown(self, location):
         assert is_in_brazil(location)
 
     @pytest.mark.parametrize(
-        "location", ["Los Angeles, CA", "Cebu, Philippines", "Strongsville, OH"]
+        "location",
+        ["Los Angeles, CA", "Cebu, Philippines", "Strongsville, OH", "Pittsburgh, PA"],
     )
     def test_foreign(self, location):
         assert not is_in_brazil(location)

@@ -71,7 +71,9 @@ _BR_MARKERS = re.compile(
     r"paraiba|piaui|maranhao|alagoas|sergipe|tocantins|rondonia|roraima|amapa|acre|"
     r"greater (sao paulo|rio de janeiro|curitiba|belo horizonte|porto alegre|florianopolis|"
     r"campinas|brasilia|recife|salvador|fortaleza)|"
-    rf",\s*({_BR_UF})\b"
+    rf",\s*({_BR_UF})\b|"
+    # "Pará" por extenso (Adzuna). Só depois de vírgula: "para" sozinho é preposição.
+    r",\s*para\b"
 )
 _REGION = re.compile(r"\b(" + "|".join(OESTE_PARANA) + r")\b")
 
