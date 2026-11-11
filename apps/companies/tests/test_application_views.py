@@ -163,25 +163,33 @@ class JobApplicationsPortalTests(TestCase):
         from django.db import connection
         from django.test.utils import CaptureQueriesContext
 
+        from apps.courses.models import Course
+
+        # Login uma vez, fora da medição: o login em si grava sessão e last_login.
+        self.client.force_login(self.user)
+
         def consultas():
             with CaptureQueriesContext(connection) as ctx:
-                self._abrir()
-            return len(ctx)
-
-        from apps.courses.models import Course
+                self.client.get("/empresas/candidaturas/")
+            return [q["sql"] for q in ctx.captured_queries]
 
         curso = Course.objects.create(name="Curso Consultas")
         self.student.course = curso
         self.student.save()
         consultas()  # aquecimento: a primeira requisição cria sessão e popula caches
-        base = consultas()
+        antes = consultas()
         for i in range(5):
             aluno = UserProfile.objects.create(
                 phone_number=f"55459999{i:05d}@c.us", ra=f"a900000{i}", course=curso
             )
             JobApplication.objects.create(user=aluno, job=self.job)
+        depois = consultas()
 
-        self.assertEqual(consultas(), base)
+        self.assertEqual(
+            len(depois),
+            len(antes),
+            "consultas a mais:\n" + "\n".join(sorted(set(depois) - set(antes))),
+        )
 
     def test_status_update(self):
         self.client.force_login(self.user)
