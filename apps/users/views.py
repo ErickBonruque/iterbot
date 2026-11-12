@@ -133,7 +133,7 @@ class ConfirmEmailView(View):
                 "account/email_confirmed.html",
                 {
                     "success": False,
-                    "error": "Link expirado ou inválido. Solicite um novo código no bot.",
+                    "error": "Link expirado ou inválido.",
                     "whatsapp_url": bot_whatsapp_url(),
                 },
             )
@@ -174,7 +174,7 @@ class ConfirmCompanyEmailView(View):
             "account/email_confirmed.html",
             {
                 "success": False,
-                "error": "Link expirado ou inválido. Solicite um novo link pelo WhatsApp.",
+                "error": "Link expirado ou inválido.",
                 "whatsapp_url": bot_whatsapp_url(),
             },
         )

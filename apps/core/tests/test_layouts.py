@@ -87,7 +87,7 @@ def test_logo_utfpr_escolhe_arquivo_pelo_fundo(variante, esperado, ausente):
     [
         ("layouts/entrada.html", "img/logo-utfpr.png"),
         ("layouts/portal.html", "img/logo-utfpr-branco.png"),
-        ("layouts/simples.html", "img/logo-utfpr-branco.png"),
+        ("layouts/simples.html", "img/logo-utfpr.png"),
     ],
 )
 def test_cada_layout_mostra_o_logo_da_utfpr_uma_vez(template, arquivo):
@@ -95,6 +95,24 @@ def test_cada_layout_mostra_o_logo_da_utfpr_uma_vez(template, arquivo):
 
     assert html.count("logo-utfpr") == 1
     assert arquivo in html
+
+
+@pytest.mark.parametrize(
+    "template, sistema",
+    [
+        # Entrada é só de empresa; a casca simples também serve ao aluno (vaga, confirmação).
+        ("layouts/entrada.html", "Portal de empresas"),
+        ("layouts/simples.html", "Vagas de estágio e emprego"),
+    ],
+)
+def test_telas_publicas_tem_o_topo_institucional_com_o_logo(template, sistema):
+    """Visual de sistema oficial da UTFPR: logo colorido num topo branco, com o nome do sistema."""
+    html = render_to_string(template, request=_request())
+
+    topo = re.search(r'<header class="topo-utfpr".*?</header>', html, re.S)
+    assert topo is not None
+    assert "img/logo-utfpr.png" in topo.group(0)
+    assert sistema in topo.group(0)
 
 
 @pytest.mark.parametrize("caminho", ["/empresas/candidaturas/", "/empresas/perfil/"])

@@ -1,14 +1,15 @@
 {% extends "base.html" %}
 {% load static %}
 {% comment %}
-Tela dividida de entrada (login, cadastro, senha, confirmações).
-Blocos: entrada_titulo e entrada_texto (apoio + lista, some no celular) já trazem o
+Tela de entrada (login, cadastro, senha, confirmações): topo institucional da
+UTFPR e, abaixo, o painel preto do IterBot ao lado do formulário. Blocos: entrada_titulo e entrada_texto (apoio + lista, some no celular) já trazem o
 texto institucional; as telas só precisam definir entrada_conteudo.
 {% endcomment %}
 
 {% block body_class %}pagina-entrada{% endblock %}
 
 {% block body %}
+{% include "includes/topo_utfpr.html" with sistema="Portal de empresas" %}
 <div class="entrada">
     <section class="entrada-lado">
         <div class="entrada-marca">
@@ -24,11 +25,9 @@ texto institucional; as telas só precisam definir entrada_conteudo.
                     {% endblock %}</div>
             </div>
         </div>
-        <small class="entrada-rodape">IterBot, UTFPR Campus Santa Helena</small>
     </section>
     <main class="entrada-form">
         <div class="entrada-form-interno">
-            {% include "includes/logo_utfpr.html" with variante="claro" classe="logo-entrada" %}
             {% include "includes/mensagens.html" %}
             {% block entrada_conteudo %}{% endblock %}
         </div>

@@ -1,0 +1,17 @@
+{% comment %}
+Topo institucional das telas públicas (entrada e simples), no padrão dos sistemas
+da UTFPR: logo oficial colorido num fundo branco, nome do sistema e filete amarelo.
+É o único logo da tela (exigência do registro INPI: cores e proporções originais).
+`sistema`: subtítulo ao lado de "IterBot" (padrão "Vagas de estágio e emprego").
+Não usa request nem {% url %}: o 500.html também passa por aqui.
+{% endcomment %}
+<header class="topo-utfpr">
+    <div class="topo-utfpr-marca">
+        {% include "includes/logo_utfpr.html" with variante="claro" classe="logo-topo" %}
+        <span class="topo-utfpr-sistema">
+            <strong>IterBot</strong>
+            <span>{{ sistema|default:"Vagas de estágio e emprego" }}</span>
+        </span>
+    </div>
+    <span class="topo-utfpr-campus">Campus Santa Helena</span>
+</header>

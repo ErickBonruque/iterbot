@@ -26,6 +26,8 @@
   --verde: #17703A;
   --vermelho: #A61B1B;
   --raio: 10px;
+  /* Altura do topo institucional (com o filete): o painel preto da entrada desconta. */
+  --altura-topo: 5.5rem;
   /* Anel de foco legível em qualquer fundo: contorno preto + halo amarelo. */
   --anel-foco: 0 0 0 2px var(--preto), 0 0 0 5px var(--amarelo);
 
@@ -451,37 +453,118 @@ a:focus-visible {
   padding: 0.85rem 1.25rem;
 }
 
+/* ---------- Topo institucional: telas públicas (entrada e simples) ---------- */
+
+/* Padrão dos sistemas da UTFPR: logo oficial colorido em fundo branco, nome do
+   sistema ao lado e filete amarelo embaixo. É o único logo dessas telas. */
+.topo-utfpr {
+  align-items: center;
+  background: var(--branco);
+  border-bottom: 4px solid var(--amarelo);
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+  min-height: var(--altura-topo);
+  padding: 0.6rem clamp(1.25rem, 4vw, 3.5rem);
+}
+
+.topo-utfpr-marca {
+  align-items: center;
+  display: flex;
+  gap: 1.1rem;
+}
+
+.logo-topo {
+  display: block;
+  width: 150px;
+}
+
+.topo-utfpr-sistema {
+  border-left: 1px solid var(--cinza-linha);
+  display: flex;
+  flex-direction: column;
+  line-height: 1.25;
+  padding-left: 1.1rem;
+}
+
+.topo-utfpr-sistema strong {
+  font-size: 1.05rem;
+  font-weight: 800;
+}
+
+.topo-utfpr-sistema span,
+.topo-utfpr-campus {
+  color: var(--cinza-texto);
+  font-size: 0.9rem;
+}
+
+.topo-utfpr-campus {
+  font-weight: 600;
+}
+
+@media (max-width: 600px) {
+  .logo-topo {
+    width: 104px;
+  }
+
+  .topo-utfpr-marca {
+    gap: 0.8rem;
+  }
+
+  .topo-utfpr-sistema {
+    padding-left: 0.8rem;
+  }
+
+  .topo-utfpr-campus {
+    display: none;
+  }
+}
+
 /* ---------- Layout "entrada": login, cadastro, senha, confirmações ---------- */
 
 .pagina-entrada {
   background: var(--branco);
+  display: flex;
+  flex-direction: column;
 }
 
 .entrada {
   display: grid;
+  flex: 1;
   grid-template-columns: 1fr 1fr;
-  min-height: 100vh;
 }
 
+/* O bloco do IterBot fica no centro do painel preto, na largura e na altura da
+   área visível: em formulário longo (cadastro) ele acompanha a rolagem em vez de
+   ficar no meio da página inteira. */
 .entrada-lado {
   background: var(--preto);
   color: var(--branco);
+  padding: 0 3.5rem;
+}
+
+.entrada-marca {
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  padding: 3.5rem;
+  justify-content: center;
+  margin: 0 auto;
+  max-width: 460px;
+  min-height: calc(100vh - var(--altura-topo));
+  padding: 2.5rem 0;
+  position: sticky;
+  top: calc(var(--altura-topo) / 2);
 }
 
 .entrada-mascote {
   background: var(--amarelo);
   border-radius: 28px;
   height: auto;
-  padding: 18px;
-  width: 190px;
+  padding: 16px;
+  width: 150px;
 }
 
 .entrada-titulo {
-  font-size: clamp(2rem, 3.2vw, 2.8rem);
+  font-size: clamp(2rem, 3vw, 2.7rem);
   font-weight: 800;
   letter-spacing: -0.02em;
   line-height: 1.1;
@@ -517,45 +600,39 @@ a:focus-visible {
   width: 0.7rem;
 }
 
-.entrada-rodape {
-  color: #9A9A9A;
-}
-
 .entrada-form {
   align-items: center;
   background: var(--branco);
   display: flex;
   justify-content: center;
-  padding: 3rem;
+  padding: 3.5rem 3rem;
 }
 
 .entrada-form-interno {
-  max-width: 380px;
+  max-width: 400px;
   width: 100%;
 }
 
-.logo-entrada {
-  display: block;
-  margin-bottom: 2.25rem;
-  width: 200px;
-}
-
 @media (max-width: 900px) {
-  /* Faixa preta curta no topo; o formulário fica logo abaixo, acima da dobra. */
+  /* Faixa preta curta logo abaixo do topo; o formulário fica acima da dobra. */
   .entrada {
     grid-template-columns: 1fr;
-    min-height: 0;
   }
 
   .entrada-lado {
-    flex-direction: row;
     padding: 1rem 1.25rem;
   }
 
   .entrada-marca {
     align-items: center;
-    display: flex;
+    flex-direction: row;
     gap: 1rem;
+    justify-content: flex-start;
+    margin: 0;
+    max-width: none;
+    min-height: 0;
+    padding: 0;
+    position: static;
   }
 
   .entrada-mascote {
@@ -571,19 +648,13 @@ a:focus-visible {
     max-width: none;
   }
 
-  .entrada-texto,
-  .entrada-rodape {
+  .entrada-texto {
     display: none;
   }
 
   .entrada-form {
     align-items: flex-start;
-    padding: 1.5rem 1.25rem 2.5rem;
-  }
-
-  .logo-entrada {
-    margin-bottom: 1.25rem;
-    width: 150px;
+    padding: 1.75rem 1.25rem 2.5rem;
   }
 }
 
@@ -743,15 +814,6 @@ a:focus-visible {
   min-height: 100vh;
 }
 
-.simples-topo {
-  background: var(--preto);
-  padding: 0.6rem 1.25rem;
-}
-
-.simples-topo .marca-mascote {
-  width: 38px;
-}
-
 .simples-miolo {
   display: flex;
   flex: 1;
@@ -814,10 +876,8 @@ a:focus-visible {
 
 .simples-rodape {
   background: var(--preto);
-  padding: 1.25rem;
+  color: #BDBDBD;
+  font-size: 0.9rem;
+  padding: 1.1rem 1.25rem;
   text-align: center;
-}
-
-.logo-rodape {
-  width: 150px;
 }

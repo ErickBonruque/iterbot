@@ -127,7 +127,8 @@ class TestTelasDoAluno(TestCase):
             response = self.client.get("/confirmar-email/token-invalido/")
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Link expirado ou inválido")
+        self.assertContains(response, "Link expirado ou inválido.")
+        self.assertNotContains(response, "Solicite um novo")
         self.assertContains(response, "Abrir o WhatsApp")
         self.assertContains(response, f'href="{LINK_DO_BOT}"')
         self.assertNotContains(response, "/accounts/login/")
@@ -144,7 +145,8 @@ class TestTelasDoAluno(TestCase):
             response = self.client.get("/accounts/confirmar-empresa/token-invalido/")
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Link expirado ou inválido")
+        self.assertContains(response, "Link expirado ou inválido.")
+        self.assertNotContains(response, "Solicite um novo")
         self.assertContains(response, f'href="{LINK_DO_BOT}"')
 
     def test_telas_do_aluno_sem_emoji_nem_estilo_inline(self):

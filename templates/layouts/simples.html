@@ -1,5 +1,4 @@
 {% extends "base.html" %}
-{% load static %}
 {% comment %}
 Casca avulsa: telas de resultado, página pública de vaga e páginas de erro.
 Bloco: simples_conteudo (dentro de um bloco branco centralizado).
@@ -10,20 +9,13 @@ Não usa request/user além das mensagens, para o 500.html poder reutilizá-la.
 
 {% block body %}
 <div class="simples">
-    <header class="simples-topo">
-        <span class="marca">
-            <img class="marca-mascote" src="{% static 'img/mascote.png' %}" alt="">
-            <span>iterbot</span>
-        </span>
-    </header>
+    {% include "includes/topo_utfpr.html" %}
     <main class="simples-miolo">
         <div class="simples-bloco bloco">
             {% include "includes/mensagens.html" %}
             {% block simples_conteudo %}{% endblock %}
         </div>
     </main>
-    <footer class="simples-rodape">
-        {% include "includes/logo_utfpr.html" with variante="escuro" classe="logo-rodape" %}
-    </footer>
+    <footer class="simples-rodape">IterBot, projeto da UTFPR Campus Santa Helena</footer>
 </div>
 {% endblock %}
