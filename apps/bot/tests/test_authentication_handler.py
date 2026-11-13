@@ -1,6 +1,6 @@
 from unittest.mock import MagicMock
 
-from django.test import TestCase
+from django.test import TestCase, override_settings
 
 from apps.bot.models import ConversationState
 from apps.bot.services import BotService
@@ -143,6 +143,37 @@ class AuthenticationHandlerLoginEmailTests(TestCase):
         self.assertFalse(user.email_verified)
         self.assertEqual(user.conversation_state.current_action, "login_step_waiting_confirmation")
         self.dispatcher.dispatch_confirmation_email.assert_called_once_with(user.id)
+
+    @override_settings(STUDENT_TEST_EMAILS=frozenset({"iterbot.teste01@alunos.utfpr.edu.br"}))
+    def test_test_email_authenticates_without_sending_link(self):
+        chat_id = "5511777777770@c.us"
+        user = self._user_in_state(chat_id, "login_step_email", {"temp_ra": "a1234567"})
+
+        self.service.process_message(chat_id, "iterbot.teste01@alunos.utfpr.edu.br", from_me=False)
+
+        user.refresh_from_db()
+        self.assertTrue(user.email_verified)
+        self.assertTrue(user.is_authenticated_utfpr)
+        self.assertIsNone(user.conversation_state.current_action)
+        self.dispatcher.dispatch_confirmation_email.assert_not_called()
+        sent_text = self.waha_client.send_message.call_args[0][1]
+        self.assertIn("Conta de teste", sent_text)
+
+    def test_email_already_linked_to_other_number_asks_another(self):
+        UserProfile.objects.create(
+            phone_number="5511000000000@c.us", email="aluno@alunos.utfpr.edu.br"
+        )
+        chat_id = "5511777777771@c.us"
+        user = self._user_in_state(chat_id, "login_step_email", {"temp_ra": "a1234567"})
+
+        self.service.process_message(chat_id, "aluno@alunos.utfpr.edu.br", from_me=False)
+
+        user.refresh_from_db()
+        self.assertIsNone(user.email)
+        self.assertEqual(user.conversation_state.current_action, "login_step_email")
+        self.dispatcher.dispatch_confirmation_email.assert_not_called()
+        sent_text = self.waha_client.send_message.call_args[0][1]
+        self.assertIn("outro número", sent_text)
 
     def test_email_step_without_temp_ra_sends_flow_error(self):
         chat_id = "5511888888888@c.us"

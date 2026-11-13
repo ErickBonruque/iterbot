@@ -185,6 +185,12 @@ PRIVACY_CONTACT_EMAIL = env("PRIVACY_CONTACT_EMAIL", default="") or DEFAULT_FROM
 # Link do formulário de opinião (Google Forms) enviado pelo comando "opinião" do bot.
 FEEDBACK_FORM_URL = env("FEEDBACK_FORM_URL", default="")
 
+# E-mails @alunos fictícios para testadores (separados por vírgula): o cadastro
+# no bot é aceito sem enviar o link de confirmação. Vazio = desligado.
+STUDENT_TEST_EMAILS = frozenset(
+    e.strip().lower() for e in env.list("STUDENT_TEST_EMAILS", default=[]) if e.strip()
+)
+
 # Resumo semanal em massa — ritmo conservador para não parecer spam ao WhatsApp
 # (intervalo aleatório entre mensagens, lote máximo por execução e pausa entre
 # lotes). Ver apps/jobs/services.py:send_weekly_reviews.
@@ -320,6 +326,7 @@ UNFOLD = {
                         "title": "Usuários Django",
                         "icon": "person",
                         "link": reverse_lazy("admin:auth_user_changelist"),
+                        "permission": lambda request: request.user.has_perm("auth.view_user"),
                     },
                     {
                         "title": "Perfis de Alunos",
@@ -367,6 +374,9 @@ UNFOLD = {
                         "title": "Interações",
                         "icon": "chat",
                         "link": reverse_lazy("admin:bot_interactionlog_changelist"),
+                        "permission": lambda request: request.user.has_perm(
+                            "bot.view_interactionlog"
+                        ),
                     },
                     {
                         "title": "Métricas Brutas",

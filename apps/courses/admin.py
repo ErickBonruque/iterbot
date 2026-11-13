@@ -109,7 +109,7 @@ class SearchTermAdmin(ModelAdmin):
 
     @action(
         description="Testar busca",
-        permissions=["test_search"],
+        permissions=["change"],
         variant=ActionVariant.INFO,
     )
     def test_search(self, request, obj):
@@ -146,9 +146,6 @@ class SearchTermAdmin(ModelAdmin):
         except Exception as exc:
             request.session["job_search_results"] = []
             messages.warning(request, f"Erro ao executar busca: {exc}")
-
-    def has_test_search_permission(self, request, object_id=None):
-        return True
 
     def changeform_view(self, request, object_id, form_url="", extra_context=None):
         extra_context = extra_context or {}

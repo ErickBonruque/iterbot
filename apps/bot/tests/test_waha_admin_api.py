@@ -10,12 +10,13 @@ from django.test import Client
 
 @pytest.fixture
 def staff_client(db):
-    """Client autenticado como staff."""
+    """Client autenticado como superusuário (QR/reinício/desconexão exigem)."""
     user_model = get_user_model()
     user = user_model.objects.create_user(
         username="admin_test",
         password="testpass123",
         is_staff=True,
+        is_superuser=True,
     )
     client = Client()
     client.force_login(user)

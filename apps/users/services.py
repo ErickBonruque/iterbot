@@ -2,12 +2,26 @@ import uuid
 from datetime import timedelta
 
 import structlog
+from django.conf import settings
 from django.utils import timezone
 
 from apps.users.models import UserProfile
 from infra.waha.protocols import EmailConfirmationDispatcher
 
 logger = structlog.get_logger(__name__)
+
+
+class EmailEmUsoError(Exception):
+    """O e-mail @alunos já está vinculado a outro número de WhatsApp."""
+
+
+def is_student_test_email(email: str | None) -> bool:
+    """E-mail de aluno fictício (``STUDENT_TEST_EMAILS``) aceito sem o link.
+
+    Serve para testadores sem e-mail @alunos usarem os fluxos do aluno. Nenhum
+    e-mail é enviado a esses endereços; esvaziar a variável desliga o atalho.
+    """
+    return bool(email) and email.strip().lower() in settings.STUDENT_TEST_EMAILS
 
 
 class UTFPRAuthService:
@@ -41,6 +55,31 @@ class UTFPRAuthService:
             existing.save(update_fields=["ra", "is_authenticated_utfpr", "updated_at"])
             logger.info("user_relogged_in_without_email_verification", user_id=existing.id)
             return existing
+
+        # E-mail é único: sem esta checagem o update_or_create estoura
+        # IntegrityError quando outro número já usa o mesmo endereço.
+        if (
+            normalized_email
+            and UserProfile.objects.filter(email__iexact=normalized_email)
+            .exclude(phone_number=phone_number)
+            .exists()
+        ):
+            raise EmailEmUsoError(normalized_email)
+
+        if is_student_test_email(normalized_email):
+            user, _created = UserProfile.objects.update_or_create(
+                phone_number=phone_number,
+                defaults={
+                    "ra": ra,
+                    "email": normalized_email,
+                    "is_authenticated_utfpr": True,
+                    "email_verified": True,
+                    "email_confirmation_token": None,
+                    "email_confirmation_sent_at": None,
+                },
+            )
+            logger.info("student_test_email_linked", user_id=user.id)
+            return user
 
         token = str(uuid.uuid4())
         user, _created = UserProfile.objects.update_or_create(

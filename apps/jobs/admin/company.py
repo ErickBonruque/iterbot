@@ -43,6 +43,7 @@ class CompanyAdmin(ModelAdmin):
 
     status_badge.short_description = "Status"
 
+    @admin.action(description="Aprovar empresas selecionadas", permissions=["change"])
     def approve_companies(self, request, queryset):
         pending = list(queryset.filter(status=CompanyStatus.PENDING).values_list("pk", flat=True))
         updated = queryset.filter(status=CompanyStatus.PENDING).update(
@@ -74,8 +75,7 @@ class CompanyAdmin(ModelAdmin):
             except Exception as exc:
                 logger.error("company_approval_notify_dispatch_failed", error=str(exc))
 
-    approve_companies.short_description = "Aprovar empresas selecionadas"
-
+    @admin.action(description="Bloquear empresas selecionadas", permissions=["change"])
     def block_companies(self, request, queryset):
         updated = queryset.filter(
             status__in=[CompanyStatus.PENDING, CompanyStatus.APPROVED]
@@ -97,8 +97,6 @@ class CompanyAdmin(ModelAdmin):
                 f"{updated} empresa(s) bloqueada(s). As vagas delas saíram do bot e do resumo.",
                 level=messages.WARNING,
             )
-
-    block_companies.short_description = "Bloquear empresas selecionadas"
 
     def delete_model(self, request, obj):
         """Deleta a empresa e o auth.User vinculado (limpa allauth EmailAddress por cascade)."""

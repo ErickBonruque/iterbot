@@ -44,7 +44,9 @@
         </div>
     </div>
 
-    <!-- Pareamento do WhatsApp: evita abrir o dashboard do WAHA por tunel SSH -->
+    <!-- Pareamento do WhatsApp: evita abrir o dashboard do WAHA por tunel SSH.
+         Só superusuário: o QR entrega o número do bot (conta de leitura vê só o status). -->
+    {% if request.user.is_superuser %}
     <article class="cv-admin-panel" id="waha-pairing" style="margin-bottom: 24px;">
         <h2 class="cv-admin-panel-title">Conexão do WhatsApp</h2>
         <p style="margin-bottom: 12px;">
@@ -68,6 +70,12 @@
             O código é renovado sozinho enquanto esta tela estiver aberta.
         </p>
     </article>
+    {% else %}
+    <article class="cv-admin-panel" style="margin-bottom: 24px;">
+        <h2 class="cv-admin-panel-title">Conexão do WhatsApp</h2>
+        <p>Sessão: <strong>{{ current_status.session_status|default:"—" }}</strong></p>
+    </article>
+    {% endif %}
 
     <!-- Métricas por período -->
     <div class="cv-admin-panels-grid" style="margin-bottom: 24px;">

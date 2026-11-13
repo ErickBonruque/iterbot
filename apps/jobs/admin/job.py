@@ -67,7 +67,7 @@ class JobAdmin(ModelAdmin):
 
     @action(
         description="Aprovar Vaga",
-        permissions=["approve_job"],
+        permissions=["change"],
         variant=ActionVariant.SUCCESS,
     )
     def approve_job(self, request, obj):
@@ -76,18 +76,12 @@ class JobAdmin(ModelAdmin):
         obj.save(update_fields=["status", "rejection_reason"])
         self.message_user(request, f'Vaga "{obj.titulo}" aprovada com sucesso.')
 
-    def has_approve_job_permission(self, request, object_id=None):
-        return True
-
     @action(
         description="Rejeitar Vaga",
-        permissions=["reject_job"],
+        permissions=["change"],
         variant=ActionVariant.DANGER,
     )
     def reject_job(self, request, obj):
         obj.status = JobStatus.REJECTED
         obj.save(update_fields=["status", "rejection_reason"])
         self.message_user(request, f'Vaga "{obj.titulo}" foi rejeitada.')
-
-    def has_reject_job_permission(self, request, object_id=None):
-        return True

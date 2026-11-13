@@ -15,6 +15,7 @@ from apps.bot.state_machine import (
     normalize_current_action,
 )
 from apps.users.models import UserProfile
+from apps.users.services import EmailEmUsoError, is_student_test_email
 from apps.users.validators import validate_utfpr_email
 from infra.waha.protocols import Authenticator, EmailConfirmationDispatcher, MessageSender
 
@@ -169,24 +170,38 @@ class AuthenticationHandler(BaseHandler):
             self.reset_state(user)
             return False
 
-        linked_user = self.auth_service.link_user(chat_id, ra, email)
+        try:
+            linked_user = self.auth_service.link_user(chat_id, ra, email)
+        except EmailEmUsoError:
+            # Continua no passo do e-mail: a pessoa pode digitar outro.
+            self.send_msg(
+                user,
+                chat_id,
+                self.resolve_message(
+                    BOT_MESSAGES.auth.login_email_in_use.key,
+                    BOT_MESSAGES.auth.login_email_in_use.text,
+                ),
+            )
+            logger.info("login_email_in_use", user_id=user.id)
+            return True
 
         if linked_user:
-            # Re-login: e-mail já verificado anteriormente — autentica direto sem reenviar link.
+            # Re-login (e-mail já verificado) ou conta de teste: autentica direto, sem link.
             if linked_user.email_verified and linked_user.is_authenticated_utfpr:
                 apply_state_transition(
                     conversation_state=conversation_state,
                     next_state=STATE_IDLE,
                     clear_flow_data=True,
                 )
+                message = (
+                    BOT_MESSAGES.auth.login_test_account
+                    if is_student_test_email(email)
+                    else BOT_MESSAGES.auth.login_welcome_back
+                )
                 self.send_msg(
                     user,
                     chat_id,
-                    self.resolve_message(
-                        BOT_MESSAGES.auth.login_welcome_back.key,
-                        BOT_MESSAGES.auth.login_welcome_back.text,
-                        email=email,
-                    ),
+                    self.resolve_message(message.key, message.text, email=email),
                 )
                 logger.info("user_relogged_in", user_id=linked_user.id)
                 return True

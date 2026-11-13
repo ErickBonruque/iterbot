@@ -6,10 +6,10 @@ Garante que:
 - Logout preserva o vínculo verificado para permitir re-login sem reenvio.
 """
 
-from django.test import TestCase
+from django.test import TestCase, override_settings
 
 from apps.users.models import UserProfile
-from apps.users.services import UTFPRAuthService
+from apps.users.services import EmailEmUsoError, UTFPRAuthService
 
 
 class _StubDispatcher:
@@ -34,6 +34,23 @@ class LinkUserTests(TestCase):
         self.assertFalse(user.is_authenticated_utfpr)
         self.assertFalse(user.email_verified)
         self.assertIsNotNone(user.email_confirmation_token)
+
+    @override_settings(STUDENT_TEST_EMAILS=frozenset({"iterbot.teste01@alunos.utfpr.edu.br"}))
+    def test_test_email_is_verified_without_token(self):
+        user = self.service.link_user(self.phone, "a1234567", "IterBot.Teste01@alunos.utfpr.edu.br")
+
+        self.assertTrue(user.email_verified)
+        self.assertTrue(user.is_authenticated_utfpr)
+        self.assertIsNone(user.email_confirmation_token)
+        self.assertEqual(user.email, "iterbot.teste01@alunos.utfpr.edu.br")
+        self.assertEqual(self.dispatcher.calls, [])
+
+    def test_email_of_another_number_raises_instead_of_integrity_error(self):
+        self.service.link_user("5500000000000@c.us", "a1111111", self.email)
+
+        with self.assertRaises(EmailEmUsoError):
+            self.service.link_user(self.phone, "a1234567", self.email)
+        self.assertFalse(UserProfile.objects.filter(phone_number=self.phone).exists())
 
     def test_relogin_after_verification_skips_token_regeneration(self):
         # Primeiro cadastro

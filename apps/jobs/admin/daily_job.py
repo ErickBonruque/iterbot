@@ -1,4 +1,5 @@
 from django.contrib import admin, messages
+from django.core.exceptions import PermissionDenied
 from django.http import HttpResponseRedirect
 from unfold.admin import ModelAdmin
 from unfold.decorators import action
@@ -33,8 +34,13 @@ class DailyJobAdmin(ModelAdmin):
     actions_list = ["trigger_fetch_daily_jobs"]
     actions_submit_line = ["mark_as_manual"]
 
-    @action(description="Buscar Vagas Agora", variant=ActionVariant.SUCCESS)
+    @action(description="Buscar Vagas Agora", permissions=["change"], variant=ActionVariant.SUCCESS)
     def trigger_fetch_daily_jobs(self, request):
+        # A URL das ações de lista do Unfold só passa por admin_view (is_staff):
+        # o `permissions` acima esconde o botão, mas quem só vê ainda chegaria
+        # aqui pelo endereço direto.
+        if not self.has_change_permission(request):
+            raise PermissionDenied
         from apps.jobs.tasks import fetch_daily_jobs
 
         fetch_daily_jobs.delay()
@@ -54,6 +60,3 @@ class DailyJobAdmin(ModelAdmin):
         obj.is_manual = True
         obj.save(update_fields=["is_manual", "updated_at"])
         self.message_user(request, f'Vaga "{obj.title}" marcada como manual.')
-
-    def has_mark_as_manual_permission(self, request, object_id=None):
-        return True

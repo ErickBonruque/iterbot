@@ -14,10 +14,10 @@ class JobApplicationAdmin(ModelAdmin):
     ordering = ("-created_at",)
     actions = ("mark_as_vista", "mark_as_contatado")
 
-    @admin.action(description="Marcar como Vista")
+    @admin.action(description="Marcar como Vista", permissions=["change"])
     def mark_as_vista(self, request, queryset):
         queryset.update(status=ApplicationStatus.VISTA)
 
-    @admin.action(description="Marcar como Contatado")
+    @admin.action(description="Marcar como Contatado", permissions=["change"])
     def mark_as_contatado(self, request, queryset):
         queryset.update(status=ApplicationStatus.CONTATADO)

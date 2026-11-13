@@ -1,7 +1,20 @@
 from django.contrib import admin
+from django.http import JsonResponse
 from django.template.response import TemplateResponse
 from django.urls import path
 from unfold.sites import UnfoldAdminSite
+
+
+def _somente_superusuario(request) -> JsonResponse | None:
+    """Barra o controle da sessão do WhatsApp a quem não é superusuário.
+
+    QR, reinício e desconexão mexem no número do bot (quem escaneia o QR
+    assume o número), então ficam fora do alcance da conta de leitura —
+    ``admin_view`` só exige ``is_staff``.
+    """
+    if request.user.is_superuser:
+        return None
+    return JsonResponse({"error": "Forbidden"}, status=403)
 
 
 class IterBotAdminSite(UnfoldAdminSite):
@@ -156,7 +169,6 @@ class IterBotAdminSite(UnfoldAdminSite):
 
     def waha_status_api_view(self, request):
         from django.core.cache import cache
-        from django.http import JsonResponse
 
         from apps.bot.health import BotHealthMonitor
 
@@ -177,10 +189,10 @@ class IterBotAdminSite(UnfoldAdminSite):
         return JsonResponse(result)
 
     def waha_restart_api_view(self, request):
-        from django.http import JsonResponse
-
         from infra.waha.client import WahaClient
 
+        if negado := _somente_superusuario(request):
+            return negado
         if request.method != "POST":
             return JsonResponse({"error": "Method not allowed"}, status=405)
 
@@ -199,10 +211,10 @@ class IterBotAdminSite(UnfoldAdminSite):
         e o status da sessão acompanha, para a tela dizer o que falta quando não
         há QR (sessão parada, já conectada, WAHA fora do ar).
         """
-        from django.http import JsonResponse
-
         from infra.waha.client import WahaClient
 
+        if negado := _somente_superusuario(request):
+            return negado
         try:
             result = WahaClient().get_qr()
         except Exception as error:
@@ -222,10 +234,10 @@ class IterBotAdminSite(UnfoldAdminSite):
 
     def waha_logout_api_view(self, request):
         """Desconecta o número pareado para permitir um novo pareamento."""
-        from django.http import JsonResponse
-
         from infra.waha.client import WahaClient
 
+        if negado := _somente_superusuario(request):
+            return negado
         if request.method != "POST":
             return JsonResponse({"error": "Method not allowed"}, status=405)
 

@@ -85,6 +85,17 @@ class AuthMessages:
         "auth.login_welcome_back",
         "✅ *Bem-vindo de volta!*\n\nSeu e-mail `{email}` já foi verificado anteriormente, então você está autenticado direto.\n\nDigite *menu* para ver as opções disponíveis.",
     )
+    login_email_in_use: MessageTemplate = MessageTemplate(
+        "auth.login_email_in_use",
+        "⚠️ Esse e-mail já está vinculado a outro número de WhatsApp.\n\n"
+        "Digite outro e-mail @alunos.utfpr.edu.br ou 'cancelar' para voltar.",
+    )
+    login_test_account: MessageTemplate = MessageTemplate(
+        "auth.login_test_account",
+        "✅ *Conta de teste*\n\nO e-mail `{email}` é de teste: o cadastro foi aceito sem o "
+        "link de confirmação (um aluno de verdade recebe o link no e-mail @alunos).\n\n"
+        "Digite *menu* para ver as opções disponíveis.",
+    )
 
 
 @dataclass(frozen=True)
