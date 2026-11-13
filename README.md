@@ -1,10 +1,14 @@
 # IterBot
 
+[English](README.en.md) · **Português**
+
+[![CI](https://github.com/ErickBonruque/iterbot/actions/workflows/ci.yml/badge.svg)](https://github.com/ErickBonruque/iterbot/actions/workflows/ci.yml)
+
 Bot de WhatsApp para conectar estudantes da UTFPR com oportunidades de estágio e emprego — combina vagas online (agregadas via [python-jobspy](https://github.com/speedyapply/JobSpy)) com vagas locais cadastradas por empresas da região através de um portal web próprio.
 
-> **Projeto de Iniciação Científica** — UTFPR Campus Santa Helena.
+> **Projeto de Iniciação Científica** — UTFPR Campus Santa Helena. Programa de computador registrado no INPI.
 >
-> ⚠️ **Sistema em desenvolvimento.** A plataforma ainda está em evolução ativa e não possui uma versão estável para uso geral. Funcionalidades, fluxos e configurações podem mudar sem aviso.
+> **Status:** em desenvolvimento ativo, ainda sem versão estável. Funcionalidades e configurações podem mudar.
 
 ## Como funciona
 
